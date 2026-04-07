@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed:netcongestie": "tsx scripts/seed-netcongestie.ts"
+    "seed:netcongestie": "tsx scripts/seed-netcongestie.ts",
+    "seed:pseo": "tsx scripts/seed-pseo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
