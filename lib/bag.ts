@@ -364,7 +364,7 @@ export async function getBagData(adres: string): Promise<BagResult | null> {
     const M_PER_DEG = 111_320
     const dakOppervlakte =
       pand.shellAreaSqDeg !== Infinity && pand.shellAreaSqDeg > 0
-        ? Math.round(pand.shellAreaSqDeg * M_PER_DEG * M_PER_DEG)
+        ? Math.round(pand.shellAreaSqDeg * M_PER_DEG * (M_PER_DEG * Math.cos((lat * Math.PI) / 180)))
         : null
 
     return {
