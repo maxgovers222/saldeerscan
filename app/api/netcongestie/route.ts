@@ -1,0 +1,24 @@
+import { applyRateLimit } from '@/lib/rate-limit'
+import { getNetcongestie } from '@/lib/netcongestie'
+
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: Request) {
+  const limitResult = applyRateLimit(request)
+  if (limitResult.response) return limitResult.response
+
+  const { searchParams } = new URL(request.url)
+  const postcode = searchParams.get('postcode')
+
+  if (!postcode || !/^\d{4}/.test(postcode.replace(/\s/g, ''))) {
+    return Response.json({ error: 'Geldige postcode vereist (4 cijfers)' }, { status: 400 })
+  }
+
+  const result = await getNetcongestie(postcode)
+  return Response.json(result, {
+    headers: {
+      'Cache-Control': 'public, max-age=3600',
+      'X-RateLimit-Remaining': String(limitResult.rl!.remaining),
+    }
+  })
+}
