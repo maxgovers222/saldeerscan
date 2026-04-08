@@ -3,6 +3,12 @@
 import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction } from './types'
 
+function extractStad(adres: string): string {
+  // Simple extraction: last word of address (e.g. "Prinsengracht 123, Amsterdam" → "Amsterdam")
+  const parts = adres.split(/[,\s]+/)
+  return parts[parts.length - 1] ?? adres
+}
+
 interface Step6LeadCaptureProps {
   state: FunnelState
   dispatch: Dispatch<FunnelAction>
@@ -78,13 +84,13 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
     telefoon: '',
     gdprConsent: false,
   })
-  const [errors, setErrors] = useState<Partial<Record<keyof LeadFormData, string>>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof LeadFormData | 'submit', string>>>({})
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   function validate(): boolean {
-    const newErrors: Partial<Record<keyof LeadFormData, string>> = {}
+    const newErrors: Partial<Record<keyof LeadFormData | 'submit', string>> = {}
 
     if (!form.naam.trim()) newErrors.naam = 'Naam is verplicht'
     if (!form.email.trim()) {
@@ -111,40 +117,42 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
 
     setLoading(true)
     setSubmitError(null)
-
-    const leadPayload = {
-      naam: form.naam,
-      email: form.email,
-      telefoon: form.telefoon,
-      adres: state.adres,
-      bagData: state.bagData,
-      netcongestie: state.netcongestie,
-      healthScore: state.healthScore,
-      roiResult: state.roiResult,
-      meterkastAnalyse: state.meterkastAnalyse,
-      plaatsingsAnalyse: state.plaatsingsAnalyse,
-      omvormerAnalyse: state.omvormerAnalyse,
-      gdprConsent: true,
-      timestamp: new Date().toISOString(),
-    }
+    setErrors({})
 
     try {
-      // TODO (Fase 5): POST to /api/leads when the endpoint is implemented
-      // const res = await fetch('/api/leads', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(leadPayload),
-      // })
-      // if (!res.ok) throw new Error('Lead submission failed')
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          naam: form.naam,
+          email: form.email,
+          telefoon: form.telefoon,
+          adres: state.adres,
+          postcode: state.bagData?.postcode,
+          stad: state.bagData ? extractStad(state.adres) : null,
+          lat: state.bagData?.lat,
+          lon: state.bagData?.lon,
+          bagData: state.bagData,
+          healthScore: state.healthScore?.score,
+          netcongestieStatus: state.netcongestie?.status,
+          roiResult: state.roiResult,
+          meterkastAnalyse: state.meterkastAnalyse,
+          plaatsingsAnalyse: state.plaatsingsAnalyse,
+          omvormerAnalyse: state.omvormerAnalyse,
+          isdeSchatting: state.roiResult?.isdeSchatting,
+          gdprConsent: form.gdprConsent,
+        }),
+      })
 
-      // Temporary: log to console and simulate success
-      console.log('[TODO Fase 5] Lead submission payload:', leadPayload)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setLoading(false)
+        setErrors({ submit: (err as { error?: string }).error ?? 'Er is een fout opgetreden. Probeer opnieuw.' })
+        return
+      }
 
-      // Simulate network delay for UX
-      await new Promise((resolve) => setTimeout(resolve, 800))
-
-      const fakeLeadId = `LEAD-${Date.now()}`
-      dispatch({ type: 'SET_LEAD_ID', leadId: fakeLeadId })
+      const data = await res.json() as { leadId: string }
+      dispatch({ type: 'SET_LEAD_ID', leadId: data.leadId })
       setSubmitted(true)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Indienen mislukt. Probeer het opnieuw.')
@@ -299,9 +307,9 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
         </div>
 
         {/* Submit error */}
-        {submitError && (
+        {(errors.submit || submitError) && (
           <div className="bg-red-900/30 border border-red-700 rounded-lg px-3 py-2">
-            <p className="text-xs font-mono text-red-300">{submitError}</p>
+            <p className="text-xs font-mono text-red-300">{errors.submit ?? submitError}</p>
           </div>
         )}
 
