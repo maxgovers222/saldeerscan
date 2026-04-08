@@ -1,7 +1,11 @@
+import { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPseoPage, getTopPseoPages } from '@/lib/pseo'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
+
+// Deduplicate Supabase fetches: generateMetadata + page component share one request
+const getCachedPseoPage = cache(getPseoPage)
 
 // ISR: revalidate every 30 days
 export const revalidate = 2592000
@@ -25,7 +29,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const p = await params
-  const page = await getPseoPage(p)
+  const page = await getCachedPseoPage(p)
   if (!page) return { title: 'Pagina niet gevonden' }
 
   return {
@@ -45,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
 export default async function PseoStreetPage({ params }: { params: Promise<Params> }) {
   const p = await params
-  const page = await getPseoPage(p)
+  const page = await getCachedPseoPage(p)
   if (!page) notFound()
 
   const healthLabel = page.gemHealthScore

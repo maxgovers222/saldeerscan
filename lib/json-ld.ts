@@ -1,3 +1,4 @@
+// Pure schema builder — safe for server and build-time use
 export function buildLocalBusinessSchema(params: {
   straat: string
   stad: string

@@ -7,6 +7,21 @@ const PROVINCIES = [
   'drenthe', 'flevoland', 'zeeland', 'limburg',
 ]
 
+const PROVINCIE_SLUG_TO_NAAM: Record<string, string> = {
+  'noord-holland': 'Noord-Holland',
+  'zuid-holland': 'Zuid-Holland',
+  'utrecht': 'Utrecht',
+  'noord-brabant': 'Noord-Brabant',
+  'gelderland': 'Gelderland',
+  'overijssel': 'Overijssel',
+  'friesland': 'Friesland',
+  'groningen': 'Groningen',
+  'drenthe': 'Drenthe',
+  'flevoland': 'Flevoland',
+  'zeeland': 'Zeeland',
+  'limburg': 'Limburg',
+}
+
 export async function generateSitemaps() {
   return PROVINCIES.map(id => ({ id }))
 }
@@ -16,8 +31,7 @@ export default async function sitemap({ id }: { id: string | Promise<string> }):
   // In Next.js 16, id may be passed as a Promise
   const resolvedId = await Promise.resolve(id)
   // Convert slug back to provincie name for DB query
-  const provincieNaam = resolvedId.replace(/-/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())  // 'noord holland' → 'Noord Holland'
+  const provincieNaam = PROVINCIE_SLUG_TO_NAAM[resolvedId] ?? resolvedId
 
   let pages: Awaited<ReturnType<typeof getPseoPagesByProvincie>> = []
   try {

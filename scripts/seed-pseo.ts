@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import * as dotenv from 'dotenv'
+import { buildLocalBusinessSchema } from '../lib/json-ld'
 
 dotenv.config({ path: '.env.local' })
 
@@ -48,32 +49,6 @@ Return JSON:
   return JSON.parse(jsonMatch[0])
 }
 
-function buildJsonLd(page: typeof SAMPLE_PAGES[0], faqItems: Array<{vraag: string; antwoord: string}>) {
-  return {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'LocalBusiness',
-        name: `WoningEnergiePlan — ${page.straat}, ${page.stad}`,
-        address: {
-          '@type': 'PostalAddress',
-          streetAddress: page.straat,
-          addressLocality: page.stad,
-          addressRegion: page.provincie,
-          addressCountry: 'NL',
-        },
-      },
-      {
-        '@type': 'FAQPage',
-        mainEntity: faqItems.map(f => ({
-          '@type': 'Question',
-          name: f.vraag,
-          acceptedAnswer: { '@type': 'Answer', text: f.antwoord },
-        })),
-      },
-    ],
-  }
-}
 
 async function seed() {
   console.log(`Seeding ${SAMPLE_PAGES.length} pSEO pages...`)
@@ -84,7 +59,13 @@ async function seed() {
 
     try {
       const content = await generateContent(page)
-      const jsonLd = buildJsonLd(page, content.faqItems ?? [])
+      const jsonLd = buildLocalBusinessSchema({
+        straat: page.straat,
+        stad: page.stad,
+        provincie: page.provincie,
+        postcode: page.postcode_prefix,
+        faqItems: content.faqItems ?? [],
+      })
 
       const { error } = await supabase
         .from('pseo_pages')
