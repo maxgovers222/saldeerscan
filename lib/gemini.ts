@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
 
 // Model instances (lazy — initialized on first use via closure)
 function getFlashModel() {
-  return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 }
 
 export interface FAQ {
@@ -81,6 +81,21 @@ Antwoord uitsluitend in dit JSON formaat:
   }
 
   return parsed
+}
+
+// Wijk-niveau pSEO content — kort, autoritair, 2027-focused
+export async function generateWijkContent(params: {
+  wijk: string
+  stad: string
+  bouwjaar: number
+  netcongestie: 'ROOD' | 'ORANJE' | 'GROEN'
+}): Promise<string> {
+  const model = getFlashModel()
+
+  const prompt = `Schrijf een technische analyse voor de wijk ${params.wijk} in ${params.stad}. Gebruik het feit dat woningen hier gemiddeld uit ${params.bouwjaar} komen en de netstatus ${params.netcongestie} is. Focus op de financiële urgentie van 1 januari 2027 (einde salderen). Schrijf in een autoritaire, deskundige toon. Max 200 woorden.`
+
+  const result = await model.generateContent(prompt)
+  return result.response.text().trim()
 }
 
 // Tier 1 image screening — cheap, fast

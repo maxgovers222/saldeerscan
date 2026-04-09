@@ -4,16 +4,18 @@ export function rateLimit(
   ip: string,
   limit = 5,
   windowMs = 3_600_000,
+  namespace = 'default',
 ): {
   allowed: boolean
   remaining: number
   resetAt: number
 } {
   const now = Date.now()
-  const entry = rateLimitStore.get(ip)
+  const key = `${namespace}:${ip}`
+  const entry = rateLimitStore.get(key)
 
   if (!entry || now > entry.resetAt) {
-    rateLimitStore.set(ip, { count: 1, resetAt: now + windowMs })
+    rateLimitStore.set(key, { count: 1, resetAt: now + windowMs })
     return { allowed: true, remaining: limit - 1, resetAt: now + windowMs }
   }
 
@@ -36,10 +38,11 @@ export function applyRateLimit(
   request: Request,
   limit = 5,
   windowMs = 3_600_000,
+  namespace = new URL(request.url).pathname,
 ): { response: Response; rl: null } | { response: null; rl: ReturnType<typeof rateLimit> } {
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '127.0.0.1'
-  const rl = rateLimit(ip, limit, windowMs)
+  const rl = rateLimit(ip, limit, windowMs, namespace)
 
   if (!rl.allowed) {
     return {

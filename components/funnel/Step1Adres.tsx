@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, type Dispatch } from 'react'
+import { useState, useEffect, useRef, useCallback, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction } from './types'
+import { StepHeader } from './StepHeader'
+import { AnalysisLoading } from './AnalysisLoading'
 
 interface Step1AdresProps {
   state: FunnelState
@@ -10,10 +12,10 @@ interface Step1AdresProps {
 
 function HealthScoreGauge({ score, label }: { score: number; label: string }) {
   const colorClass =
-    score >= 75 ? 'text-emerald-400' :
-    score >= 55 ? 'text-amber-400' :
-    score >= 35 ? 'text-orange-400' :
-    'text-red-400'
+    score >= 75 ? 'text-emerald-600' :
+    score >= 55 ? 'text-amber-600' :
+    score >= 35 ? 'text-orange-600' :
+    'text-red-600'
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -25,36 +27,18 @@ function HealthScoreGauge({ score, label }: { score: number; label: string }) {
 
 function NetcongentieBadge({ status, netbeheerder }: { status: 'ROOD' | 'ORANJE' | 'GROEN'; netbeheerder: string }) {
   const config = {
-    ROOD: {
-      label: 'Vol stroomnet — batterij prioriteit',
-      textClass: 'text-red-400',
-      bgClass: 'bg-red-900/40 border-red-700',
-      dotClass: 'bg-red-400',
-    },
-    ORANJE: {
-      label: 'Druk stroomnet',
-      textClass: 'text-amber-400',
-      bgClass: 'bg-amber-900/40 border-amber-700',
-      dotClass: 'bg-amber-400',
-    },
-    GROEN: {
-      label: 'Vrij stroomnet',
-      textClass: 'text-emerald-400',
-      bgClass: 'bg-emerald-900/40 border-emerald-700',
-      dotClass: 'bg-emerald-400',
-    },
+    ROOD: { label: 'Vol stroomnet — batterij prioriteit', textClass: 'text-red-600', bgClass: 'bg-red-50 border-red-200', dotClass: 'bg-red-500' },
+    ORANJE: { label: 'Druk stroomnet', textClass: 'text-amber-600', bgClass: 'bg-amber-50 border-amber-200', dotClass: 'bg-amber-500' },
+    GROEN: { label: 'Vrij stroomnet', textClass: 'text-emerald-600', bgClass: 'bg-emerald-50 border-emerald-200', dotClass: 'bg-emerald-500' },
   }
-
   const c = config[status]
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${c.bgClass}`}>
       <span className={`w-2 h-2 rounded-full ${c.dotClass} shrink-0`} />
       <div>
         <span className={`text-xs font-mono font-semibold ${c.textClass}`}>{status}</span>
-        <span className="text-xs text-slate-400 ml-1.5">{c.label}</span>
-        {netbeheerder && (
-          <div className="text-xs text-slate-500 font-mono">{netbeheerder}</div>
-        )}
+        <span className="text-xs text-slate-500 ml-1.5">{c.label}</span>
+        {netbeheerder && <div className="text-xs text-slate-400 font-mono">{netbeheerder}</div>}
       </div>
     </div>
   )
@@ -63,16 +47,10 @@ function NetcongentieBadge({ status, netbeheerder }: { status: 'ROOD' | 'ORANJE'
 function LoadingSkeleton() {
   return (
     <div className="space-y-3 animate-pulse">
-      <div className="h-4 bg-slate-700 rounded w-3/4" />
-      <div className="h-4 bg-slate-700 rounded w-1/2" />
+      <div className="h-4 bg-slate-200 rounded w-3/4" />
+      <div className="h-4 bg-slate-200 rounded w-1/2" />
       <div className="grid grid-cols-2 gap-3">
-        <div className="h-16 bg-slate-700 rounded" />
-        <div className="h-16 bg-slate-700 rounded" />
-        <div className="h-16 bg-slate-700 rounded" />
-        <div className="h-16 bg-slate-700 rounded" />
-      </div>
-      <div className="h-1 bg-amber-500/30 rounded overflow-hidden">
-        <div className="h-full bg-amber-500 animate-[scan_1.5s_ease-in-out_infinite]" style={{ width: '40%' }} />
+        {[...Array(4)].map((_, i) => <div key={i} className="h-16 bg-slate-200 rounded" />)}
       </div>
     </div>
   )
@@ -80,84 +58,145 @@ function LoadingSkeleton() {
 
 function DataCard({ label, value, unit }: { label: string; value: string | number | null; unit?: string }) {
   return (
-    <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3">
-      <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">{label}</div>
-      <div className="font-mono font-bold text-amber-400 text-lg leading-none">
+    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+      <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1">{label}</div>
+      <div className="font-mono font-bold text-amber-600 text-lg leading-none">
         {value !== null && value !== undefined ? (
-          <>
-            {value}
-            {unit && <span className="text-xs text-slate-400 ml-1">{unit}</span>}
-          </>
-        ) : (
-          <span className="text-slate-600">—</span>
-        )}
+          <>{value}{unit && <span className="text-xs text-slate-500 ml-1">{unit}</span>}</>
+        ) : <span className="text-slate-300">—</span>}
       </div>
+    </div>
+  )
+}
+
+interface Suggestion { label: string; id: string }
+
+function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }: {
+  value: string; onChange: (v: string) => void; onSelect: (label: string) => void
+  isSelected: boolean; disabled: boolean
+}) {
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 3) { setSuggestions([]); setOpen(false); return }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/bag/suggest?q=${encodeURIComponent(q)}`)
+      if (res.ok) {
+        const data: Suggestion[] = await res.json()
+        setSuggestions(data)
+        setOpen(data.length > 0)
+      }
+    } catch { /* silent */ } finally { setLoading(false) }
+  }, [])
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value
+    onChange(v)
+    if (debounce.current) clearTimeout(debounce.current)
+    debounce.current = setTimeout(() => fetchSuggestions(v), 250)
+  }
+
+  function handleSelect(s: Suggestion) {
+    onSelect(s.label)
+    setSuggestions([])
+    setOpen(false)
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <input
+          type="text" value={value} onChange={handleChange}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
+          placeholder="Bijv. Prinsengracht 123, Amsterdam"
+          disabled={disabled} autoComplete="off"
+          className={[
+            'w-full bg-white border rounded-lg px-4 py-3 text-slate-800 placeholder:text-slate-400 font-mono text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-amber-500/50',
+            isSelected ? 'border-emerald-400 focus:border-emerald-400' : 'border-slate-300 focus:border-amber-500',
+          ].join(' ')}
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          {loading && <div className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />}
+          {isSelected && !loading && (
+            <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                <path d="M1.5 4l2 2 3-3" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {open && suggestions.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+          {suggestions.map((s) => (
+            <button key={s.id} type="button"
+              onMouseDown={(e) => { e.preventDefault(); handleSelect(s) }}
+              className="w-full text-left px-4 py-2.5 text-sm font-mono text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border-b border-slate-100 last:border-0">
+              <span className="text-amber-500/60 mr-2 text-xs">📍</span>{s.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
 export function Step1Adres({ state, dispatch }: Step1AdresProps) {
   const [inputValue, setInputValue] = useState(state.adres || '')
+  const [selectedAdres, setSelectedAdres] = useState<string | null>(state.adres || null)
   const [localLoading, setLocalLoading] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
 
   const hasResults = state.bagData !== null
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (!inputValue.trim() || inputValue.trim().length < 5) {
-      setLocalError('Voer een volledig adres in (minimaal 5 tekens)')
-      return
-    }
+  useEffect(() => {
+    if (state.adres && state.adres.length >= 5 && !state.bagData) doSearch(state.adres)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function doSearch(adres: string) {
     setLocalLoading(true)
     setLocalError(null)
-
     try {
-      // Fetch BAG data
-      const bagRes = await fetch(`/api/bag?adres=${encodeURIComponent(inputValue.trim())}`)
+      const bagRes = await fetch(`/api/bag?adres=${encodeURIComponent(adres)}`)
       if (!bagRes.ok) {
         const errData = await bagRes.json().catch(() => ({}))
         throw new Error((errData as { error?: string }).error || 'Adres niet gevonden in BAG')
       }
       const bagData = await bagRes.json()
+      dispatch({ type: 'SET_ADRES', adres })
+      dispatch({ type: 'SET_BAG_DATA', bagData: {
+        bouwjaar: bagData.bouwjaar, oppervlakte: bagData.oppervlakte,
+        woningtype: bagData.woningtype, postcode: bagData.postcode,
+        dakOppervlakte: bagData.dakOppervlakte, lat: bagData.lat, lon: bagData.lon,
+      }})
 
-      dispatch({ type: 'SET_ADRES', adres: inputValue.trim() })
-      dispatch({
-        type: 'SET_BAG_DATA',
-        bagData: {
-          bouwjaar: bagData.bouwjaar,
-          oppervlakte: bagData.oppervlakte,
-          woningtype: bagData.woningtype,
-          postcode: bagData.postcode,
-          dakOppervlakte: bagData.dakOppervlakte,
-          lat: bagData.lat,
-          lon: bagData.lon,
-        },
-      })
-
-      // Fetch netcongestie & ROI in parallel (if postcode available)
-      const postcode = bagData.postcode
       const promises: Promise<void>[] = []
-
-      if (postcode) {
+      if (bagData.postcode) {
         promises.push(
-          fetch(`/api/netcongestie?postcode=${encodeURIComponent(postcode)}`)
+          fetch(`/api/netcongestie?postcode=${encodeURIComponent(bagData.postcode)}`)
             .then(async (r) => {
               if (r.ok) {
                 const nc = await r.json()
                 dispatch({ type: 'SET_NETCONGESTIE', netcongestie: nc })
-
-                // Once we have netcongestie, compute ROI + health
                 if (bagData.oppervlakte && bagData.bouwjaar && bagData.dakOppervlakte) {
                   const roiRes = await fetch('/api/roi', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      oppervlakte: bagData.oppervlakte,
-                      bouwjaar: bagData.bouwjaar,
-                      dakOppervlakte: bagData.dakOppervlakte,
-                      netcongestieStatus: nc.status,
-                    }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oppervlakte: bagData.oppervlakte, bouwjaar: bagData.bouwjaar, dakOppervlakte: bagData.dakOppervlakte, netcongestieStatus: nc.status }),
                   })
                   if (roiRes.ok) {
                     const roiData = await roiRes.json()
@@ -166,33 +205,17 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
                   }
                 }
               }
-            })
-            .catch(() => {
-              // netcongestie not critical, continue
-            })
+            }).catch(() => {})
         )
       } else if (bagData.oppervlakte && bagData.bouwjaar && bagData.dakOppervlakte) {
         promises.push(
-          fetch('/api/roi', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              oppervlakte: bagData.oppervlakte,
-              bouwjaar: bagData.bouwjaar,
-              dakOppervlakte: bagData.dakOppervlakte,
-            }),
-          })
-            .then(async (r) => {
-              if (r.ok) {
-                const roiData = await r.json()
-                dispatch({ type: 'SET_ROI', roiResult: roiData.roi })
-                dispatch({ type: 'SET_HEALTH_SCORE', healthScore: roiData.health })
-              }
-            })
-            .catch(() => {})
+          fetch('/api/roi', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oppervlakte: bagData.oppervlakte, bouwjaar: bagData.bouwjaar, dakOppervlakte: bagData.dakOppervlakte }),
+          }).then(async (r) => {
+            if (r.ok) { const d = await r.json(); dispatch({ type: 'SET_ROI', roiResult: d.roi }); dispatch({ type: 'SET_HEALTH_SCORE', healthScore: d.health }) }
+          }).catch(() => {})
         )
       }
-
       await Promise.all(promises)
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Onbekende fout bij ophalen adresgegevens')
@@ -201,80 +224,63 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
     }
   }
 
-  function handleNext() {
-    dispatch({ type: 'SET_STEP', step: 2 })
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedAdres) return
+    await doSearch(selectedAdres)
+  }
+
+  function handleInputChange(v: string) {
+    setInputValue(v)
+    if (selectedAdres && v !== selectedAdres) setSelectedAdres(null)
   }
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <p className="text-[10px] font-mono text-amber-400 tracking-widest uppercase mb-1">// STAP 01 — ADRESVERIFICATIE</p>
-        <h2 className="text-xl font-bold text-slate-100">Voer uw adres in</h2>
-        <p className="text-sm text-slate-400 mt-0.5">Wij analyseren uw woning via het Kadaster BAG register</p>
-      </div>
+      <StepHeader stap="// STAP 01 — ADRESVERIFICATIE" title="Voer uw adres in" subtitle="Selecteer uw adres voor een nauwkeurige BAG-analyse" />
 
-      {/* Search form */}
-      <form onSubmit={handleSearch} className="space-y-3">
-        <div className="relative">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Bijv. Prinsengracht 123, Amsterdam"
-            className="w-full bg-slate-900 border border-slate-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 rounded-lg px-4 py-3 text-slate-100 placeholder:text-slate-600 font-mono text-sm transition-colors"
-            disabled={localLoading}
-            autoComplete="street-address"
-          />
-          {localLoading && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <AddressAutocomplete
+          value={inputValue} onChange={handleInputChange}
+          onSelect={(label) => { setInputValue(label); setSelectedAdres(label); setLocalError(null) }}
+          isSelected={!!selectedAdres} disabled={localLoading}
+        />
+
+        {!selectedAdres && inputValue.length >= 3 && (
+          <p className="text-[10px] font-mono text-slate-400">
+            <span className="text-amber-500">›</span> Selecteer een adres uit de suggesties om door te gaan
+          </p>
+        )}
 
         {localError && (
-          <div className="flex items-start gap-2 bg-red-900/30 border border-red-700 rounded-lg px-3 py-2">
-            <span className="text-red-400 text-xs mt-0.5">!</span>
-            <p className="text-red-300 text-xs font-mono">{localError}</p>
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <span className="text-red-500 text-xs mt-0.5">!</span>
+            <p className="text-red-600 text-xs font-mono">{localError}</p>
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={localLoading || inputValue.trim().length < 5}
-          className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-slate-900 font-bold py-3 px-6 rounded-lg transition-colors font-mono text-sm"
-        >
+        <button type="submit" disabled={!selectedAdres || localLoading}
+          className="w-full bg-[#00aa65] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-full transition-colors font-mono text-sm">
           {localLoading ? 'Analyseren...' : 'Adres Analyseren'}
         </button>
       </form>
 
-      {/* Loading skeleton */}
-      {localLoading && (
-        <div className="pt-2">
-          <LoadingSkeleton />
-        </div>
-      )}
+      {localLoading && <AnalysisLoading wijk={state.wijk || undefined} />}
 
-      {/* Results */}
       {hasResults && !localLoading && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-slate-700" />
-            <span className="text-[10px] font-mono text-slate-500 tracking-widest uppercase">Scan Resultaat</span>
-            <div className="h-px flex-1 bg-slate-700" />
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-[10px] font-mono text-slate-400 tracking-widest uppercase">Scan Resultaat</span>
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
 
-          {/* Address confirmation */}
-          <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3">
-            <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Geanalyseerd adres</div>
-            <div className="font-mono text-slate-100 text-sm">{state.adres}</div>
-            {state.bagData?.postcode && (
-              <div className="font-mono text-slate-400 text-xs mt-0.5">{state.bagData.postcode}</div>
-            )}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1">Geanalyseerd adres</div>
+            <div className="font-mono text-slate-800 text-sm">{state.adres}</div>
+            {state.bagData?.postcode && <div className="font-mono text-slate-500 text-xs mt-0.5">{state.bagData.postcode}</div>}
           </div>
 
-          {/* Data grid */}
           <div className="grid grid-cols-2 gap-3">
             <DataCard label="Bouwjaar" value={state.bagData?.bouwjaar ?? null} />
             <DataCard label="Oppervlakte" value={state.bagData?.oppervlakte ?? null} unit="m²" />
@@ -282,24 +288,22 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
             <DataCard label="Dakoppervlak" value={state.bagData?.dakOppervlakte ?? null} unit="m²" />
           </div>
 
-          {/* Netcongestie */}
           {state.netcongestie && (
             <div>
-              <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1.5">Netcongestie</div>
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1.5">Netcongestie</div>
               <NetcongentieBadge status={state.netcongestie.status} netbeheerder={state.netcongestie.netbeheerder} />
             </div>
           )}
 
-          {/* Health Score */}
           {state.healthScore && (
-            <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
-              <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-3">Energiepotentieel Score</div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-3">Energiepotentieel Score</div>
               <div className="flex items-center justify-between">
                 <HealthScoreGauge score={state.healthScore.score} label={state.healthScore.label} />
                 <div className="flex-1 ml-4 space-y-1">
                   {state.healthScore.aanbevelingen.slice(0, 2).map((a, i) => (
-                    <p key={i} className="text-xs text-slate-400 font-mono leading-relaxed">
-                      <span className="text-amber-500 mr-1">›</span>{a}
+                    <p key={i} className="text-xs text-slate-500 font-mono leading-relaxed">
+                      <span className="text-amber-600 mr-1">›</span>{a}
                     </p>
                   ))}
                 </div>
@@ -307,13 +311,9 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
             </div>
           )}
 
-          {/* Next step */}
-          <button
-            onClick={handleNext}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-3 px-6 rounded-lg transition-colors font-mono text-sm flex items-center justify-center gap-2"
-          >
-            Bekijk besparingsanalyse
-            <span>→</span>
+          <button onClick={() => dispatch({ type: 'SET_STEP', step: 2 })}
+            className="w-full bg-[#00aa65] hover:opacity-90 text-white font-bold py-3 px-6 rounded-full transition-colors font-mono text-sm flex items-center justify-center gap-2">
+            Bekijk besparingsanalyse <span>→</span>
           </button>
         </div>
       )}

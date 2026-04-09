@@ -76,6 +76,8 @@ export interface OmvormerAnalyse {
 export interface FunnelState {
   step: 1 | 2 | 3 | 4 | 5 | 6
   adres: string
+  wijk: string
+  stad: string
   bagData: {
     bouwjaar: number | null
     oppervlakte: number | null
@@ -104,6 +106,7 @@ export interface FunnelState {
 
 export type FunnelAction =
   | { type: 'SET_STEP'; step: FunnelState['step'] }
+  | { type: 'SET_WIJK'; wijk: string; stad: string }
   | { type: 'SET_BAG_DATA'; bagData: FunnelState['bagData'] }
   | { type: 'SET_NETCONGESTIE'; netcongestie: FunnelState['netcongestie'] }
   | { type: 'SET_HEALTH_SCORE'; healthScore: HealthScoreResult }

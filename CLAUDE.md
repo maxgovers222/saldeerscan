@@ -1,1 +1,192 @@
 @AGENTS.md
+
+# Saldeerscan.nl — pSEO Lead Fabriek
+
+Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.000+ statische pagina's (pSEO op straat- én wijk-niveau) die converteren via een 6-staps funnel naar 'Technisch Dossiers' voor B2B partners (installateurs). Kernurgentie: einde salderen per 1 januari 2027.
+
+## Stack
+
+| Laag | Keuze |
+|------|-------|
+| Framework | Next.js 16.2.2 + React 19 (App Router) |
+| Styling | Tailwind v4 (CSS-first config, geen tailwind.config.ts) |
+| UI | Shadcn/UI v4 + `@base-ui/react` |
+| Database | Supabase (Postgres) |
+| Supabase client | `@supabase/ssr` — drie clients: `lib/supabase/server.ts`, `lib/supabase/browser.ts`, `lib/supabase/admin.ts` |
+| Geocoding | Mapbox Search JS React (`@mapbox/search-js-react`) |
+| Grafieken | Recharts v3 |
+| AI — screening | Gemini 2.5 Flash (`@google/generative-ai`) |
+| AI — diepanalyse | Claude claude-sonnet-4-6 (`@anthropic-ai/sdk`) |
+| Scripts | `tsx` — draai met `npx tsx scripts/<naam>.ts` |
+
+## Projectstructuur
+
+```
+app/
+  page.tsx                          # Homepage: deep navy hero + SVG grid + adreszoek + USPs + stats
+  layout.tsx                        # Fonts: Bricolage Grotesque (headings) + DM Sans (body)
+  globals.css                       # Tailwind v4 + design tokens + .glass-card-navy utility
+  sitemap.ts                        # Gesplitste sitemaps per provincie
+  check/page.tsx                    # 6-staps Super Funnel (Suspense + useSearchParams voor ?adres=, ?wijk=, ?stad= prefill)
+  [provincie]/[stad]/[wijk]/page.tsx          # pSEO wijk-pagina (ISR 30d) — nieuw
+  [provincie]/[stad]/[wijk]/[straat]/page.tsx # pSEO adrespagina (ISR 30d)
+  api/
+    bag/route.ts                    # BAG/PDOK lookup
+    bag/suggest/route.ts            # Adres autocomplete suggesties
+    netcongestie/route.ts           # Netbeheer NL congestion check
+    roi/route.ts                    # ROI + 2027 shock-effect
+    health-score/route.ts           # Energie score 0-100
+    vision/route.ts                 # Two-tier Vision analyse
+    generate-content/route.ts       # Gemini Flash pSEO content
+    leads/route.ts                  # Lead opslaan + webhook trigger
+    webhooks/b2b/route.ts           # B2B partner webhook dispatcher
+
+components/
+  funnel/
+    FunnelContainer.tsx             # useReducer state machine (6 stappen), accepteert initialAdres/initialWijk/initialStad props + localStorage persistentie
+    Step1Adres.tsx                  # Auto-zoekt bij mount als initialAdres aanwezig; AnalysisLoading tijdens fetch
+    Step2ROI.tsx … Step6LeadCapture.tsx
+    Shock2027Banner.tsx             # 2027 saldering urgentie component
+    PhotoUpload.tsx                 # Dropzone + vision API
+    FunnelProgress.tsx
+    AnalysisLoading.tsx             # Labor illusion loader met roterende berichten (BAG / netcapaciteit / ROI)
+    StepHeader.tsx                  # Gedeelde stap-header component
+    types.ts                        # Gedeelde funnel types (incl. wijk + stad in FunnelState)
+  pseo/
+    LocalSchema.tsx                 # JSON-LD LocalBusiness + FAQPage injectie (prop: jsonLd)
+  ui/                               # Shadcn componenten
+
+lib/
+  bag.ts                            # BAG adapter (Mapbox → PDOK)
+  netcongestie.ts                   # Postcode-prefix cache lookup
+  roi.ts                            # ROI algoritme + saldering afbouw 2026→2027
+  health-score.ts                   # Score 0-100 (bouwjaar/label/dak/congestie)
+  gemini.ts                         # Gemini 2.5 Flash adapter (pSEO content + screening + generateWijkContent)
+  vision.ts                         # Two-tier: Gemini screen → Claude diepanalyse + withRetry
+  webhooks.ts                       # HMAC-SHA256 signed B2B dispatcher (consent-gated)
+  rate-limit.ts                     # In-memory sliding window, namespace per route
+  pseo.ts                           # pSEO page helpers (incl. getWijkPage + getTopWijken)
+  json-ld.ts                        # JSON-LD builder
+  supabase/server.ts|browser.ts|admin.ts
+
+scripts/
+  seed-netcongestie.ts              # Seed netcongestie_cache tabel
+  seed-pseo.ts                      # Seed eerste batch pSEO adrespagina's
+  seed-wijken.ts                    # Golden batch seed: 6 focus wijken via Gemini AI
+
+supabase/migrations/
+  20260407000001_leads.sql
+  20260407000002_pseo_pages.sql
+  20260407000003_netcongestie_cache.sql   # Bevat ook b2b_partners tabel + FK naar leads
+  20260410000001_pseo_status.sql          # Voegt status kolom toe aan pseo_pages (draft/published)
+```
+
+## Database tabellen
+
+- **leads** — volledig verrijkt lead record; GDPR-constraint blokkeert B2B export zonder consent
+- **pseo_pages** — gegenereerde pagina's (slug, SEO content, JSON-LD, stats); kolom `status` (draft/published)
+- **netcongestie_cache** — postcode-prefix → ROOD/ORANJE/GROEN (TTL 24h)
+- **b2b_partners** — webhook URL, HMAC key hash, lead filter (min score, provincie, etc.)
+
+## Kritieke architectuurbeslissingen
+
+### Vision: two-tier kostenbeheer
+`lib/vision.ts` werkt in twee lagen:
+1. **Tier 1 — Gemini 2.5 Flash** (screening, ~€0.0001/call): beantwoordt "Is dit een [type]? Ja/Nee + confidence". Drempel: confidence < 0.7 → foutmelding naar gebruiker.
+2. **Tier 2 — Claude claude-sonnet-4-6** (diepanalyse, alleen als Tier 1 ≥ 0.7): geeft gestructureerde JSON terug per type (meterkast/plaatsing/omvormer).
+
+`withRetry` wrapper in `vision.ts` handelt Claude 529 (overloaded) en 429 (rate limit) af met exponential backoff (1s, 2s, 3s).
+
+### GDPR consent gate
+De B2B webhook dispatcher in `lib/webhooks.ts` controleert altijd `gdpr_consent === true` vóór dispatch. Zonder consent: nul webhooks, log warning. De database heeft een CHECK constraint `b2b_requires_consent` als extra zekerheid.
+
+### Saldering afbouw 2027
+`lib/roi.ts` heeft een `SALDERING_SCHEMA` map (2025: 64%, 2026: 28%, 2027: 0%). Het `shockEffect2027` object drijft urgentie in `Shock2027Banner.tsx` én op pSEO-pagina's.
+
+### Rate limiting
+`lib/rate-limit.ts` — in-memory sliding window, 5 req/IP/uur, **namespace per route** (key = `${pathname}:${ip}`). Voorkomt dat BAG + ROI + netcongestie calls dezelfde teller delen. Voor productie vervangen door Upstash Redis.
+
+### URL pre-fill handshake
+`app/check/page.tsx` leest `useSearchParams()` (wrapped in `Suspense`):
+- `?adres=` → `initialAdres` → `FunnelContainer` → `Step1Adres` triggert `doSearch()` automatisch bij mount
+- `?wijk=` + `?stad=` → `initialWijk` / `initialStad` → in `FunnelState` → gebruikt door `AnalysisLoading` voor dynamische berichten
+
+wijk-pSEO CTA linkt naar `/check?wijk=[wijk]&stad=[stad]` om de URL handshake te activeren.
+
+### Funnel localStorage persistentie
+`FunnelContainer` slaat volledige `FunnelState` op in `localStorage` (key: `funnel_state`). Bij herladen verschijnt een "Doorgaan waar je was?" banner.
+
+### pSEO routes — twee niveaus
+- **Straat-niveau**: `app/[provincie]/[stad]/[wijk]/[straat]/page.tsx` — ISR 30d, `generateStaticParams()` pre-bouwt top-500 straten op `aantal_woningen`
+- **Wijk-niveau**: `app/[provincie]/[stad]/[wijk]/page.tsx` — ISR 30d, `generateStaticParams()` via `getTopWijken(500)`, AI-content via `generateWijkContent()` in Gemini
+
+### Sitemaps
+`app/sitemap.ts` gebruikt `generateSitemaps()` om per provincie een apart XML-bestand te genereren (max 50k URL's per sitemap). Resultaat: `/sitemap/noord-holland.xml` etc.
+
+### ROI validatie
+`app/api/roi/route.ts` — bouwjaar validatie: `< 1000 || > 2030` (niet < 1800, want panden zoals Anne Frank Huis zijn 1635). DakOppervlakte max: 5000 m² (niet 500).
+
+## Design systeem
+
+**Identiteit: High-End Engineering Dashboard — deep navy + amber**
+
+Homepage en pSEO pagina's: dark navy achtergrond. Funnel cards (`/check`): wit/licht.
+
+| Gebied | Waarde |
+|--------|--------|
+| Hero / pagina achtergrond | `#020617` (slate-950) → `#0f172a` (slate-900) gradient |
+| Section achtergrond (afwisselend) | `#020617` / `#0f172a` |
+| Card (glassmorphism, op donker) | `bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl` of `.glass-card-navy` |
+| Card (funnel, op licht) | `bg-white border border-slate-200 rounded-2xl` |
+| Amber CTA button | `bg-amber-500 text-slate-950 shadow-[0_0_25px_rgba(245,158,11,0.4)] active:scale-105` |
+| Disabled button | `disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none` |
+| Stats / highlight cijfers | `#f59e0b` (amber-500) |
+| Status ROOD | `bg-red-50 border-red-200 text-red-600` (licht) / `bg-red-950/50 border-red-700 text-red-400` (donker) |
+| Status ORANJE | `bg-amber-50 border-amber-200 text-amber-600` (licht) / `bg-amber-950/50 border-amber-700 text-amber-400` (donker) |
+| Status GROEN | `bg-emerald-50 border-emerald-200 text-emerald-600` (licht) / `bg-emerald-950/50 border-emerald-700 text-emerald-400` (donker) |
+| SVG grid (hero only) | opacity 0.03, fade via `maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)'` |
+
+Fonts (via `app/layout.tsx`, Next.js Google Fonts):
+- **Bricolage Grotesque** — koppen (H1-H6), `var(--font-heading)`
+- **DM Sans** — body tekst, `var(--font-sans)`
+- **ui-monospace** — code/data labels, `font-mono`
+
+## Environment variables
+
+Kopieer `.env.example` naar `.env.local` en vul in:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+MAPBOX_ACCESS_TOKEN=        # Server-side only (lib/bag.ts geocoding)
+GOOGLE_AI_API_KEY=          # Gemini 2.5 Flash (screening + pSEO content + wijk seed)
+ANTHROPIC_API_KEY=          # Claude claude-sonnet-4-6 (vision diepanalyse)
+EPONLINE_API_KEY=           # EP-online RVO (energie labels)
+```
+
+## NPM scripts
+
+```bash
+npm run dev               # Start dev server
+npm run build             # Production build
+npm run seed:netcongestie # Seed netcongestie_cache tabel
+npm run seed:pseo         # Seed eerste batch pSEO adrespagina's
+npm run seed:wijken       # Golden batch: 6 focus wijken via Gemini (voer DB migratie eerst uit)
+```
+
+## Verificatie checklist
+
+- `curl /api/bag?adres=Prinsengracht+123+Amsterdam` → BAG JSON
+- ROI voor 1975 rijtjeshuis (110m²) → €400-800/jaar besparing
+- ROI voor pre-1800 pand (bouwjaar 1635) → werkt zonder 400 error
+- Homepage adres invoeren → redirect naar `/check?adres=...` → auto-zoek triggered
+- `/check?wijk=IJburg&stad=Amsterdam` → Step 1 AnalysisLoading toont "Netcapaciteit IJburg verifiëren..."
+- pSEO straat-route laadt met JSON-LD in `<head>`
+- pSEO wijk-route (`/utrecht/utrecht/leidsche-rijn`) laadt na seed
+- GDPR checkbox niet aangevinkt → submit geblokkeerd
+- 6e identiek request zelfde IP op zelfde route → 429 met `Retry-After: 3600`
+- Lead zonder `gdpr_consent` → webhook nooit verstuurd
+- `/sitemap/noord-holland.xml` → alleen Noord-Holland URLs
+- Vision: verkeerde foto → 422 screening error, juiste foto → analyse JSON
+- Step 6: floating rapport-kaart zichtbaar met adres + score + besparing/jaar

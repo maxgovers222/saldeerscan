@@ -22,3 +22,9 @@ CREATE INDEX netcongestie_expires_idx ON netcongestie_cache(expires_at);
 
 -- Add updated_at to b2b_partners for audit trail
 ALTER TABLE b2b_partners ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- FK from leads.b2b_partner_id → b2b_partners.id (applied here, after b2b_partners exists)
+ALTER TABLE leads
+  ADD CONSTRAINT leads_b2b_partner_fk
+  FOREIGN KEY (b2b_partner_id) REFERENCES b2b_partners(id) ON DELETE SET NULL
+  DEFERRABLE INITIALLY DEFERRED;

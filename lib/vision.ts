@@ -4,6 +4,23 @@ import { screenImage } from '@/lib/gemini'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn()
+    } catch (err: unknown) {
+      const isOverloaded = err instanceof Anthropic.APIError && err.status === 529
+      const isRateLimit = err instanceof Anthropic.APIError && err.status === 429
+      if ((isOverloaded || isRateLimit) && attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, 1000 * attempt))
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error('Max retries reached')
+}
+
 // --- Types ---
 
 export interface MeterkastAnalyse {
@@ -36,7 +53,7 @@ export interface OmvormerAnalyse {
 const SCREENING_THRESHOLD = 0.7  // Minimum confidence for Tier 1 pass
 
 async function deepAnalyseMeterkast(imageBase64: string, mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'): Promise<MeterkastAnalyse> {
-  const response = await anthropic.messages.create({
+  const response = await withRetry(() => anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [{
@@ -70,7 +87,7 @@ Antwoord uitsluitend in dit JSON formaat:
         },
       ],
     }],
-  })
+  }))
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -88,7 +105,7 @@ Antwoord uitsluitend in dit JSON formaat:
 }
 
 async function deepAnalysePlaatsing(imageBase64: string, mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'): Promise<PlaatsingsAnalyse> {
-  const response = await anthropic.messages.create({
+  const response = await withRetry(() => anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [{
@@ -121,7 +138,7 @@ Antwoord uitsluitend in dit JSON formaat:
         },
       ],
     }],
-  })
+  }))
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -137,7 +154,7 @@ Antwoord uitsluitend in dit JSON formaat:
 }
 
 async function deepAnalyseOmvormer(imageBase64: string, mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'): Promise<OmvormerAnalyse> {
-  const response = await anthropic.messages.create({
+  const response = await withRetry(() => anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [{
@@ -171,7 +188,7 @@ Antwoord uitsluitend in dit JSON formaat:
         },
       ],
     }],
-  })
+  }))
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)

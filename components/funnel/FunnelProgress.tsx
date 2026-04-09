@@ -13,50 +13,42 @@ const STEPS = [
   { label: 'Aanvraag', num: 6 },
 ] as const
 
+const GREEN = '#00aa65'
+const GREEN_DARK = '#0e352e'
+
 export function FunnelProgress({ currentStep }: FunnelProgressProps) {
   return (
     <div className="w-full">
-      {/* Progress bar */}
-      <div className="h-0.5 bg-slate-700 rounded-full mb-4 overflow-hidden">
+      <div className="h-1 rounded-full mb-4 overflow-hidden" style={{ background: '#d1fae5' }}>
         <div
-          className="h-full bg-amber-500 transition-all duration-500 ease-out"
-          style={{ width: `${((currentStep - 1) / 5) * 100}%` }}
+          className="h-full transition-all duration-500 ease-out rounded-full"
+          style={{ width: `${((currentStep - 1) / 5) * 100}%`, background: `linear-gradient(90deg, ${GREEN_DARK}, ${GREEN})` }}
         />
       </div>
 
-      {/* Step indicators */}
       <div className="flex justify-between">
         {STEPS.map(({ label, num }) => {
           const isCompleted = num < currentStep
           const isActive = num === currentStep
-          const isFuture = num > currentStep
 
           return (
             <div key={num} className="flex flex-col items-center gap-1.5">
               <div
-                className={[
-                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold transition-all duration-300',
-                  isCompleted
-                    ? 'bg-emerald-500 text-white'
-                    : isActive
-                    ? 'bg-amber-500 text-slate-900 ring-2 ring-amber-400/50 ring-offset-1 ring-offset-slate-900'
-                    : 'bg-slate-600 text-slate-400',
-                ].join(' ')}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
+                style={
+                  isCompleted ? { background: GREEN, color: 'white', boxShadow: `0 0 0 2px white, 0 0 0 3px ${GREEN}40` }
+                  : isActive ? { background: GREEN_DARK, color: 'white', boxShadow: `0 0 0 2px white, 0 0 0 3px ${GREEN_DARK}30` }
+                  : { background: 'white', color: '#94a3b8', border: '1px solid #e2e8f0' }
+                }
               >
                 {isCompleted ? (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                     <path d="M2 6l2.5 2.5L10 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                ) : (
-                  <span>{num}</span>
-                )}
+                ) : <span>{num}</span>}
               </div>
-              <span
-                className={[
-                  'text-[10px] font-mono hidden sm:block transition-colors duration-300',
-                  isActive ? 'text-amber-400 font-semibold' : isCompleted ? 'text-emerald-400' : 'text-slate-500',
-                ].join(' ')}
-              >
+              <span className="text-[10px] font-mono hidden sm:block transition-colors duration-300"
+                style={{ color: isActive ? GREEN_DARK : isCompleted ? GREEN : '#94a3b8', fontWeight: isActive ? 600 : 400 }}>
                 {label}
               </span>
             </div>
@@ -64,9 +56,8 @@ export function FunnelProgress({ currentStep }: FunnelProgressProps) {
         })}
       </div>
 
-      {/* Mobile: active step label */}
       <div className="mt-2 text-center sm:hidden">
-        <span className="text-xs font-mono text-amber-400">
+        <span className="text-xs font-mono" style={{ color: GREEN_DARK }}>
           Stap {currentStep}/6 — {STEPS[currentStep - 1].label}
         </span>
       </div>
