@@ -128,24 +128,24 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   return (
     <div className="space-y-6">
       {showResumeBanner && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between gap-3">
-          <div className="text-sm font-mono text-amber-800">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="text-sm font-mono text-amber-300">
             <span className="font-bold">Vorige sessie gevonden</span> — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
           </div>
           <div className="flex gap-2 shrink-0">
             <button onClick={resumeSavedState}
-              className="text-xs font-bold bg-amber-500 text-white px-3 py-1.5 rounded-full hover:bg-amber-600 transition-colors">
+              className="text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:opacity-90">
               Doorgaan
             </button>
             <button onClick={() => { setResumeBannerDismissed(true); localStorage.removeItem(STORAGE_KEY) }}
-              className="text-xs font-mono text-amber-600 hover:text-amber-800 px-2 py-1.5">
+              className="text-xs font-mono text-amber-400/70 hover:text-amber-300 px-2 py-1.5 transition-colors">
               Opnieuw
             </button>
           </div>
         </div>
       )}
       <FunnelProgress currentStep={state.step} />
-      <div className="rounded-xl border border-slate-200 bg-white shadow-md overflow-hidden">
+      <div className="glass-card-navy rounded-2xl overflow-hidden">
         {state.step === 1 && <Step1Adres state={state} dispatch={dispatch} />}
         {state.step === 2 && <Step2ROI state={state} dispatch={dispatch} />}
         {state.step === 3 && <Step3Meterkast state={state} dispatch={dispatch} />}

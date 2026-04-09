@@ -39,23 +39,25 @@ interface LeadFormData {
   gdprConsent: boolean
 }
 
+const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
+
 function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: number; apparaatType: string; vermogenKwp: number }) {
   if (bedragEur <= 0) return null
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-      <div className="text-[10px] font-mono text-amber-600 uppercase tracking-widest mb-2">ISDE Subsidie Schatting</div>
+    <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-4">
+      <div className="text-[10px] font-mono text-amber-400 uppercase tracking-widest mb-2">ISDE Subsidie Schatting</div>
       <div className="flex items-baseline gap-2 mb-2">
-        <span className="font-mono font-bold text-amber-600 text-2xl">€{bedragEur.toLocaleString('nl-NL')}</span>
-        <span className="text-xs font-mono text-slate-400">via ISDE-regeling</span>
+        <span className="font-mono font-bold text-amber-400 text-2xl">€{bedragEur.toLocaleString('nl-NL')}</span>
+        <span className="text-xs font-mono text-white/30">via ISDE-regeling</span>
       </div>
       <div className="grid grid-cols-2 gap-2 mt-2">
         <div>
-          <div className="text-[10px] font-mono text-slate-400">Apparaat</div>
-          <div className="text-sm font-mono text-slate-700">{apparaatType}</div>
+          <div className="text-[10px] font-mono text-white/40">Apparaat</div>
+          <div className="text-sm font-mono text-white/70">{apparaatType}</div>
         </div>
         <div>
-          <div className="text-[10px] font-mono text-slate-400">Vermogen</div>
-          <div className="text-sm font-mono text-slate-700">{vermogenKwp} kWp</div>
+          <div className="text-[10px] font-mono text-white/40">Vermogen</div>
+          <div className="text-sm font-mono text-white/70">{vermogenKwp} kWp</div>
         </div>
       </div>
     </div>
@@ -65,27 +67,27 @@ function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: 
 function SuccessState() {
   return (
     <div className="text-center space-y-4 py-8">
-      <div className="w-16 h-16 bg-emerald-50 border border-emerald-300 rounded-full flex items-center justify-center mx-auto">
+      <div className="w-16 h-16 bg-emerald-950/30 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <path d="M6 16l6 6L26 8" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M6 16l6 6L26 8" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
       <div>
-        <h3 className="text-xl font-bold text-[#0e352e]">Aanvraag ingediend!</h3>
-        <p className="text-sm text-slate-500 mt-2 font-mono">
+        <h3 className="text-xl font-bold text-white">Aanvraag ingediend!</h3>
+        <p className="text-sm text-white/50 mt-2 font-mono">
           Een gecertificeerde installateur neemt binnen 24 uur contact op.
         </p>
       </div>
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-left space-y-2">
-        <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Volgende stappen</div>
+      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 text-left space-y-2">
+        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Volgende stappen</div>
         {[
           'Installateur bekijkt uw energiedossier',
           'U ontvangt een persoonlijke offerte',
           'Gratis inspectie op locatie',
           'ISDE subsidie aanvraag begeleiding',
         ].map((step, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs font-mono text-slate-600">
-            <span className="text-emerald-600 font-bold">{i + 1}.</span>
+          <div key={i} className="flex items-center gap-2 text-xs font-mono text-white/60">
+            <span className="text-emerald-400 font-bold">{i + 1}.</span>
             {step}
           </div>
         ))}
@@ -94,7 +96,7 @@ function SuccessState() {
   )
 }
 
-const inputBase = 'w-full bg-white border rounded-lg px-4 py-3 text-slate-800 placeholder:text-slate-400 font-mono text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-amber-500/50'
+const inputBase = 'w-full bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-mono text-sm transition-colors focus:outline-none amber-glow'
 
 export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
   const [form, setForm] = useState<LeadFormData>({ naam: '', email: '', telefoon: '', gdprConsent: false })
@@ -164,8 +166,8 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
       {isde && <IsdeSummaryCard {...isde} />}
 
       {/* Floating report preview card */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-        <div className="text-[10px] font-mono text-amber-600 uppercase tracking-widest mb-3">📄 Persoonlijk Investeringsrapport 2027</div>
+      <div className="bg-slate-900/40 border border-white/10 rounded-2xl p-5">
+        <div className="text-[10px] font-mono text-amber-400 uppercase tracking-widest mb-3">📄 Persoonlijk Investeringsrapport 2027</div>
         <div className="space-y-1.5 mb-3">
           {[
             { label: 'ROI-berekening', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}/jaar` : '—', done: !!state.roiResult },
@@ -175,38 +177,38 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
             { label: '2027 urgentie tijdlijn', value: 'Inbegrepen', done: true },
           ].map(({ label, value, done }) => (
             <div key={label} className="flex items-center justify-between text-xs font-mono">
-              <span className="flex items-center gap-1.5 text-slate-500">
-                <span className={done ? 'text-emerald-500' : 'text-slate-300'}>✓</span>
+              <span className="flex items-center gap-1.5 text-white/50">
+                <span className={done ? 'text-emerald-400' : 'text-white/20'}>✓</span>
                 {label}
               </span>
-              <span className="text-slate-700 font-semibold">{value}</span>
+              <span className="text-white/70 font-semibold">{value}</span>
             </div>
           ))}
         </div>
         {state.adres && (
-          <div className="pt-2 border-t border-slate-200">
-            <div className="text-[10px] font-mono text-slate-400 mb-0.5">Adres</div>
-            <div className="text-xs font-mono text-slate-600 truncate">{state.adres}</div>
+          <div className="pt-2 border-t border-white/10">
+            <div className="text-[10px] font-mono text-white/40 mb-0.5">Adres</div>
+            <div className="text-xs font-mono text-white/60 truncate">{state.adres}</div>
           </div>
         )}
         {state.healthScore && (
           <div className="flex gap-4 mt-2">
             <div>
-              <div className="text-[10px] font-mono text-slate-400">Score</div>
-              <div className="text-sm font-mono font-bold text-amber-600">{state.healthScore.score}/100</div>
+              <div className="text-[10px] font-mono text-white/40">Score</div>
+              <div className="text-sm font-mono font-bold text-amber-400">{state.healthScore.score}/100</div>
             </div>
             {state.roiResult && (
               <div>
-                <div className="text-[10px] font-mono text-slate-400">Besparing/jaar</div>
-                <div className="text-sm font-mono font-bold text-emerald-600">€{state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}</div>
+                <div className="text-[10px] font-mono text-white/40">Besparing/jaar</div>
+                <div className="text-sm font-mono font-bold text-emerald-400">€{state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}</div>
               </div>
             )}
           </div>
         )}
       </div>
 
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-        <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-3">Uw energiedossier</div>
+      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4">
+        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">Uw energiedossier</div>
         <div className="space-y-1.5">
           {[
             { label: 'Adres', value: state.adres || '—', done: !!state.adres },
@@ -216,8 +218,8 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
             { label: 'Omvormer', value: state.omvormerAnalyse ? `${state.omvormerAnalyse.merk ?? 'Onbekend'}` : 'Niet gescand', done: !!state.omvormerAnalyse },
           ].map(({ label, value, done }) => (
             <div key={label} className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-400">{label}</span>
-              <span className={done ? 'text-slate-700' : 'text-slate-400'}>{value}</span>
+              <span className="text-white/40">{label}</span>
+              <span className={done ? 'text-white/70' : 'text-white/30'}>{value}</span>
             </div>
           ))}
         </div>
@@ -230,14 +232,14 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           { id: 'lead-telefoon', label: 'Telefoonnummer *', type: 'tel', key: 'telefoon' as const, placeholder: '06 12345678', auto: 'tel' },
         ].map(({ id, label, type, key, placeholder, auto }) => (
           <div key={key} className="space-y-1.5">
-            <label className="text-xs font-mono text-slate-500 uppercase tracking-widest" htmlFor={id}>{label}</label>
+            <label className="text-xs font-mono text-white/50 uppercase tracking-widest" htmlFor={id}>{label}</label>
             <input
               id={id} type={type} value={form[key] as string}
               onChange={(e) => { setForm(f => ({ ...f, [key]: e.target.value })); setErrors(er => ({ ...er, [key]: undefined })) }}
               placeholder={placeholder} disabled={loading} autoComplete={auto}
-              className={[inputBase, errors[key] ? 'border-red-400 focus:border-red-400' : 'border-slate-300 focus:border-amber-500'].join(' ')}
+              className={[inputBase, errors[key] ? 'border-red-400' : 'border-white/10'].join(' ')}
             />
-            {errors[key] && <p className="text-xs font-mono text-red-600">{errors[key]}</p>}
+            {errors[key] && <p className="text-xs font-mono text-red-400">{errors[key]}</p>}
           </div>
         ))}
 
@@ -248,43 +250,43 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
                 onChange={(e) => { setForm(f => ({ ...f, gdprConsent: e.target.checked })); setErrors(er => ({ ...er, gdprConsent: undefined })) }}
                 className="sr-only peer" disabled={loading} />
               <div className={['w-4 h-4 rounded border-2 transition-colors peer-focus:ring-2 peer-focus:ring-amber-500/40',
-                form.gdprConsent ? 'bg-amber-500 border-amber-500' : errors.gdprConsent ? 'bg-transparent border-red-400' : 'bg-transparent border-slate-300 group-hover:border-amber-500',
+                form.gdprConsent ? 'bg-amber-500 border-amber-500' : errors.gdprConsent ? 'bg-transparent border-red-400' : 'bg-transparent border-white/20 group-hover:border-amber-500',
               ].join(' ')}>
                 {form.gdprConsent && (
-                  <svg className="w-full h-full text-white" viewBox="0 0 16 16" fill="none">
+                  <svg className="w-full h-full text-slate-950" viewBox="0 0 16 16" fill="none">
                     <path d="M3 8l3 3 7-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
               </div>
             </div>
-            <span className="text-xs font-mono text-slate-500 leading-relaxed">
+            <span className="text-xs font-mono text-white/50 leading-relaxed">
               Ja, ik ontvang graag mijn Persoonlijke 2027-Rapport. Ik geef toestemming om mijn scandata te laten valideren door een gecertificeerde energie-expert van SaldeerScan.nl in mijn regio voor een definitief configuratie-advies.{' '}
-              <a href="/privacy" className="text-amber-600 hover:text-amber-500 underline" target="_blank" rel="noopener noreferrer">Privacyverklaring →</a>
+              <a href="/privacy" className="text-amber-400 hover:text-amber-300 underline" target="_blank" rel="noopener noreferrer">Privacyverklaring →</a>
             </span>
           </label>
-          {errors.gdprConsent && <p className="text-xs font-mono text-red-600 pl-7">{errors.gdprConsent}</p>}
+          {errors.gdprConsent && <p className="text-xs font-mono text-red-400 pl-7">{errors.gdprConsent}</p>}
         </div>
 
         {(errors.submit || submitError) && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            <p className="text-xs font-mono text-red-600">{errors.submit ?? submitError}</p>
+          <div className="bg-red-950/40 border border-red-700 rounded-xl px-3 py-2">
+            <p className="text-xs font-mono text-red-400">{errors.submit ?? submitError}</p>
           </div>
         )}
 
         <button type="submit" disabled={loading}
-          className="w-full bg-[#00aa65] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 px-6 rounded-full transition-colors font-mono text-sm flex items-center justify-center gap-2">
+          className={`w-full font-mono text-sm py-3.5 px-6 flex items-center justify-center gap-2 ${amberBtnCls}`}>
           {loading ? (
-            <><div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />Indienen...</>
+            <><div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />Indienen...</>
           ) : 'Offerte aanvragen →'}
         </button>
 
-        <p className="text-[10px] font-mono text-slate-400 text-center">
+        <p className="text-[10px] font-mono text-white/30 text-center">
           Uw data wordt beveiligd verwerkt en gevalideerd door een gecertificeerde expert in {regio} voor een definitieve 2027-check.
         </p>
       </form>
 
       <button onClick={() => dispatch({ type: 'SET_STEP', step: 5 })} disabled={loading}
-        className="w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-mono text-sm py-2.5 px-4 rounded-full transition-colors">
+        className="w-full bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 text-white/50 font-mono text-sm py-2.5 px-4 rounded-full transition-colors">
         ← Terug
       </button>
     </div>

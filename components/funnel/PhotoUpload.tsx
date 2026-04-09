@@ -101,18 +101,18 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, icon }
           onClick={() => fileInputRef.current?.click()}
           className={[
             'relative border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all duration-200',
-            isDragOver ? 'border-amber-400 bg-amber-50 scale-[1.01]' : 'border-slate-300 hover:border-amber-400 bg-slate-50 hover:bg-amber-50/50',
+            isDragOver ? 'border-amber-500 bg-amber-500/10 scale-[1.01]' : 'border-white/15 hover:border-amber-500/50 bg-white/5 hover:bg-amber-500/5',
           ].join(' ')}
         >
           <div className="text-4xl select-none">{icon}</div>
           <div className="text-center">
-            <p className="font-mono font-semibold text-slate-700 text-sm">{title}</p>
-            <p className="text-xs text-slate-500 mt-1">{description}</p>
+            <p className="font-mono font-semibold text-white/80 text-sm">{title}</p>
+            <p className="text-xs text-white/40 mt-1">{description}</p>
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <div className="h-px w-12 bg-slate-200" />
-            <span className="text-[10px] font-mono text-slate-400 uppercase">sleep of klik</span>
-            <div className="h-px w-12 bg-slate-200" />
+            <div className="h-px w-12 bg-white/10" />
+            <span className="text-[10px] font-mono text-white/30 uppercase">sleep of klik</span>
+            <div className="h-px w-12 bg-white/10" />
           </div>
           <div className="text-[10px] font-mono text-amber-600/70 uppercase tracking-widest">JPEG · PNG · WebP — max 10 MB</div>
           <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-amber-400/40 rounded-tl" />
@@ -124,8 +124,8 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, icon }
         <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = '' }} className="hidden" />
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            <p className="text-xs font-mono text-red-600">{error}</p>
+          <div className="bg-red-950/40 border border-red-700 rounded-xl px-3 py-2">
+            <p className="text-xs font-mono text-red-400">{error}</p>
           </div>
         )}
       </div>
@@ -134,32 +134,32 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, icon }
 
   return (
     <div className="space-y-3">
-      <div className="relative rounded-lg overflow-hidden border border-slate-200">
+      <div className="relative rounded-lg overflow-hidden border border-white/10">
         <img src={imageUrl} alt="Geüploade foto" className="w-full max-h-48 object-cover" />
         <button onClick={handleReset}
-          className="absolute top-2 right-2 bg-white/90 hover:bg-white border border-slate-200 rounded-md px-2 py-1 text-[10px] font-mono text-slate-600 transition-colors">
+          className="absolute top-2 right-2 bg-slate-900/80 hover:bg-slate-900 border border-white/10 rounded-md px-2 py-1 text-[10px] font-mono text-white/60 transition-colors">
           Andere foto
         </button>
       </div>
 
       {screeningError && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+        <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 space-y-2">
           <div className="flex items-start gap-2">
-            <span className="text-amber-600 text-sm shrink-0 mt-0.5">!</span>
-            <p className="text-xs font-mono text-amber-700">{screeningError}</p>
+            <span className="text-amber-400 text-sm shrink-0 mt-0.5">!</span>
+            <p className="text-xs font-mono text-amber-300">{screeningError}</p>
           </div>
           <button onClick={handleReset}
-            className="w-full bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-700 font-mono text-xs py-2 px-3 rounded-md transition-colors">
+            className="w-full bg-amber-950/50 hover:bg-amber-900/50 border border-amber-500/40 text-amber-300 font-mono text-xs py-2 px-3 rounded-md transition-colors">
             Opnieuw proberen
           </button>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
-          <p className="text-xs font-mono text-red-600">{error}</p>
+        <div className="bg-red-950/40 border border-red-700 rounded-xl p-3 space-y-2">
+          <p className="text-xs font-mono text-red-400">{error}</p>
           <button onClick={handleReset}
-            className="w-full bg-red-100 hover:bg-red-200 border border-red-200 text-red-700 font-mono text-xs py-2 px-3 rounded-md transition-colors">
+            className="w-full bg-red-950/60 hover:bg-red-950 border border-red-700/50 text-red-400 font-mono text-xs py-2 px-3 rounded-md transition-colors">
             Opnieuw proberen
           </button>
         </div>

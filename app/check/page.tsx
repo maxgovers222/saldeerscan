@@ -6,7 +6,7 @@ import { FunnelContainer } from '@/components/funnel/FunnelContainer'
 
 function Header() {
   return (
-    <nav className="bg-white border-b border-slate-100">
+    <nav className="bg-[#020617]/80 backdrop-blur-md border-b border-white/10">
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: '#00aa65' }}>
@@ -15,11 +15,11 @@ function Header() {
               <path d="M9 6.5L12 8.5V12L9 14L6 12V8.5L9 6.5Z" fill="white" />
             </svg>
           </div>
-          <span className="font-bold text-[#0e352e] text-sm tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+          <span className="font-bold text-white text-sm tracking-tight" style={{ fontFamily: 'var(--font-heading)' }}>
             SaldeerScan<span style={{ color: '#00aa65' }}>.nl</span>
           </span>
         </a>
-        <span className="text-xs font-mono text-slate-400">Gratis 2027 saldeercheck</span>
+        <span className="text-xs font-mono text-white/50">Gratis 2027 saldeercheck</span>
       </div>
     </nav>
   )
@@ -32,14 +32,14 @@ function CheckPageInner() {
   const initialStad = searchParams.get('stad') ?? ''
 
   return (
-    <main className="min-h-screen" style={{ background: '#f2f2f2' }}>
+    <main className="min-h-screen bg-command-center">
       <Header />
       <div className="max-w-xl mx-auto px-4 py-8">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-extrabold text-[#0e352e]" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
             Uw gratis 2027 Saldeercheck
           </h1>
-          <p className="text-slate-500 text-sm mt-1.5">6 stappen naar uw persoonlijk investeringsrapport</p>
+          <p className="text-white/50 text-sm mt-1.5">6 stappen naar uw persoonlijk investeringsrapport</p>
         </div>
         <FunnelContainer initialAdres={initialAdres} initialWijk={initialWijk} initialStad={initialStad} />
       </div>
@@ -48,10 +48,10 @@ function CheckPageInner() {
 }
 
 const FallbackPage = (
-  <main className="min-h-screen" style={{ background: '#f2f2f2' }}>
+  <main className="min-h-screen bg-command-center">
     <div className="max-w-xl mx-auto px-4 py-8">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-extrabold text-[#0e352e]" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h1 className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)' }}>
           Uw gratis 2027 Saldeercheck
         </h1>
       </div>

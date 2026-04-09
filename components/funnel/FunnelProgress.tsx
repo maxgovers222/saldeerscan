@@ -13,16 +13,16 @@ const STEPS = [
   { label: 'Aanvraag', num: 6 },
 ] as const
 
-const GREEN = '#00aa65'
-const GREEN_DARK = '#0e352e'
+const AMBER = '#f59e0b'
+const AMBER_DARK = '#b45309'
 
 export function FunnelProgress({ currentStep }: FunnelProgressProps) {
   return (
     <div className="w-full">
-      <div className="h-1 rounded-full mb-4 overflow-hidden" style={{ background: '#d1fae5' }}>
+      <div className="h-1 rounded-full mb-4 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
         <div
           className="h-full transition-all duration-500 ease-out rounded-full"
-          style={{ width: `${((currentStep - 1) / 5) * 100}%`, background: `linear-gradient(90deg, ${GREEN_DARK}, ${GREEN})` }}
+          style={{ width: `${((currentStep - 1) / 5) * 100}%`, background: `linear-gradient(90deg, ${AMBER_DARK}, ${AMBER})` }}
         />
       </div>
 
@@ -36,9 +36,9 @@ export function FunnelProgress({ currentStep }: FunnelProgressProps) {
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
                 style={
-                  isCompleted ? { background: GREEN, color: 'white', boxShadow: `0 0 0 2px white, 0 0 0 3px ${GREEN}40` }
-                  : isActive ? { background: GREEN_DARK, color: 'white', boxShadow: `0 0 0 2px white, 0 0 0 3px ${GREEN_DARK}30` }
-                  : { background: 'white', color: '#94a3b8', border: '1px solid #e2e8f0' }
+                  isCompleted ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 2px rgba(2,6,23,0.8), 0 0 0 3px ${AMBER}60` }
+                  : isActive ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 2px rgba(2,6,23,0.8), 0 0 0 3px ${AMBER}40` }
+                  : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.15)' }
                 }
               >
                 {isCompleted ? (
@@ -48,7 +48,7 @@ export function FunnelProgress({ currentStep }: FunnelProgressProps) {
                 ) : <span>{num}</span>}
               </div>
               <span className="text-[10px] font-mono hidden sm:block transition-colors duration-300"
-                style={{ color: isActive ? GREEN_DARK : isCompleted ? GREEN : '#94a3b8', fontWeight: isActive ? 600 : 400 }}>
+                style={{ color: isActive ? AMBER : isCompleted ? AMBER : 'rgba(255,255,255,0.25)', fontWeight: isActive ? 600 : 400 }}>
                 {label}
               </span>
             </div>
@@ -57,7 +57,7 @@ export function FunnelProgress({ currentStep }: FunnelProgressProps) {
       </div>
 
       <div className="mt-2 text-center sm:hidden">
-        <span className="text-xs font-mono" style={{ color: GREEN_DARK }}>
+        <span className="text-xs font-mono" style={{ color: AMBER }}>
           Stap {currentStep}/6 — {STEPS[currentStep - 1].label}
         </span>
       </div>

@@ -31,14 +31,14 @@ export function AnalysisLoading({ wijk }: AnalysisLoadingProps) {
     <div className="flex flex-col items-center justify-center gap-5 py-10">
       {/* Amber spinner */}
       <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-2 border-slate-200" />
+        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
         <div className="absolute inset-0 rounded-full border-2 border-t-amber-500 animate-spin" />
       </div>
 
       {/* Rotating message */}
       <div className="h-6 flex items-center justify-center">
         <p
-          className="text-sm font-mono text-slate-600 transition-opacity duration-200"
+          className="text-sm font-mono text-white/70 transition-opacity duration-200"
           style={{ opacity: visible ? 1 : 0 }}
         >
           {berichten[index]}
@@ -51,7 +51,7 @@ export function AnalysisLoading({ wijk }: AnalysisLoadingProps) {
           <span
             key={i}
             className="w-1.5 h-1.5 rounded-full transition-colors duration-300"
-            style={{ background: i === index ? '#f59e0b' : '#e2e8f0' }}
+            style={{ background: i === index ? '#f59e0b' : 'rgba(255,255,255,0.15)' }}
           />
         ))}
       </div>
