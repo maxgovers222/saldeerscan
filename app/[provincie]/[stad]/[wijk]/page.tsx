@@ -54,6 +54,15 @@ function scoreLabel(score: number): { label: string; color: string } {
   return { label: 'Laag', color: '#ef4444' }
 }
 
+function renderBold(text: string) {
+  const parts = text.split('**')
+  return parts.map((part, i) =>
+    i % 2 === 1
+      ? <strong key={i} className="text-white font-semibold">{part}</strong>
+      : part
+  )
+}
+
 function computeBesparing(bouwjaar: number | null, score: number): number {
   const base = bouwjaar
     ? bouwjaar < 1970 ? 720
@@ -242,7 +251,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                 </div>
                 <div className="space-y-4">
                   {analyse.map((para, i) => (
-                    <p key={i} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{para}</p>
+                    <p key={i} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{renderBold(para)}</p>
                   ))}
                 </div>
                 <p className="text-[9px] font-mono mt-5" style={{ color: 'rgba(255,255,255,0.15)' }}>
@@ -261,7 +270,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                 </div>
                 <div className="space-y-4">
                   {netwerk.map((para, i) => (
-                    <p key={i} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{para}</p>
+                    <p key={i} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{renderBold(para)}</p>
                   ))}
                 </div>
                 <p className="text-[9px] font-mono mt-5" style={{ color: 'rgba(255,255,255,0.15)' }}>
