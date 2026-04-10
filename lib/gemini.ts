@@ -83,16 +83,35 @@ Antwoord uitsluitend in dit JSON formaat:
   return parsed
 }
 
-// Wijk-niveau pSEO content — kort, autoritair, 2027-focused
+// Wijk-niveau pSEO content — autoritair, hyperlocaal, 2027-focused
 export async function generateWijkContent(params: {
   wijk: string
   stad: string
+  provincie: string
   bouwjaar: number
   netcongestie: 'ROOD' | 'ORANJE' | 'GROEN'
+  aantalWoningen?: number | null
 }): Promise<string> {
   const model = getFlashModel()
 
-  const prompt = `Schrijf een technische analyse voor de wijk ${params.wijk} in ${params.stad}. Gebruik het feit dat woningen hier gemiddeld uit ${params.bouwjaar} komen en de netstatus ${params.netcongestie} is. Focus op de financiële urgentie van 1 januari 2027 (einde salderen). Schrijf in een autoritaire, deskundige toon. Max 200 woorden.`
+  const woningenTekst = params.aantalWoningen
+    ? `${params.aantalWoningen.toLocaleString('nl-NL')} woningen`
+    : 'een aanzienlijke woningpopulatie'
+
+  const netTekst = {
+    ROOD:   `Vol stroomnet (ROOD) — thuisbatterij essentieel`,
+    ORANJE: `Toenemende netdruk (ORANJE) — batterijopslag sterk aanbevolen`,
+    GROEN:  `Ruime netcapaciteit (GROEN) — ideaal voor directe teruglevering`,
+  }[params.netcongestie]
+
+  const prompt = `Je bent een senior energie-adviseur. Schrijf een technisch-autoritaire analyse van precies 800 woorden voor de wijk ${params.wijk} in ${params.stad} (${params.provincie}).
+
+Verwerk ALLE van deze lokale feiten:
+- ${woningenTekst} (CBS 2023)
+- Gemiddeld bouwjaar: ${params.bouwjaar}
+- Netstatus: ${netTekst}
+
+Focus op: financiële urgentie 1 januari 2027 (einde salderingsregeling), concrete euro-bedragen voor ${params.wijk}, bouwjaar-specifieke dakgeschiktheid, netcongestie impact. Schrijf direct voor de huiseigenaar in ${params.wijk}. Geen algemeenheden — elke zin moet specifiek voor ${params.wijk} aanvoelen. Gebruik **dikgedrukte** kernbegrippen via markdown.`
 
   const result = await model.generateContent(prompt)
   return result.response.text().trim()
