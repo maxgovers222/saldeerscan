@@ -3,6 +3,7 @@
 import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction } from './types'
 import { StepHeader } from './StepHeader'
+import { PDFDownloadButton } from './PDFDownloadButton'
 
 function extractStad(adres: string): string {
   const parts = adres.split(/[,\s]+/)
@@ -64,22 +65,32 @@ function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: 
   )
 }
 
-function SuccessState() {
+function SuccessState({ state }: { state: FunnelState }) {
   return (
-    <div className="text-center space-y-4 py-8">
-      <div className="w-16 h-16 bg-emerald-950/30 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <path d="M6 16l6 6L26 8" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+    <div className="space-y-5 py-4">
+      {/* Bevestiging */}
+      <div className="text-center">
+        <div className="w-14 h-14 bg-emerald-950/30 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-3">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <path d="M6 16l6 6L26 8" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <h3 className="text-xl font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>Gegevens ontvangen!</h3>
+        <p className="text-sm text-white/50 mt-1.5 font-mono">Een bevestiging is verstuurd naar uw e-mail</p>
       </div>
-      <div>
-        <h3 className="text-xl font-bold text-white">Aanvraag ingediend!</h3>
-        <p className="text-sm text-white/50 mt-2 font-mono">
-          Een gecertificeerde installateur neemt binnen 24 uur contact op.
+
+      {/* PDF download — hoofdactie */}
+      <div className="bg-slate-900/40 border border-amber-500/20 rounded-2xl p-5">
+        <p className="text-[10px] font-mono uppercase tracking-widest text-amber-400/70 mb-1.5">Uw rapport staat klaar</p>
+        <p className="text-sm text-white/60 font-mono mb-4">
+          Download hieronder uw persoonlijk 2027-rapport met ROI-berekening, subsidie check en 2027-tijdlijn.
         </p>
+        <PDFDownloadButton state={state} />
       </div>
-      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 text-left space-y-2">
-        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Volgende stappen</div>
+
+      {/* Volgende stappen */}
+      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-2">
+        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">Wat gebeurt er verder?</div>
         {[
           'Installateur bekijkt uw energiedossier',
           'U ontvangt een persoonlijke offerte',
@@ -154,7 +165,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
     }
   }
 
-  if (submitted) return <div className="p-6"><SuccessState /></div>
+  if (submitted) return <div className="p-6"><SuccessState state={state} /></div>
 
   const isde = state.roiResult?.isdeSchatting
   const regio = state.wijk || (state.bagData ? state.adres.split(',').pop()?.trim() : null) || 'uw regio'

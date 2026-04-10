@@ -1,6 +1,9 @@
 import { applyRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { dispatchToPartners } from '@/lib/webhooks'
+import { Resend } from 'resend'
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
   const limitResult = applyRateLimit(request, 3, 3_600_000) // 3 leads per IP per hour
@@ -79,10 +82,63 @@ export async function POST(request: Request) {
   }
 
   // Dispatch to B2B partners asynchronously (fire and forget)
-  // We don't await this — don't block the user response on webhook delivery
   dispatchToPartners(lead.id).catch(err =>
     console.error('[api/leads] webhook dispatch error:', err)
   )
+
+  // Send confirmation email (fire and forget)
+  if (resend) {
+    const score = body.healthScore ? Number(body.healthScore) : null
+    const besparing = (body.roiResult as { scenarioNu?: { besparingJaarEur?: number } } | null)?.scenarioNu?.besparingJaarEur ?? null
+
+    resend.emails.send({
+      from: 'SaldeerScan.nl <noreply@saldeerscan.nl>',
+      to: String(email),
+      subject: `Uw gratis PDF-rapport is klaar — SaldeerScan.nl`,
+      html: `
+<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:sans-serif">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+    <div style="background:#020617;padding:28px 32px">
+      <div style="font-size:20px;font-weight:700;color:#f59e0b;margin-bottom:4px">SaldeerScan.nl</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase">Persoonlijk 2027-Rapport</div>
+    </div>
+    <div style="background:#7c2d12;padding:10px 32px">
+      <span style="font-size:11px;color:#fca5a5">⚠ Per 1 januari 2027 stopt de salderingsregeling volledig — uw voordeel van 28% (2026) vervalt</span>
+    </div>
+    <div style="padding:32px">
+      <p style="margin:0 0 8px;font-size:15px;color:#0f172a">Geachte ${String(naam)},</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6">
+        Uw persoonlijk 2027-rapport voor <strong>${String(body.adres)}</strong> is aangemaakt.
+        Open de SaldeerScan-pagina opnieuw om uw PDF te downloaden.
+      </p>
+
+      ${score || besparing ? `
+      <div style="background:#f8fafc;border-radius:8px;padding:16px 20px;margin-bottom:24px;border-left:4px solid #f59e0b">
+        <div style="font-size:10px;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Uw scanresultaten</div>
+        ${score ? `<div style="font-size:13px;color:#0f172a;margin-bottom:4px">Energie Score: <strong style="color:#f59e0b">${score}/100</strong></div>` : ''}
+        ${besparing ? `<div style="font-size:13px;color:#0f172a">Geschatte besparing: <strong style="color:#10b981">€${besparing.toLocaleString('nl-NL')}/jaar</strong></div>` : ''}
+      </div>
+      ` : ''}
+
+      <a href="https://saldeerscan.nl/check" style="display:inline-block;background:#f59e0b;color:#020617;font-weight:700;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;margin-bottom:24px">
+        Download uw PDF-rapport →
+      </a>
+
+      <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6">
+        Geen actie nodig — een gecertificeerde energie-expert in uw regio bekijkt uw dossier en neemt binnen 24 uur contact op.
+      </p>
+    </div>
+    <div style="background:#020617;padding:16px 32px;display:flex;justify-content:space-between">
+      <span style="font-size:11px;color:rgba(255,255,255,0.3)">© 2026 SaldeerScan.nl · AVG-compliant</span>
+    </div>
+  </div>
+</body>
+</html>`,
+    }).catch(err => console.error('[api/leads] email error:', err))
+  }
 
   return Response.json({ leadId: lead.id, status: 'ingediend' }, { status: 201 })
 }
