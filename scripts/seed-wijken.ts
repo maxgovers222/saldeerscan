@@ -200,7 +200,13 @@ Antwoord UITSLUITEND in dit JSON-formaat (geen tekst buiten de JSON):
 async function generateContent(e: WijkEntry, aantalWoningen: number | null): Promise<RichContent> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
-    generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 8192,
+      responseMimeType: 'application/json',
+      // @ts-ignore — thinkingConfig supported in gemini-2.5-flash, kills thinking-token overhead
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   })
 
   const score = deriveHealthScore(e.bouwjaar, e.netcongestie)
@@ -211,10 +217,17 @@ async function generateContent(e: WijkEntry, aantalWoningen: number | null): Pro
     try {
       const result = await model.generateContent(prompt)
       const text   = result.response.text()
-      const match  = text.match(/\{[\s\S]*\}/)
-      if (!match) throw new Error('Geen JSON in Gemini-respons')
 
-      const parsed = JSON.parse(match[0]) as RichContent
+      // Native JSON mode geeft schone JSON; als fallback: extraheer eerste {...}
+      let parsed: RichContent
+      try {
+        parsed = JSON.parse(text) as RichContent
+      } catch {
+        const match = text.match(/\{[\s\S]*\}/)
+        if (!match) throw new Error('Geen JSON in Gemini-respons')
+        parsed = JSON.parse(match[0]) as RichContent
+      }
+
       if (!parsed.titel || !parsed.hoofdtekst || !Array.isArray(parsed.faqItems)) {
         throw new Error('Onvolledige JSON-respons')
       }
