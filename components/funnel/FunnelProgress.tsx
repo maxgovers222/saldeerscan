@@ -36,9 +36,9 @@ export function FunnelProgress({ currentStep }: FunnelProgressProps) {
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
                 style={
-                  isCompleted ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 2px rgba(2,6,23,0.8), 0 0 0 3px ${AMBER}60` }
-                  : isActive ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 2px rgba(2,6,23,0.8), 0 0 0 3px ${AMBER}40` }
-                  : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.15)' }
+                  isCompleted ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 3px rgba(2,6,23,1), 0 0 0 5px ${AMBER}70, 0 0 12px ${AMBER}40` }
+                  : isActive ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 3px rgba(2,6,23,1), 0 0 0 5px ${AMBER}50, 0 0 20px ${AMBER}50` }
+                  : { background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.12)' }
                 }
               >
                 {isCompleted ? (

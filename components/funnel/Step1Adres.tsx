@@ -10,7 +10,7 @@ interface Step1AdresProps {
   dispatch: Dispatch<FunnelAction>
 }
 
-const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
+const amberBtnCls = 'bg-[#f59e0b] text-slate-950 font-bold rounded-full transition-all duration-200 shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100 disabled:brightness-100'
 
 function HealthScoreGauge({ score, label }: { score: number; label: string }) {
   const colorClass =
@@ -126,8 +126,8 @@ function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }
           placeholder="Bijv. Prinsengracht 123, Amsterdam"
           disabled={disabled} autoComplete="off"
           className={[
-            'w-full bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-mono text-sm transition-colors focus:outline-none amber-glow',
-            isSelected ? 'border-emerald-500/60' : 'border-white/10',
+            'w-full bg-slate-950/60 border rounded-xl px-4 py-3.5 text-white placeholder:text-slate-500 font-mono text-sm transition-all focus:outline-none amber-glow',
+            isSelected ? 'border-emerald-500/50' : 'border-white/10',
           ].join(' ')}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -238,7 +238,7 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-7 space-y-6">
       <StepHeader stap="// STAP 01 — ADRESVERIFICATIE" title="Voer uw adres in" subtitle="Selecteer uw adres voor een nauwkeurige BAG-analyse" />
 
       <form onSubmit={handleSubmit} className="space-y-3">

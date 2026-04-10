@@ -7,12 +7,12 @@ interface StepHeaderProps {
 export function StepHeader({ stap, title, subtitle }: StepHeaderProps) {
   return (
     <div className="-mx-6 -mt-6 mb-6 px-6 pt-6 pb-5 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 100%)' }}>
-      {/* Radial glow */}
-      <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full blur-2xl opacity-30"
+      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      {/* Subtle amber accent top-right */}
+      <div className="absolute -top-12 -right-12 w-28 h-28 rounded-full blur-3xl opacity-[0.12]"
         style={{ background: '#f59e0b' }} />
       {/* Grid */}
-      <div className="absolute inset-0 opacity-[0.05]" style={{
+      <div className="absolute inset-0 opacity-[0.04]" style={{
         backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
         backgroundSize: '32px 32px',
       }} />
