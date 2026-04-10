@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { getWijkPage, getTopWijken } from '@/lib/pseo'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
 import { WijkSaldeerChart } from '@/components/pseo/WijkSaldeerChart'
+import { CountdownTimer } from '@/components/CountdownTimer'
 
 const getCachedWijkPage = cache(getWijkPage)
 
@@ -63,6 +64,14 @@ function renderBold(text: string) {
   )
 }
 
+function neighborhoodRanking(bouwjaar: number | null, score: number): { top: boolean; label: string } | null {
+  if (!bouwjaar) return null
+  const rendementScore = bouwjaar >= 1995 && bouwjaar <= 2015 ? 92 : score
+  if (rendementScore >= 90) return { top: true, label: 'Top 10% meest rendabele wijken' }
+  if (rendementScore >= 74) return { top: true, label: 'Top 25% meest rendabele wijken' }
+  return null
+}
+
 function computeBesparing(bouwjaar: number | null, score: number): number {
   const base = bouwjaar
     ? bouwjaar < 1970 ? 720
@@ -94,6 +103,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   const { label: scorelabel, color: scoreColor } = scoreLabel(score)
   const besparing = computeBesparing(page.gemBouwjaar, score)
   const verlies = besparing
+  const ranking = neighborhoodRanking(page.gemBouwjaar, score)
   const { analyse, netwerk } = splitContent(page.hoofdtekst)
 
   const netConfig = {
@@ -160,9 +170,17 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
             style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 8vw, 4.5rem)', letterSpacing: '-0.03em' }}>
             {wijkDisplay}
           </h1>
-          <p className="text-lg mb-8 font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <p className="text-lg font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>
             {stadDisplay} · {page.aantalWoningen ? `${page.aantalWoningen} woningen` : provincie}
           </p>
+
+          {ranking && (
+            <div className="inline-flex items-center gap-2 mt-3 mb-8 px-4 py-1.5 rounded-full border border-amber-500/30 bg-amber-950/30">
+              <span className="text-amber-400 text-sm">🏆</span>
+              <span className="text-xs font-mono font-bold text-amber-400">{ranking.label} in {stadDisplay}</span>
+            </div>
+          )}
+          {!ranking && <div className="mb-8" />}
 
           {/* ── Data Ribbon ─────────────────────────────────────── */}
           <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto mb-10">
@@ -239,6 +257,10 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
               Verlies door saldering in {wijkDisplay}: <span className="font-bold text-amber-400">€{verlies} per jaar</span> vanaf 1 januari 2027 voor woningen zonder batterijopslag.
             </p>
           </div>
+
+          <div className="mt-8">
+            <CountdownTimer />
+          </div>
         </div>
       </section>
 
@@ -299,6 +321,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                   { label: 'Verlies 2027', value: `−€${verlies}/jr`, sub: 'bij 0% saldering', danger: true },
                   { label: 'Netcongestie', value: page.netcongestieStatus ?? '—', sub: net?.label ?? '' },
                   ...(page.aantalWoningen ? [{ label: 'Woningen', value: `${page.aantalWoningen.toLocaleString('nl')}`, sub: 'in dit postcodegebied' }] : []),
+                  ...(ranking ? [{ label: 'Wijk Ranking', value: ranking.top ? '🏆 Top 10%' : '⭐ Top 25%', sub: 'rendement in ' + stadDisplay }] : []),
                 ].map(({ label, value, sub, danger }) => (
                   <div key={label} className="flex items-start justify-between gap-2 pb-3 border-b border-white/5 last:border-0 last:pb-0">
                     <div>

@@ -3,6 +3,7 @@
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FunnelContainer } from '@/components/funnel/FunnelContainer'
+import { CountdownTimer } from '@/components/CountdownTimer'
 
 function Header() {
   return (
@@ -41,9 +42,9 @@ function CheckPageInner() {
           </h1>
           <p className="text-white/50 text-sm mt-1.5">6 stappen naar uw persoonlijk investeringsrapport</p>
         </div>
-        <p className="text-xs font-mono text-amber-500/75 uppercase tracking-widest text-center mb-4 leading-relaxed">
-          ⚠️ Per 1 jan 2027 stopt de salderingsregeling volledig — uw voordeel van 28% (2026) vervalt
-        </p>
+        <div className="mb-6">
+          <CountdownTimer />
+        </div>
         <FunnelContainer initialAdres={initialAdres} initialWijk={initialWijk} initialStad={initialStad} />
       </div>
     </main>

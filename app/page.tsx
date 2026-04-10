@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CountdownTimer } from '@/components/CountdownTimer'
 
 /* ─── Palette tokens ──────────────────────────────── */
 const G     = '#00aa65'   // brand green (accenten, logo)
@@ -111,7 +112,7 @@ function HeroSection() {
           </button>
         </form>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/45">
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/45 mb-12">
           {['BAG officiële data', 'AVG-compliant', 'Volledig gratis'].map((t) => (
             <span key={t} className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke={G} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -119,6 +120,8 @@ function HeroSection() {
             </span>
           ))}
         </div>
+
+        <CountdownTimer />
       </div>
     </section>
   )
