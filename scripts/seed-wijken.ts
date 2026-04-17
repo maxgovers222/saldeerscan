@@ -350,7 +350,7 @@ async function seedWijk(e: WijkEntry, opts: { dryRun: boolean; skipExisting: boo
 // Uitbreiden: voeg entries toe aan het einde van WIJKEN.
 // CBS WFS haalt aantalWoningen automatisch op — geen handmatige invulling nodig.
 
-const WIJKEN: WijkEntry[] = [
+const WIJKEN_BASE: WijkEntry[] = [
   // ── Utrecht ──────────────────────────────────────────────────────────────
   { wijk: 'Leidsche Rijn',       stad: 'Utrecht',              provincie: 'utrecht',        bouwjaar: 2001, netcongestie: 'ORANJE' },
   { wijk: 'Vathorst',            stad: 'Amersfoort',           provincie: 'utrecht',        bouwjaar: 2002, netcongestie: 'ORANJE' },
@@ -1410,6 +1410,10 @@ const WIJKEN: WijkEntry[] = [
   { wijk: "Wellerlooi", stad: "Bergen (L.)", provincie: "limburg", bouwjaar: 1978, netcongestie: "GROEN", aantalWoningen: 507 },
   { wijk: "Aarlanderveen", stad: "Alphen aan den Rijn", provincie: "zuid-holland", bouwjaar: 1978, netcongestie: "GROEN", aantalWoningen: 505 },
   { wijk: "Vianen", stad: "Cuijk", provincie: "noord-brabant", bouwjaar: 1978, netcongestie: "GROEN", aantalWoningen: 500 },
+]
+
+// Batch 3 apart gedeclareerd om TypeScript union-type complexiteit te voorkomen
+const WIJKEN_BATCH3: WijkEntry[] = [
   // ── Uitbreiding batch 3 — CBS 2023 naar 2000 wijken ──────────────────
   { wijk: "Bergen op Zoom-Oude stad e.o.", stad: "Bergen op Zoom", provincie: "noord-brabant", bouwjaar: 1972, netcongestie: "ORANJE", aantalWoningen: 5752 },
   { wijk: "Halsteren", stad: "Bergen op Zoom", provincie: "noord-brabant", bouwjaar: 1972, netcongestie: "ORANJE", aantalWoningen: 5240 },
@@ -2434,6 +2438,8 @@ const WIJKEN: WijkEntry[] = [
   { wijk: "Santpoort-Zuid", stad: "Velsen", provincie: "noord-holland", bouwjaar: 1972, netcongestie: "ORANJE", aantalWoningen: 1413 },
   { wijk: "Aetsveld", stad: "Weesp", provincie: "noord-holland", bouwjaar: 1972, netcongestie: "ORANJE", aantalWoningen: 1413 },
 ]
+
+const WIJKEN: WijkEntry[] = [...WIJKEN_BASE, ...WIJKEN_BATCH3]
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
