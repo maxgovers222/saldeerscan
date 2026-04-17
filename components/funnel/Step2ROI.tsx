@@ -87,7 +87,7 @@ function SliderInput({ label, value, onChange, min, max, step, unit, note }: {
 export function Step2ROI({ state, dispatch }: Step2ROIProps) {
   const dakMax = Math.max(100, state.bagData?.dakOppervlakte ?? 100)
 
-  const geschatVerbruik = state.bagData
+  const geschatVerbruik = state.bagData?.oppervlakte && state.bagData?.bouwjaar
     ? schatVerbruik(state.bagData.oppervlakte, state.bagData.bouwjaar)
     : 3500
   const verbruikMax = Math.max(25000, (state.bagData?.oppervlakte ?? 0) * 40)
@@ -95,7 +95,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
   const [verbruik, setVerbruik] = useState<number>(state.roiResult?.geschatVerbruikKwh ?? geschatVerbruik)
   const [dakOpp, setDakOpp] = useState<number>(Math.min(state.bagData?.dakOppervlakte ?? 35, dakMax))
   const panelenMax = Math.max(40, Math.floor((dakMax * 0.70) / 4))
-  const [panelen, setPanelen] = useState<number>(state.roiResult?.aantalPanelen ?? Math.floor((dakMax * 0.55) / 4) || 10)
+  const [panelen, setPanelen] = useState<number>(state.roiResult?.aantalPanelen ?? (Math.floor((dakMax * 0.55) / 4) || 10))
   const [localRoi, setLocalRoi] = useState<ROIResult | null>(state.roiResult ?? null)
   const [loading, setLoading] = useState(false)
   const [roiError, setRoiError] = useState<string | null>(null)
