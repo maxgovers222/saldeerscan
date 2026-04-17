@@ -21,7 +21,7 @@ const UNITS = [
   { key: 's', label: 'Sec' },
 ] as const
 
-export function CountdownTimer() {
+export function CountdownTimer({ compact = false }: { compact?: boolean }) {
   const [time, setTime] = useState<{ d: number; h: number; m: number; s: number } | null>(null)
   const [mounted, setMounted] = useState(false)
 
@@ -31,6 +31,19 @@ export function CountdownTimer() {
     const id = setInterval(() => setTime(calc()), 1_000)
     return () => clearInterval(id)
   }, [])
+
+  if (compact) {
+    const days = mounted && time ? time.d : '--'
+    return (
+      <p className="text-center text-xs font-mono text-white/40">
+        Nog{' '}
+        <span className="text-amber-400 font-bold">
+          {typeof days === 'number' ? days : days}
+        </span>
+        {' '}dagen — saldering eindigt 1 jan 2027
+      </p>
+    )
+  }
 
   return (
     <div className="text-center">

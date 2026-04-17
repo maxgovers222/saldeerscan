@@ -35,15 +35,9 @@ function CheckPageInner() {
   return (
     <main className="min-h-screen" style={{ background: '#020617' }}>
       <Header />
-      <div className="max-w-xl mx-auto px-4 py-8">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-            Uw gratis 2027 Saldeercheck
-          </h1>
-          <p className="text-white/50 text-sm mt-1.5">6 stappen naar uw persoonlijk investeringsrapport</p>
-        </div>
-        <div className="mb-6">
-          <CountdownTimer />
+      <div className="max-w-xl mx-auto px-4 py-6">
+        <div className="mb-4">
+          <CountdownTimer compact />
         </div>
         <FunnelContainer initialAdres={initialAdres} initialWijk={initialWijk} initialStad={initialStad} />
       </div>
