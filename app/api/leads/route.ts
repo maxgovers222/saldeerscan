@@ -6,7 +6,7 @@ import { Resend } from 'resend'
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: Request) {
-  const limitResult = applyRateLimit(request, 3, 3_600_000) // 3 leads per IP per hour
+  const limitResult = applyRateLimit(request, 10, 3_600_000) // 10 leads per IP per hour
   if (limitResult.response) return limitResult.response
 
   let body: Record<string, unknown>
