@@ -99,7 +99,7 @@ export async function POST(request: Request) {
 
     try {
     const emailResult = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? 'SaldeerScan.nl <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM_EMAIL!,
       to: String(email),
       subject: `Uw gratis PDF-rapport is klaar — SaldeerScan.nl`,
       html: `
