@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     return Response.json(result, {
       headers: {
         'Cache-Control': 'public, max-age=3600',
-        'X-RateLimit-Remaining': String(limitResult.rl!.remaining),
+        'X-RateLimit-Remaining': String(limitResult.rl?.remaining ?? 0),
       }
     })
   } catch (err) {

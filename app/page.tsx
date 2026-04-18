@@ -313,7 +313,7 @@ function Footer() {
             <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
             <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
           </div>
-          <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.15)' }}>© 2026 SaldeerScan.nl</p>
+          <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
         </div>
       </div>
     </footer>

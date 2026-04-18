@@ -68,6 +68,9 @@ export function getSeedStatus(postcodePrefix: string): NetcongestieStatus {
 
 export async function getNetcongestie(postcode: string): Promise<NetcongestieResult> {
   const postcodePrefix = postcode.replace(/\s/g, '').substring(0, 4)
+  if (!/^\d{4}$/.test(postcodePrefix)) {
+    return { status: 'GROEN', netbeheerder: 'Onbekend', uitleg: getUitleg('GROEN', 'Onbekend'), terugleveringBeperkt: false, postcodePrefix }
+  }
 
   // 1. Check cache (valid entries only)
   const { data: cached, error: cacheError } = await supabaseAdmin

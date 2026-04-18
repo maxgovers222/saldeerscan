@@ -75,6 +75,7 @@ function SliderInput({ label, value, onChange, min, max, step, unit, note }: {
         <span className="font-mono font-bold text-amber-400 text-sm">{value.toLocaleString('nl-NL')} {unit}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
+        aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={`${value} ${unit}`}
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer
           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4

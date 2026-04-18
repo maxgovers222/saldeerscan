@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getStaddenByProvincie } from '@/lib/pseo'
 
-export const revalidate = 2592000
+export const revalidate = 604800
 
 type Params = { provincie: string }
 

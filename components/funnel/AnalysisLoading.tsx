@@ -36,7 +36,7 @@ export function AnalysisLoading({ wijk }: AnalysisLoadingProps) {
       </div>
 
       {/* Rotating message */}
-      <div className="h-6 flex items-center justify-center">
+      <div className="h-6 flex items-center justify-center" aria-live="polite" aria-atomic="true">
         <p
           className="text-sm font-mono text-white/70 transition-opacity duration-200"
           style={{ opacity: visible ? 1 : 0 }}

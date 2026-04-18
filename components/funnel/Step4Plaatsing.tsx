@@ -88,7 +88,7 @@ export function Step4Plaatsing({ state, dispatch }: Step4PlaatsingProps) {
       ) : (
         <div className="space-y-3">
           <PlaatsingResultaat analyse={analyse} />
-          <button onClick={() => dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: null as unknown as PlaatsingsAnalyse })}
+          <button onClick={() => dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: null })}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 font-mono text-xs py-2 px-4 rounded-lg transition-colors">
             Andere foto uploaden
           </button>

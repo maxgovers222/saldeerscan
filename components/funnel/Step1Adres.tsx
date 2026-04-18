@@ -100,7 +100,7 @@ function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }
     try {
       const res = await fetch(`/api/bag/suggest?q=${encodeURIComponent(q)}`)
       if (res.ok) {
-        const data: Suggestion[] = await res.json()
+        const data: Suggestion[] = (await res.json() as Suggestion[]).slice(0, 8)
         setSuggestions(data)
         setOpen(data.length > 0)
       }

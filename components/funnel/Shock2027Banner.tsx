@@ -8,15 +8,18 @@ interface Shock2027BannerProps {
 }
 
 export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
+  const jaar = new Date().getFullYear()
+  const pct = jaar <= 2025 ? 64 : jaar === 2026 ? 28 : 0
+
   return (
     <div className="rounded-xl border-l-4 border-l-red-500 border border-red-700/60 bg-red-950/40 p-4 space-y-3">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">Besparing Nu (2026)</div>
+          <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">Besparing Nu ({jaar})</div>
           <div className="font-mono font-bold text-amber-400 text-xl">
             €{besparingNu.toLocaleString('nl-NL')}<span className="text-xs text-white/30">/jaar</span>
           </div>
-          <div className="text-[10px] font-mono text-white/30 mt-0.5">Saldering: 28%</div>
+          <div className="text-[10px] font-mono text-white/30 mt-0.5">Saldering: {pct}%</div>
         </div>
         <div>
           <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">Verlies Vanaf 2027</div>

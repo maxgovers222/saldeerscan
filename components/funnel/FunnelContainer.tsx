@@ -81,17 +81,17 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   const [savedState, setSavedState] = useState<FunnelState | null>(null)
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false)
 
-  // Load saved state on mount (client only)
+  // Load saved state on mount (client only) — always, even with URL params
   useEffect(() => {
-    if (!initialAdres) {
-      const loaded = loadState()
-      if (loaded) setSavedState(loaded)
-    }
-  }, [initialAdres])
+    const loaded = loadState()
+    if (loaded) setSavedState(loaded)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Save state on every change
+  // Save state on every change — debounced to avoid excessive I/O
   useEffect(() => {
-    saveState(state)
+    const t = setTimeout(() => saveState(state), 500)
+    return () => clearTimeout(t)
   }, [state])
 
   function resumeSavedState() {

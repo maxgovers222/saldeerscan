@@ -95,7 +95,7 @@ export function Step5Omvormer({ state, dispatch }: Step5OmvormerProps) {
         <div className="space-y-3">
           <OmvormerResultaat analyse={analyse} />
           <button
-            onClick={() => dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: null as unknown as OmvormerAnalyse })}
+            onClick={() => dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: null })}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 font-mono text-xs py-2 px-4 rounded-lg transition-colors"
           >
             Andere foto uploaden

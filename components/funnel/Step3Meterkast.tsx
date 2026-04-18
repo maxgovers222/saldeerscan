@@ -72,11 +72,11 @@ export function Step3Meterkast({ state, dispatch }: Step3MeterkastProps) {
       )}
       {!analyse ? (
         <PhotoUpload visionType="meterkast" onAnalysed={(r) => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: r as MeterkastAnalyse })}
-          title="Foto van uw meterkast" description="Maak een foto van de open meterkastkast, inclusief alle groepen zichtbaar" icon="⚡" />
+          title="Foto van uw meterkast" description="Maak een foto van uw open meterkast, inclusief alle groepen zichtbaar" icon="⚡" />
       ) : (
         <div className="space-y-3">
           <MeterkastResultaat analyse={analyse} />
-          <button onClick={() => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null as unknown as MeterkastAnalyse })}
+          <button onClick={() => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null })}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 font-mono text-xs py-2 px-4 rounded-lg transition-colors">
             Andere foto uploaden
           </button>

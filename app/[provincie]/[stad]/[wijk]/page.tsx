@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getWijkPage, getTopWijken } from '@/lib/pseo'
+import { getWijkPage, getTopWijken, getWijkenByStad } from '@/lib/pseo'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
 import { WijkSaldeerChart } from '@/components/pseo/WijkSaldeerChart'
 import { CountdownTimer } from '@/components/CountdownTimer'
@@ -9,7 +9,7 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 
 const getCachedWijkPage = cache(getWijkPage)
 
-export const revalidate = 2592000
+export const revalidate = 604800
 
 type Params = { provincie: string; stad: string; wijk: string }
 
@@ -108,15 +108,20 @@ const amberBtnCls = [
 
 export default async function WijkPage({ params }: { params: Promise<Params> }) {
   const { provincie, stad, wijk } = await params
-  const page = await getCachedWijkPage({ provincie, stad, wijk })
+  const [page, wijkenInStad] = await Promise.all([
+    getCachedWijkPage({ provincie, stad, wijk }),
+    getWijkenByStad(provincie, stad),
+  ])
   if (!page) notFound()
+  const relatedWijken = wijkenInStad.filter(w => w.wijk !== wijk).slice(0, 6)
 
   const wijkDisplay = toDisplay(wijk)
   const stadDisplay = toDisplay(stad)
   const score = wijkScore(page.gemBouwjaar, page.gemHealthScore)
   const { label: scorelabel, color: scoreColor } = scoreLabel(score)
   const besparing = computeBesparing(page.gemBouwjaar, score)
-  const verlies = besparing
+  // Verlies = terugleveringsvoordeel dat wegvalt na 2027 (~40% van besparing)
+  const verlies = Math.round(besparing * 0.40)
   const ranking = neighborhoodRanking(page.gemBouwjaar, score)
   const { analyse, netwerk } = splitContent(page.hoofdtekst)
 
@@ -130,6 +135,16 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   return (
     <div className="min-h-screen pb-24 sm:pb-0" style={{ background: N1 }}>
       {page.jsonLd && Object.keys(page.jsonLd).length > 0 && <LocalSchema jsonLd={page.jsonLd} />}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://saldeerscan.nl' },
+          { '@type': 'ListItem', position: 2, name: toDisplay(provincie), item: `https://saldeerscan.nl/${provincie}` },
+          { '@type': 'ListItem', position: 3, name: stadDisplay, item: `https://saldeerscan.nl/${provincie}/${stad}` },
+          { '@type': 'ListItem', position: 4, name: wijkDisplay, item: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}` },
+        ],
+      }).replace(/<\/script>/g, '<\\/script>') }} />
 
       {/* ── Nav ─────────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 bg-white border-b border-slate-100">
@@ -250,7 +265,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
           <a href={`/check?wijk=${encodeURIComponent(wijk)}&stad=${encodeURIComponent(stad)}`}
             className={`inline-flex items-center gap-2 text-base ${amberBtnCls}`}
             style={{ fontFamily: 'var(--font-heading)' }}>
-            Start mijn gratis Saldeercheck
+            Gratis mijn woning analyseren
             <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -447,6 +462,38 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
         </div>
       </section>
 
+      {/* ── Andere wijken in stad ───────────────────────────────── */}
+      {relatedWijken.length > 0 && (
+        <section className="py-16 px-6" style={{ background: N2 }}>
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8">
+              <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+                Interne vergelijking
+              </p>
+              <h2 className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+                Andere wijken in {stadDisplay}
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {relatedWijken.map((w) => {
+                const ws = wijkScore(w.gem_bouwjaar, w.gem_health_score)
+                return (
+                  <a key={w.wijk} href={`/${provincie}/${stad}/${w.wijk}`}
+                    className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-4 transition-all hover:bg-slate-900/60 group">
+                    <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
+                      {toDisplay(w.wijk)}
+                    </p>
+                    <p className="text-xs font-mono mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      Score {ws}/100 {w.gem_bouwjaar ? `· ${w.gem_bouwjaar}` : ''}
+                    </p>
+                  </a>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Footer ──────────────────────────────────────────────── */}
       <footer className="py-12 px-6" style={{ background: N1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-5xl mx-auto">
@@ -476,7 +523,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
               <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
               <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
             </div>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© 2026 SaldeerScan.nl</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
           </div>
         </div>
       </footer>

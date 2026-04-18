@@ -1,5 +1,14 @@
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
 
+function pruneExpiredEntries() {
+  const now = Date.now()
+  let checked = 0
+  for (const [key, entry] of rateLimitStore) {
+    if (now > entry.resetAt) rateLimitStore.delete(key)
+    if (++checked >= 200) break
+  }
+}
+
 export function rateLimit(
   ip: string,
   limit = 5,
@@ -12,6 +21,7 @@ export function rateLimit(
 } {
   const now = Date.now()
   const key = `${namespace}:${ip}`
+  if (rateLimitStore.size > 1000) pruneExpiredEntries()
   const entry = rateLimitStore.get(key)
 
   if (!entry || now > entry.resetAt) {

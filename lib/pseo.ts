@@ -117,6 +117,7 @@ export async function getPseoPagesByProvincie(provincie: string) {
     .from('pseo_pages')
     .select('slug, generated_at')
     .eq('provincie', provincie)
+    .eq('status', 'published')
   return data ?? []
 }
 

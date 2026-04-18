@@ -111,9 +111,9 @@ export type FunnelAction =
   | { type: 'SET_NETCONGESTIE'; netcongestie: FunnelState['netcongestie'] }
   | { type: 'SET_HEALTH_SCORE'; healthScore: HealthScoreResult }
   | { type: 'SET_ROI'; roiResult: ROIResult }
-  | { type: 'SET_METERKAST'; meterkastAnalyse: MeterkastAnalyse }
-  | { type: 'SET_PLAATSING'; plaatsingsAnalyse: PlaatsingsAnalyse }
-  | { type: 'SET_OMVORMER'; omvormerAnalyse: OmvormerAnalyse }
+  | { type: 'SET_METERKAST'; meterkastAnalyse: MeterkastAnalyse | null }
+  | { type: 'SET_PLAATSING'; plaatsingsAnalyse: PlaatsingsAnalyse | null }
+  | { type: 'SET_OMVORMER'; omvormerAnalyse: OmvormerAnalyse | null }
   | { type: 'SET_LEAD_ID'; leadId: string }
   | { type: 'SET_ADRES'; adres: string }
   | { type: 'SET_LOADING'; loading: boolean }

@@ -6,9 +6,10 @@ import { StepHeader } from './StepHeader'
 import { PDFDownloadButton } from './PDFDownloadButton'
 import { ResultsDashboard } from './ResultsDashboard'
 
-function extractStad(adres: string): string {
+function extractStad(adres?: string): string {
+  if (!adres) return 'Nederland'
   const parts = adres.split(/[,\s]+/)
-  return parts[parts.length - 1] ?? adres
+  return parts[parts.length - 1] || 'Nederland'
 }
 
 function extractProvincie(postcodePrefix: string): string | null {
@@ -101,7 +102,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
     if (!form.email.trim()) e.email = 'E-mail is verplicht'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Voer een geldig e-mailadres in'
     if (!form.telefoon.trim()) e.telefoon = 'Telefoonnummer is verplicht'
-    else if (form.telefoon.replace(/\s/g, '').length < 10) e.telefoon = 'Voer een geldig telefoonnummer in'
+    else if (!/^(?:0|\+31)[1-9]\d{8}$/.test(form.telefoon.replace(/\s/g, ''))) e.telefoon = 'Voer een geldig telefoonnummer in'
     if (!form.gdprConsent) e.gdprConsent = 'U moet akkoord gaan met de privacyverklaring om door te gaan.'
     setErrors(e)
     return Object.keys(e).length === 0

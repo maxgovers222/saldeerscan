@@ -18,7 +18,7 @@ const AMBER_DARK = '#b45309'
 
 export function FunnelProgress({ currentStep }: FunnelProgressProps) {
   return (
-    <div className="w-full">
+    <div className="w-full" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={6} aria-label={`Stap ${currentStep} van 6`}>
       <div className="h-1 rounded-full mb-4 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
         <div
           className="h-full transition-all duration-500 ease-out rounded-full"
