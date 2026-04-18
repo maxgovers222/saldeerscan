@@ -301,6 +301,15 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
             <DataCard label="Dakoppervlak" value={state.bagData?.dakOppervlakte ?? null} unit="m²" />
           </div>
 
+          {state.bagData?.woningtype &&
+            !['Woning', 'woning', 'residential', 'Appartement', 'appartement'].includes(state.bagData.woningtype) && (
+            <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl p-3">
+              <p className="text-xs font-mono text-amber-300">
+                ⚠ Dit lijkt een kantoor- of bedrijfspand. Onze berekeningen zijn primair voor woningen — de uitkomsten kunnen afwijken van uw werkelijke situatie.
+              </p>
+            </div>
+          )}
+
           {state.netcongestie && (
             <div>
               <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Netcongestie</div>

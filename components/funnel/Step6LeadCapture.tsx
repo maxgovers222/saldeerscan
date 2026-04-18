@@ -165,7 +165,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
         </div>
         <div>
           <p className="text-sm font-bold text-emerald-400">U ontvangt gratis een PDF-rapport</p>
-          <p className="text-xs font-mono text-white/40 mt-0.5">Direct naar uw e-mail · Geen verplichtingen · Binnen 24 uur</p>
+          <p className="text-xs font-mono text-white/40 mt-0.5">Direct naar uw e-mail · Geen verplichtingen</p>
         </div>
       </div>
 
@@ -177,7 +177,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
             { label: 'ROI-berekening', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}/jaar` : '—', done: !!state.roiResult },
             { label: 'ISDE subsidie check', value: isde ? `€${isde.bedragEur.toLocaleString('nl-NL')}` : '—', done: !!isde },
             { label: 'Netcongestie analyse', value: state.netcongestie?.status ?? '—', done: !!state.netcongestie },
-            { label: 'Installateur advies', value: 'Binnen 24 uur', done: true },
+            { label: 'Installateur advies', value: 'Zo snel mogelijk', done: true },
             { label: '2027 urgentie tijdlijn', value: 'Inbegrepen', done: true },
           ].map(({ label, value, done }) => (
             <div key={label} className="flex items-center justify-between text-xs font-mono">

@@ -21,6 +21,7 @@ export interface ROIInput {
   huidigVerbruikKwh?: number   // Optioneel: overschrijft schatting
   budgetEur?: number           // Optioneel: max investering
   aantalPanelenOverride?: number // Optioneel: gebruiker overschrijft paneel berekening
+  kwhPerPaneel?: number        // Optioneel: paneelefficiëntie (standaard 350)
 }
 
 export interface ShockEffect2027 {
@@ -83,7 +84,8 @@ export function berekenROI(input: ROIInput): ROIResult {
 
   const aantalPanelen = input.aantalPanelenOverride
     ?? Math.floor((input.dakOppervlakte * DAK_BENUTTING) / M2_PER_PANEEL)
-  const productieKwh = aantalPanelen * KWH_PER_PANEEL
+  const kwhPerPaneel = input.kwhPerPaneel ?? KWH_PER_PANEEL
+  const productieKwh = aantalPanelen * kwhPerPaneel
   const saldering2026 = SALDERING_SCHEMA[2026]
 
   // Eigengebruik: direct van panelen (zonder batterij ~30% van productie)

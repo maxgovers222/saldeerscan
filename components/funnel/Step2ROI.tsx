@@ -13,6 +13,12 @@ interface Step2ROIProps {
 
 const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_35px_rgba(245,158,11,0.5)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
 
+const PANEEL_TYPES = [
+  { label: 'Standaard (330 kWh/jaar)', kwhPerPaneel: 330 },
+  { label: 'Efficiënt (370 kWh/jaar)',  kwhPerPaneel: 370 },
+  { label: 'Premium (410 kWh/jaar)',    kwhPerPaneel: 410 },
+]
+
 function ScenarioCard({ scenario, variant, recommended }: {
   scenario: { naam: string; beschrijving: string; besparingJaarEur: number; investeringEur: number; terugverdientijdJaar: number }
   variant: 'amber' | 'emerald' | 'red'
@@ -96,14 +102,18 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
   const [dakOpp, setDakOpp] = useState<number>(Math.min(state.bagData?.dakOppervlakte ?? 35, dakMax))
   const panelenMax = Math.max(40, Math.floor((dakMax * 0.70) / 4))
   const [panelen, setPanelen] = useState<number>(state.roiResult?.aantalPanelen ?? (Math.floor((dakMax * 0.55) / 4) || 10))
+  const [kwhPerPaneel, setKwhPerPaneel] = useState(350)
   const [localRoi, setLocalRoi] = useState<ROIResult | null>(state.roiResult ?? null)
   const [loading, setLoading] = useState(false)
   const [roiError, setRoiError] = useState<string | null>(null)
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasLoadedOnce = useRef(false)
 
+  const aanbevolenPanelen = Math.floor((dakOpp * 0.55) / 4) || 1
+
   useEffect(() => {
     if (!state.bagData?.oppervlakte || !state.bagData?.bouwjaar) return
+    if (panelen === 0) return
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
     const delay = hasLoadedOnce.current ? 500 : 0
     hasLoadedOnce.current = true
@@ -119,6 +129,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
             dakOppervlakte: dakOpp,
             huidigVerbruikKwh: verbruik,
             aantalPanelenOverride: panelen,
+            kwhPerPaneel,
             netcongestieStatus: state.netcongestie?.status,
           }),
         })
@@ -136,7 +147,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
     }, delay)
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verbruik, dakOpp, panelen])
+  }, [verbruik, dakOpp, panelen, kwhPerPaneel])
 
   const roi = localRoi
 
@@ -150,8 +161,24 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
           note={state.bagData?.oppervlakte ? `Geschat o.b.v. ${state.bagData.oppervlakte}m²` : undefined} />
         <SliderInput label="Dakoppervlak" value={dakOpp} onChange={setDakOpp} min={10} max={dakMax} step={1} unit="m²"
           note={state.bagData?.dakOppervlakte ? `BAG: ${state.bagData.dakOppervlakte}m²` : undefined} />
-        <SliderInput label="Zonnepanelen" value={panelen} onChange={setPanelen} min={1} max={panelenMax} step={1} unit="stuks"
-          note="Pas aan als u al weet hoeveel panelen u wilt" />
+        <SliderInput label="Zonnepanelen" value={panelen} onChange={setPanelen} min={0} max={panelenMax} step={1} unit="stuks"
+          note="0 = toon advies" />
+
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <label className="text-xs font-mono text-white/40 uppercase tracking-widest">Paneeltype</label>
+            <span className="font-mono text-amber-400 text-sm">{kwhPerPaneel} kWh/paneel</span>
+          </div>
+          <select
+            value={kwhPerPaneel}
+            onChange={(e) => setKwhPerPaneel(Number(e.target.value))}
+            className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/70 font-mono text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
+          >
+            {PANEEL_TYPES.map((t) => (
+              <option key={t.kwhPerPaneel} value={t.kwhPerPaneel}>{t.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {roiError && (
@@ -168,7 +195,24 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
         </div>
       )}
 
-      {roi && (
+      {panelen === 0 ? (
+        <div className="bg-slate-900/40 border border-amber-500/30 rounded-xl p-4 space-y-3">
+          <div className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">Advies op basis van uw situatie</div>
+          <p className="text-sm font-mono text-white/70 leading-relaxed">
+            Op basis van uw verbruik van{' '}
+            <span className="text-amber-400 font-bold">{verbruik.toLocaleString('nl-NL')} kWh/jaar</span>{' '}
+            en <span className="text-amber-400 font-bold">{dakOpp} m²</span> dakoppervlak
+            adviseren wij{' '}
+            <span className="text-amber-400 font-bold">{aanbevolenPanelen} zonnepanelen</span>.
+          </p>
+          <button
+            onClick={() => setPanelen(aanbevolenPanelen)}
+            className="text-xs font-mono text-amber-400 underline underline-offset-2 hover:text-amber-300"
+          >
+            Gebruik aanbevolen aantal →
+          </button>
+        </div>
+      ) : roi && (
         <>
           <div>
             <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">Scenario Vergelijking</div>
@@ -207,7 +251,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
       <div className="flex gap-3">
         <button onClick={() => dispatch({ type: 'SET_STEP', step: 1 })}
           className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 font-mono text-sm py-3 px-4 rounded-full transition-colors">← Terug</button>
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 3 })} disabled={!roi}
+        <button onClick={() => dispatch({ type: 'SET_STEP', step: 3 })} disabled={!roi || panelen === 0}
           className={`flex-[2] font-mono text-sm py-3 px-6 ${amberBtnCls}`}>
           Meterkast scannen →
         </button>

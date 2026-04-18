@@ -138,7 +138,7 @@ function ExpertSectie({ regio }: { regio: string }) {
       </div>
       <p className="text-xs font-mono text-white/50 mb-4 leading-relaxed">
         Uw dossier is doorgezet naar een gecertificeerde installateur in {regio}.
-        Hij bekijkt uw scan, berekent de exacte configuratie en neemt <strong className="text-white/70">binnen 24 uur</strong> contact op.
+        Hij bekijkt uw scan, berekent de exacte configuratie en neemt <strong className="text-white/70">zo spoedig mogelijk</strong> contact op.
       </p>
       <a
         href="/check"
@@ -300,7 +300,7 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
         <p className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-3">Wat gebeurt er verder?</p>
         <div className="space-y-2">
           {[
-            { nr: '1', text: 'Expert bekijkt uw dossier binnen 24 uur', done: true },
+            { nr: '1', text: 'Expert bekijkt uw dossier', done: true },
             { nr: '2', text: 'Gratis inspectie op locatie', done: false },
             { nr: '3', text: 'Persoonlijke offerte op maat', done: false },
             { nr: '4', text: 'ISDE subsidie aanvraag begeleiding', done: false },

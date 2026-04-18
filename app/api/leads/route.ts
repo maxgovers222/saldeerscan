@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       </a>
 
       <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6">
-        Geen actie nodig — een gecertificeerde energie-expert in uw regio bekijkt uw dossier en neemt binnen 24 uur contact op.
+        Geen actie nodig — een gecertificeerde energie-expert in uw regio bekijkt uw dossier en neemt zo spoedig mogelijk contact op.
       </p>
     </div>
     <div style="background:#020617;padding:16px 32px;display:flex;justify-content:space-between">
