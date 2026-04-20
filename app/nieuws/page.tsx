@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { getAllPublishedNieuws } from '@/lib/nieuws'
+import { NavDark, FooterDark } from '@/components/NavDark'
 
 export const revalidate = 3600
 
@@ -26,13 +27,11 @@ export default async function NieuwsOverzicht() {
 
   return (
     <main className="min-h-screen bg-[#020617]">
-      {/* Header */}
-      <div className="border-b border-white/5 bg-slate-950/80">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
-          <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">Home</Link>
-          <span className="text-slate-600">/</span>
-          <span className="text-slate-200 text-sm">Nieuws</span>
-        </div>
+      <NavDark />
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+        <Link href="/" className="text-slate-500 hover:text-white transition-colors text-sm">Home</Link>
+        <span className="text-slate-700">/</span>
+        <span className="text-slate-300 text-sm">Nieuws</span>
       </div>
 
       {/* Hero */}
@@ -111,6 +110,7 @@ export default async function NieuwsOverzicht() {
           </Link>
         </div>
       </section>
+      <FooterDark />
     </main>
   )
 }

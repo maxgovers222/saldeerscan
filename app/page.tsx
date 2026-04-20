@@ -311,6 +311,8 @@ function Footer() {
         <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
           <div className="flex gap-6 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
             <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
+            <a href="/kennisbank" className="hover:text-white/50 transition-colors">Kennisbank</a>
+            <a href="/nieuws" className="hover:text-white/50 transition-colors">Nieuws</a>
             <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
           </div>
           <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>

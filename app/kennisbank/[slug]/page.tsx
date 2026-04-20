@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getKennisbankArticle, getAllKennisbankSlugs, getAllPublishedKennisbank } from '@/lib/kennisbank'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
+import { NavDark, FooterDark } from '@/components/NavDark'
 
 export const revalidate = 2592000
 
@@ -95,16 +96,13 @@ export default async function KennisbankArtikel({ params }: { params: Promise<Pa
   return (
     <main className="min-h-screen bg-[#020617]">
       <LocalSchema jsonLd={article.jsonLd} />
-
-      {/* Breadcrumb */}
-      <div className="border-b border-white/5 bg-slate-950/80">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3 flex-wrap">
-          <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">Home</Link>
-          <span className="text-slate-600">/</span>
-          <Link href="/kennisbank" className="text-slate-400 hover:text-white transition-colors text-sm">Kennisbank</Link>
-          <span className="text-slate-600">/</span>
-          <span className="text-slate-300 text-sm truncate max-w-xs">{article.titel}</span>
-        </div>
+      <NavDark />
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+        <Link href="/" className="text-slate-500 hover:text-white transition-colors text-sm">Home</Link>
+        <span className="text-slate-700">/</span>
+        <Link href="/kennisbank" className="text-slate-500 hover:text-white transition-colors text-sm">Kennisbank</Link>
+        <span className="text-slate-700">/</span>
+        <span className="text-slate-300 text-sm truncate max-w-xs">{article.titel}</span>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-12">
@@ -220,6 +218,7 @@ export default async function KennisbankArtikel({ params }: { params: Promise<Pa
           </aside>
         </div>
       </div>
+      <FooterDark />
     </main>
   )
 }
