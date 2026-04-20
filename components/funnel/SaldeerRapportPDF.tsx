@@ -11,9 +11,9 @@ const S = StyleSheet.create({
   headerDate: { fontSize: 8, color: 'rgba(255,255,255,0.3)', marginTop: 8 },
 
   // Urgency bar
-  urgencyBar: { backgroundColor: '#7c2d12', padding: '10 32', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  urgencyText: { fontSize: 9, color: '#fca5a5', letterSpacing: 1 },
-  urgencyBold: { fontSize: 9, color: '#f87171', fontFamily: 'Helvetica-Bold' },
+  urgencyBar: { backgroundColor: '#1c1208', borderTopWidth: 1, borderTopColor: 'rgba(245,158,11,0.3)', padding: '10 32', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  urgencyText: { fontSize: 9, color: '#fbbf24', letterSpacing: 1 },
+  urgencyBold: { fontSize: 9, color: '#f59e0b', fontFamily: 'Helvetica-Bold' },
 
   // Body
   body: { padding: '28 32' },
@@ -96,8 +96,8 @@ export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
 
         {/* Urgency bar */}
         <View style={S.urgencyBar}>
-          <Text style={S.urgencyBold}>⚠ DEADLINE:</Text>
-          <Text style={S.urgencyText}>Salderingsregeling stopt volledig per 1 januari 2027 — 2026 nog 28% voordeel</Text>
+          <Text style={S.urgencyBold}>Deadline 1 januari 2027 —</Text>
+          <Text style={S.urgencyText}>Salderingsregeling stopt volledig — 2026 nog 28% voordeel</Text>
         </View>
 
         <View style={S.body}>
