@@ -9,6 +9,7 @@
     "seed:netcongestie": "tsx scripts/seed-netcongestie.ts",
     "seed:pseo": "tsx scripts/seed-pseo.ts",
     "seed:wijken": "tsx scripts/seed-wijken.ts",
+    "seed:kennisbank": "tsx scripts/seed-kennisbank.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

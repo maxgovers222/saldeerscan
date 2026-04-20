@@ -117,6 +117,152 @@ Focus op: financiële urgentie 1 januari 2027 (einde salderingsregeling), concre
   return result.response.text().trim()
 }
 
+// Kennisbank artikel generator — lang, evergreen, 1200 woorden
+export interface KennisbankContent {
+  titel: string
+  metaDescription: string
+  intro: string
+  hoofdtekst: string
+  faqItems: FAQ[]
+  category: 'saldering' | 'zonnepanelen' | 'netcongestie' | 'subsidie' | 'algemeen'
+  relatedSlugs: string[]
+}
+
+const KENNISBANK_TOPICS: Record<string, string> = {
+  'wat-is-salderen': 'Wat is salderen? Uitleg van de salderingsregeling voor zonnepanelen',
+  'einde-salderen-2027-uitleg': 'Einde salderen 2027: wat verandert er en wat kunt u doen?',
+  'zonnepanelen-terugverdientijd-berekenen': 'Zonnepanelen terugverdientijd berekenen in 2025-2027',
+  'netcongestie-problemen-nederland': 'Netcongestie in Nederland: oorzaken, gevolgen en oplossingen',
+  'energiebelasting-2027-veranderingen': 'Energiebelasting 2027: wat verandert er voor zonnepaneelbezitters?',
+  'beste-zonnepanelen-2025': 'Beste zonnepanelen 2025: welk merk en type past bij uw woning?',
+  'zonnepanelen-subsidie-nederland': 'Zonnepanelen subsidie Nederland: alle regelingen op een rij',
+  'salderingsregeling-afbouw-2026-2027': 'Salderingsregeling afbouw 2026-2027: stap voor stap uitgelegd',
+  'omvormer-kiezen-zonnepanelen': 'Omvormer kiezen voor zonnepanelen: string vs micro vs optimizer',
+  'thuisbatterij-saldering-alternatief': 'Thuisbatterij als alternatief voor saldering: rendement en kosten',
+  'zonnepanelen-huurhuis-toegestaan': 'Zonnepanelen in een huurhuis: rechten, regels en mogelijkheden',
+  'energielabel-woning-verbeteren': 'Energielabel woning verbeteren: van G naar A in stappen',
+}
+
+export async function generateKennisbankContent(params: {
+  slug: string
+  allSlugs: string[]
+}): Promise<KennisbankContent> {
+  const model = getFlashModel()
+  const topicTitle = KENNISBANK_TOPICS[params.slug] ?? params.slug.replace(/-/g, ' ')
+  const allTopics = params.allSlugs.map(s => `${s}: ${KENNISBANK_TOPICS[s] ?? s}`).join('\n')
+
+  const prompt = `Je bent een senior energie-adviseur en SEO-specialist voor SaldeerScan.nl.
+Schrijf een uitgebreid kennisbank-artikel van precies 1200 woorden over: "${topicTitle}".
+
+Context: SaldeerScan.nl helpt Nederlandse huiseigenaren de impact van het einde van de salderingsregeling op 1 januari 2027 te begrijpen. Doelgroep: Nederlandse woningbezitters met zonnepanelen of interesse daarin.
+
+Vereisten:
+- Minimaal 6 ## H2-koppen (markdown, geen #, geen ###)
+- Concrete euro-bedragen en percentages
+- Urgentie van de 2027-deadline
+- Geen algemeenheden — elke alinea moet actionable zijn
+- Verwerk naturlijk: "saldering 2027", "zonnepanelen terugverdientijd", "netcongestie"
+- Geen emoji
+
+Kies ook 3 gerelateerde onderwerpen voor interne links uit:
+${allTopics}
+
+Return ALLEEN dit JSON formaat (geen markdown omheen):
+{
+  "titel": "...",
+  "metaDescription": "...",
+  "intro": "...",
+  "hoofdtekst": "...",
+  "faqItems": [
+    { "vraag": "...", "antwoord": "..." },
+    { "vraag": "...", "antwoord": "..." },
+    { "vraag": "...", "antwoord": "..." },
+    { "vraag": "...", "antwoord": "..." },
+    { "vraag": "...", "antwoord": "..." }
+  ],
+  "category": "saldering|zonnepanelen|netcongestie|subsidie|algemeen",
+  "relatedSlugs": ["slug1", "slug2", "slug3"]
+}
+
+Veldlengtes: titel max 65 tekens, metaDescription max 155 tekens, intro ~150 woorden, hoofdtekst ~1200 woorden met ## koppen.`
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('Gemini kennisbank response bevat geen geldig JSON')
+
+  const parsed = JSON.parse(jsonMatch[0]) as KennisbankContent
+  if (!parsed.titel || !parsed.hoofdtekst || !Array.isArray(parsed.faqItems)) {
+    throw new Error('Gemini kennisbank response mist vereiste velden')
+  }
+
+  return parsed
+}
+
+// Nieuws artikel generator — actueel, ~900 woorden
+export interface NieuwsContent {
+  titel: string
+  metaDescription: string
+  intro: string
+  hoofdtekst: string
+  faqItems: FAQ[]
+  slug: string
+}
+
+export async function generateNieuwsContent(params: {
+  topicSeed: string
+  recentPublishedTitles: string[]
+}): Promise<NieuwsContent> {
+  const model = getFlashModel()
+  const now = new Date()
+  const maand = now.toLocaleString('nl-NL', { month: 'long' })
+  const jaar = now.getFullYear()
+  const recentStr = params.recentPublishedTitles.length > 0
+    ? `Reeds gepubliceerde titels (vermijd herhaling):\n${params.recentPublishedTitles.join('\n')}`
+    : ''
+
+  const prompt = `Je bent een energie-journalist voor SaldeerScan.nl.
+Schrijf een actueel nieuwsartikel (${maand} ${jaar}) over: "${params.topicSeed}".
+
+${recentStr}
+
+Vereisten:
+- 900 woorden, korte alinea's (max 4 zinnen per alinea)
+- Nieuwswaarde: waarom is dit nu relevant voor de 2027-deadline?
+- Gebruik ## H2-koppen (markdown)
+- 3 concrete feiten of tips per artikel
+- Eindig met een alinea die verwijst naar /check op SaldeerScan.nl voor persoonlijk advies
+- Geen emoji
+
+Return ALLEEN dit JSON formaat (geen markdown omheen):
+{
+  "titel": "...",
+  "metaDescription": "...",
+  "intro": "...",
+  "hoofdtekst": "...",
+  "faqItems": [
+    { "vraag": "...", "antwoord": "..." },
+    { "vraag": "...", "antwoord": "..." },
+    { "vraag": "...", "antwoord": "..." }
+  ],
+  "slug": "..."
+}
+
+Veldlengtes: titel max 70 tekens, metaDescription max 155 tekens, intro 2 zinnen, hoofdtekst ~900 woorden, slug URL-safe max 60 tekens zonder datum erin.`
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('Gemini nieuws response bevat geen geldig JSON')
+
+  const parsed = JSON.parse(jsonMatch[0]) as NieuwsContent
+  if (!parsed.titel || !parsed.hoofdtekst || !parsed.slug) {
+    throw new Error('Gemini nieuws response mist vereiste velden')
+  }
+
+  return parsed
+}
+
 // Tier 1 image screening — cheap, fast
 export interface ScreeningResult {
   isCorrectType: boolean

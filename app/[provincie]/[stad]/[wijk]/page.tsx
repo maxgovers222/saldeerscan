@@ -496,6 +496,38 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
         </section>
       )}
 
+      {/* ── Kennisbank interne linking ──────────────────────────── */}
+      <section className="py-10 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="max-w-5xl mx-auto">
+          <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">Lees ook in de Kennisbank</p>
+          <div className="flex flex-wrap gap-3">
+            {(page.netcongestieStatus === 'ROOD'
+              ? [
+                  { slug: 'wat-is-salderen', titel: 'Wat is salderen?' },
+                  { slug: 'einde-salderen-2027-uitleg', titel: 'Einde salderen 2027' },
+                  { slug: 'netcongestie-problemen-nederland', titel: 'Netcongestie in Nederland' },
+                ]
+              : [
+                  { slug: 'wat-is-salderen', titel: 'Wat is salderen?' },
+                  { slug: 'einde-salderen-2027-uitleg', titel: 'Einde salderen 2027' },
+                  { slug: 'thuisbatterij-saldering-alternatief', titel: 'Thuisbatterij als alternatief' },
+                ]
+            ).map(link => (
+              <a
+                key={link.slug}
+                href={`/kennisbank/${link.slug}`}
+                className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors text-sm border border-white/10 rounded-lg px-3 py-2 hover:border-amber-500/30"
+              >
+                <svg className="w-3.5 h-3.5 text-amber-500/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                {link.titel}
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ──────────────────────────────────────────────── */}
       <footer className="py-12 px-6" style={{ background: N1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-5xl mx-auto">

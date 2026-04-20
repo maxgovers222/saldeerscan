@@ -1,5 +1,7 @@
 import { MetadataRoute } from 'next'
 import { getPseoPagesByProvincie } from '@/lib/pseo'
+import { getAllPublishedKennisbank } from '@/lib/kennisbank'
+import { getAllPublishedNieuws } from '@/lib/nieuws'
 
 const PROVINCIES = [
   'noord-holland', 'zuid-holland', 'utrecht', 'noord-brabant',
@@ -7,41 +9,58 @@ const PROVINCIES = [
   'drenthe', 'flevoland', 'zeeland', 'limburg',
 ]
 
-const PROVINCIE_SLUG_TO_NAAM: Record<string, string> = {
-  'noord-holland': 'Noord-Holland',
-  'zuid-holland': 'Zuid-Holland',
-  'utrecht': 'Utrecht',
-  'noord-brabant': 'Noord-Brabant',
-  'gelderland': 'Gelderland',
-  'overijssel': 'Overijssel',
-  'friesland': 'Friesland',
-  'groningen': 'Groningen',
-  'drenthe': 'Drenthe',
-  'flevoland': 'Flevoland',
-  'zeeland': 'Zeeland',
-  'limburg': 'Limburg',
-}
-
 export async function generateSitemaps() {
-  return PROVINCIES.map(id => ({ id }))
+  return [
+    ...PROVINCIES.map(id => ({ id })),
+    { id: 'kennisbank' },
+    { id: 'nieuws' },
+  ]
 }
 
 export default async function sitemap({ id }: { id: string | Promise<string> }): Promise<MetadataRoute.Sitemap> {
-  // id = provincie slug (e.g. 'noord-holland')
-  // In Next.js 16, id may be passed as a Promise
+  // id = provincie slug (e.g. 'noord-holland') — matches DB storage format
   const resolvedId = await Promise.resolve(id)
-  // Convert slug back to provincie name for DB query
-  const provincieNaam = PROVINCIE_SLUG_TO_NAAM[resolvedId] ?? resolvedId
+  const now = new Date()
 
-  let pages: Awaited<ReturnType<typeof getPseoPagesByProvincie>> = []
-  try {
-    pages = await getPseoPagesByProvincie(provincieNaam)
-  } catch {
-    // DB not available at build time — return empty sitemap for this provincie
-    return []
+  // Kennisbank sitemap
+  if (resolvedId === 'kennisbank') {
+    try {
+      const articles = await getAllPublishedKennisbank()
+      return [
+        { url: 'https://saldeerscan.nl/kennisbank', lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
+        ...articles.map(a => ({
+          url: `https://saldeerscan.nl/kennisbank/${a.slug}`,
+          lastModified: a.generatedAt ? new Date(a.generatedAt) : now,
+          changeFrequency: 'monthly' as const,
+          priority: 0.85,
+        })),
+      ]
+    } catch { return [] }
   }
 
-  const now = new Date()
+  // Nieuws sitemap
+  if (resolvedId === 'nieuws') {
+    try {
+      const articles = await getAllPublishedNieuws()
+      return [
+        { url: 'https://saldeerscan.nl/nieuws', lastModified: now, changeFrequency: 'daily' as const, priority: 0.9 },
+        ...articles.map(a => ({
+          url: `https://saldeerscan.nl/nieuws/${a.slug}`,
+          lastModified: a.publishedAt ? new Date(a.publishedAt) : now,
+          changeFrequency: 'weekly' as const,
+          priority: 0.8,
+        })),
+      ]
+    } catch { return [] }
+  }
+
+  // Provincie sitemaps
+  let pages: Awaited<ReturnType<typeof getPseoPagesByProvincie>> = []
+  try {
+    pages = await getPseoPagesByProvincie(resolvedId)
+  } catch {
+    return []
+  }
 
   // Provincie-overzichtspagina
   const provincieUrl = [{
