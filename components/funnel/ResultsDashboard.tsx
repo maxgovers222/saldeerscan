@@ -242,22 +242,12 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
       {/* Volgende stap */}
       <div className="bg-slate-900/40 border border-amber-500/15 rounded-2xl p-6 print-break-avoid">
         <p className="text-xs font-semibold text-amber-400 mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Volgende stap</p>
-        <h3 className="text-base font-bold text-white mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
+        <p className="text-base font-bold text-white mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
           Een energieadviseur neemt contact op
-        </h3>
-        <p className="text-sm text-white/50 mb-5 leading-relaxed" style={{ fontFamily: 'var(--font-sans)' }}>
-          Uw dossier wordt bekeken door een energieadviseur in {regio}. Hij berekent de exacte configuratie en neemt zo spoedig mogelijk contact op.
         </p>
-        <a
-          href="/check"
-          className="no-print w-full flex items-center justify-center gap-2 font-bold py-3.5 px-6 rounded-full text-sm text-slate-950 bg-amber-500 hover:brightness-105 active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_rgba(245,158,11,0.3)]"
-          style={{ fontFamily: 'var(--font-heading)' }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/>
-          </svg>
-          Bespreek dit rapport met een expert
-        </a>
+        <p className="text-sm text-white/50 leading-relaxed" style={{ fontFamily: 'var(--font-sans)' }}>
+          Uw dossier wordt bekeken door een energieadviseur in {regio}. Hij berekent de exacte configuratie en neemt zo spoedig mogelijk contact met u op.
+        </p>
       </div>
 
       {/* Download */}
@@ -273,30 +263,6 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
           </svg>
           Afdrukken / opslaan als PDF
         </button>
-      </div>
-
-      {/* Volgende stappen */}
-      <div className="bg-slate-900/40 border border-white/8 rounded-xl p-5 print-break-avoid">
-        <p className="text-xs font-semibold text-white/50 mb-4" style={{ fontFamily: 'var(--font-sans)' }}>Wat gebeurt er verder?</p>
-        <div className="space-y-3">
-          {[
-            { nr: '1', text: 'Expert bekijkt uw dossier', done: true },
-            { nr: '2', text: 'Gratis inspectie op locatie', done: false },
-            { nr: '3', text: 'Persoonlijke offerte op maat', done: false },
-            { nr: '4', text: 'ISDE subsidie aanvraag begeleiding', done: false },
-          ].map(({ nr, text, done }) => (
-            <div key={nr} className="flex items-center gap-3 text-sm">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${done ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400' : 'bg-white/5 border border-white/10 text-white/25'}`}>
-                {done ? (
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <path d="M2 6l2.5 2.5L10 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                ) : nr}
-              </div>
-              <span className={done ? 'text-white/70' : 'text-white/35'} style={{ fontFamily: 'var(--font-sans)' }}>{text}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       <p className="text-[10px] text-white/20 text-center pb-2" style={{ fontFamily: 'var(--font-sans)' }}>
