@@ -4,6 +4,7 @@ import { dispatchToPartners } from '@/lib/webhooks'
 import { Resend } from 'resend'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+if (!resend) console.warn('[api/leads] RESEND_API_KEY niet ingesteld — bevestigingsmail wordt overgeslagen')
 
 export async function POST(request: Request) {
   const limitResult = applyRateLimit(request, 10, 3_600_000) // 10 leads per IP per hour
