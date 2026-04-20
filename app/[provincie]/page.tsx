@@ -142,8 +142,8 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
           style={{ background: 'rgba(245,158,11,0.06)' }} />
 
         <div className="relative max-w-5xl mx-auto text-center">
-          <p className="text-[10px] font-mono uppercase tracking-widest mb-4" style={{ color: AMBER }}>
-            // PROVINCIE ENERGIE DASHBOARD
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: AMBER, fontFamily: 'var(--font-sans)' }}>
+            Zonnepanelen per regio
           </p>
           <h1 className="font-black text-white mb-2 leading-none"
             style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 6vw, 3.8rem)', letterSpacing: '-0.03em' }}>
@@ -176,7 +176,7 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
       {/* Stad grid */}
       <section className="max-w-5xl mx-auto px-6 py-10">
         <div className="mb-6">
-          <p className="text-[9px] font-mono uppercase tracking-widest text-white/30 mb-1">[STEDEN]</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>Steden</p>
           <h2 className="text-xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
             Alle steden in {provLabel}
           </h2>
@@ -209,7 +209,7 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
       {/* Andere provincies */}
       <section className="max-w-5xl mx-auto px-6 pb-10">
         <div className="mb-4">
-          <p className="text-[9px] font-mono uppercase tracking-widest text-white/30 mb-1">[PROVINCIES]</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>Andere provincies</p>
           <h2 className="text-base font-bold text-white/60" style={{ fontFamily: 'var(--font-heading)' }}>
             Andere provincies
           </h2>
@@ -271,7 +271,7 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
               <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
               <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
             </div>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© 2026 SaldeerScan.nl</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
           </div>
         </div>
       </footer>
