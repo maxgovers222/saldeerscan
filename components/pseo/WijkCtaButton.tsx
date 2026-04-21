@@ -1,13 +1,14 @@
 'use client'
 
+import type { ReactNode, CSSProperties } from 'react'
 import { trackEvent } from '@/lib/analytics'
 
 interface WijkCtaButtonProps {
   wijk: string
   stad: string
-  children: React.ReactNode
+  children: ReactNode
   className?: string
-  style?: React.CSSProperties
+  style?: CSSProperties
 }
 
 export function WijkCtaButton({ wijk, stad, children, className, style }: WijkCtaButtonProps) {

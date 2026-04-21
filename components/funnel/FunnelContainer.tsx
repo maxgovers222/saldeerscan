@@ -83,8 +83,9 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false)
 
   function trackingDispatch(action: FunnelAction) {
-    if (action.type === 'SET_STEP') {
-      trackEvent('funnel_step_complete', { step: action.step - 1, next_step: action.step })
+    // Only track forward navigation — backward steps are not completions
+    if (action.type === 'SET_STEP' && action.step > state.step) {
+      trackEvent('funnel_step_complete', { step: state.step, next_step: action.step })
     }
     dispatch(action)
   }
