@@ -94,18 +94,19 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
     dispatch(action)
   }
 
-  // Capture UTM params at mount — eenmalig
+  // Capture UTM params at mount — eenmalig. landingPage zonder UTM query zodat grouping in GA4 klopt.
   useEffect(() => {
     const source = searchParams.get('utm_source')
     const medium = searchParams.get('utm_medium')
     const campaign = searchParams.get('utm_campaign')
-    const content = searchParams.get('utm_content')
-    const term = searchParams.get('utm_term')
-    const landingPage = typeof window !== 'undefined' ? window.location.href : null
+    const landingPage = typeof window !== 'undefined'
+      ? window.location.origin + window.location.pathname
+      : null
 
-    if (source || medium || campaign || content || term) {
-      dispatch({ type: 'SET_UTM_PARAMS', utmParams: { source, medium, campaign, content, term, landingPage } })
+    if (source || medium || campaign) {
+      dispatch({ type: 'SET_UTM_PARAMS', utmParams: { source, medium, campaign, landingPage } })
     }
+  // searchParams is stable per Next.js App Router — intentioneel lege deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

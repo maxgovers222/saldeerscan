@@ -106,8 +106,6 @@ export interface FunnelState {
     source: string | null
     medium: string | null
     campaign: string | null
-    content: string | null
-    term: string | null
     landingPage: string | null
   } | null
 }
