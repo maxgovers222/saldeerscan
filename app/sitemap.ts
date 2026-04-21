@@ -34,7 +34,10 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
           priority: 0.85,
         })),
       ]
-    } catch { return [] }
+    } catch (e) {
+      console.error('[sitemap] kennisbank query mislukt:', e)
+      return []
+    }
   }
 
   // Nieuws sitemap
@@ -50,7 +53,10 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
           priority: 0.8,
         })),
       ]
-    } catch { return [] }
+    } catch (e) {
+      console.error('[sitemap] nieuws query mislukt:', e)
+      return []
+    }
   }
 
   // Provincie sitemaps
