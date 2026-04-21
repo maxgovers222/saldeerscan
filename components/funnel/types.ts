@@ -102,6 +102,14 @@ export interface FunnelState {
   leadId: string | null
   loading: boolean
   error: string | null
+  utmParams: {
+    source: string | null
+    medium: string | null
+    campaign: string | null
+    content: string | null
+    term: string | null
+    landingPage: string | null
+  } | null
 }
 
 export type FunnelAction =
@@ -118,3 +126,4 @@ export type FunnelAction =
   | { type: 'SET_ADRES'; adres: string }
   | { type: 'SET_LOADING'; loading: boolean }
   | { type: 'SET_ERROR'; error: string | null }
+  | { type: 'SET_UTM_PARAMS'; utmParams: FunnelState['utmParams'] }

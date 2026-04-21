@@ -1,6 +1,7 @@
 'use client'
 
 import { useReducer, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import type { FunnelState, FunnelAction, HealthScoreResult, ROIResult, MeterkastAnalyse, PlaatsingsAnalyse, OmvormerAnalyse } from './types'
 import { trackEvent } from '@/lib/analytics'
 
@@ -46,6 +47,7 @@ function funnelReducer(state: FunnelState, action: FunnelAction): FunnelState {
     case 'SET_ADRES': return { ...state, adres: action.adres }
     case 'SET_LOADING': return { ...state, loading: action.loading }
     case 'SET_ERROR': return { ...state, error: action.error }
+    case 'SET_UTM_PARAMS': return { ...state, utmParams: action.utmParams }
     default: return state
   }
 }
@@ -66,6 +68,7 @@ function makeInitialState(initialAdres = '', initialWijk = '', initialStad = '')
     leadId: null,
     loading: false,
     error: null,
+    utmParams: null,
   }
 }
 
@@ -81,6 +84,7 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   const [state, dispatch] = useReducer(funnelReducer, makeInitialState(initialAdres, initialWijk, initialStad))
   const [savedState, setSavedState] = useState<FunnelState | null>(null)
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false)
+  const searchParams = useSearchParams()
 
   function trackingDispatch(action: FunnelAction) {
     // Only track forward navigation — backward steps are not completions
@@ -89,6 +93,21 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
     }
     dispatch(action)
   }
+
+  // Capture UTM params at mount — eenmalig
+  useEffect(() => {
+    const source = searchParams.get('utm_source')
+    const medium = searchParams.get('utm_medium')
+    const campaign = searchParams.get('utm_campaign')
+    const content = searchParams.get('utm_content')
+    const term = searchParams.get('utm_term')
+    const landingPage = typeof window !== 'undefined' ? window.location.href : null
+
+    if (source || medium || campaign || content || term) {
+      dispatch({ type: 'SET_UTM_PARAMS', utmParams: { source, medium, campaign, content, term, landingPage } })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Load saved state on mount (client only) — always, even with URL params
   useEffect(() => {
