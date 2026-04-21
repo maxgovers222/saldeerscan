@@ -2,6 +2,7 @@
 
 import { useReducer, useEffect, useState } from 'react'
 import type { FunnelState, FunnelAction, HealthScoreResult, ROIResult, MeterkastAnalyse, PlaatsingsAnalyse, OmvormerAnalyse } from './types'
+import { trackEvent } from '@/lib/analytics'
 
 const STORAGE_KEY = 'wep_funnel_state'
 
@@ -81,6 +82,13 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   const [savedState, setSavedState] = useState<FunnelState | null>(null)
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false)
 
+  function trackingDispatch(action: FunnelAction) {
+    if (action.type === 'SET_STEP') {
+      trackEvent('funnel_step_complete', { step: action.step - 1, next_step: action.step })
+    }
+    dispatch(action)
+  }
+
   // Load saved state on mount (client only) — always, even with URL params
   useEffect(() => {
     const loaded = loadState()
@@ -93,6 +101,11 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
     const t = setTimeout(() => saveState(state), 500)
     return () => clearTimeout(t)
   }, [state])
+
+  // Track lead submission
+  useEffect(() => {
+    if (state.leadId) trackEvent('lead_submitted', { lead_id: state.leadId })
+  }, [state.leadId])
 
   function resumeSavedState() {
     if (!savedState) return
@@ -146,12 +159,12 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
       )}
       <FunnelProgress currentStep={state.step} />
       <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden">
-        {state.step === 1 && <Step1Adres state={state} dispatch={dispatch} />}
-        {state.step === 2 && <Step2ROI state={state} dispatch={dispatch} />}
-        {state.step === 3 && <Step3Meterkast state={state} dispatch={dispatch} />}
-        {state.step === 4 && <Step4Plaatsing state={state} dispatch={dispatch} />}
-        {state.step === 5 && <Step5Omvormer state={state} dispatch={dispatch} />}
-        {state.step === 6 && <Step6LeadCapture state={state} dispatch={dispatch} />}
+        {state.step === 1 && <Step1Adres state={state} dispatch={trackingDispatch} />}
+        {state.step === 2 && <Step2ROI state={state} dispatch={trackingDispatch} />}
+        {state.step === 3 && <Step3Meterkast state={state} dispatch={trackingDispatch} />}
+        {state.step === 4 && <Step4Plaatsing state={state} dispatch={trackingDispatch} />}
+        {state.step === 5 && <Step5Omvormer state={state} dispatch={trackingDispatch} />}
+        {state.step === 6 && <Step6LeadCapture state={state} dispatch={trackingDispatch} />}
       </div>
     </div>
   )
