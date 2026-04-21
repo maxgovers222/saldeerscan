@@ -85,13 +85,7 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
   return data.access_token
 }
 
-async function notifyGoogleIndexing(url: string): Promise<void> {
-  const saJson = process.env.GOOGLE_INDEXING_SA_KEY
-  if (!saJson) throw new Error('GOOGLE_INDEXING_SA_KEY niet ingesteld in .env.local')
-
-  const sa    = JSON.parse(saJson) as ServiceAccount
-  const token = await getAccessToken(sa)
-
+async function pingUrl(url: string, token: string): Promise<void> {
   const res = await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
     method:  'POST',
     headers: {
@@ -135,12 +129,31 @@ async function delay(ms: number): Promise<void> {
 async function main(): Promise<void> {
   if (dryRun) console.log('[DRY-RUN] Modus actief — geen echte API calls')
 
-  // Haal alle gepubliceerde wijk-slugs op (straat IS NULL = wijk-level)
+  // Valideer SA-key vroeg (vóór DB-queries) zodat we snel falen bij ontbrekende config
+  let token = ''
+  if (!dryRun) {
+    const saJson = process.env.GOOGLE_INDEXING_SA_KEY
+    if (!saJson) {
+      console.error('Fout: GOOGLE_INDEXING_SA_KEY niet ingesteld in .env.local')
+      process.exit(1)
+    }
+    let sa: ServiceAccount
+    try {
+      sa = JSON.parse(saJson) as ServiceAccount
+    } catch {
+      console.error('Fout: GOOGLE_INDEXING_SA_KEY bevat geen geldig JSON')
+      process.exit(1)
+    }
+    token = await getAccessToken(sa)
+  }
+
+  // Haal alle gepubliceerde wijk-slugs op (straat IS NULL + wijk IS NOT NULL = wijk-level)
   const { data, error } = await supabase
     .from('pseo_pages')
     .select('slug')
     .eq('status', 'published')
     .is('straat', null)
+    .not('wijk', 'is', null)
 
   if (error) {
     console.error('Supabase fout:', error.message)
@@ -176,7 +189,7 @@ async function main(): Promise<void> {
     }
 
     try {
-      await notifyGoogleIndexing(url)
+      await pingUrl(url, token)
       console.log(`✓ gepinged: ${url}`)
       successCount++
     } catch (err) {
