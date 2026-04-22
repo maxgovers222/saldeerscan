@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getWijkPage, getTopWijken, getWijkenByStad } from '@/lib/pseo'
+import { getWijkPage, getTopWijken, getWijkenByStad, getTopStratenByWijk } from '@/lib/pseo'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
 import { WijkSaldeerChart } from '@/components/pseo/WijkSaldeerChart'
 import { CountdownTimer } from '@/components/CountdownTimer'
@@ -109,9 +109,10 @@ const amberBtnCls = [
 
 export default async function WijkPage({ params }: { params: Promise<Params> }) {
   const { provincie, stad, wijk } = await params
-  const [page, wijkenInStad] = await Promise.all([
+  const [page, wijkenInStad, topStraten] = await Promise.all([
     getCachedWijkPage({ provincie, stad, wijk }),
     getWijkenByStad(provincie, stad),
+    getTopStratenByWijk(provincie, stad, wijk, 8),
   ])
   if (!page) notFound()
   const relatedWijken = wijkenInStad.filter(w => w.wijk !== wijk).slice(0, 6)
@@ -463,6 +464,30 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
           </div>
         </div>
       </section>
+
+      {/* ── Populaire straten in wijk ───────────────────────────────────────────── */}
+      {topStraten.length > 0 && (
+        <section className="py-10 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="max-w-5xl mx-auto">
+            <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">
+              Populaire straten in {toDisplay(wijk)}
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {topStraten.map((s) => (
+                <a
+                  key={s.straat}
+                  href={`/${s.provincie}/${s.stad}/${s.wijk}/${s.straat}`}
+                  className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-3 transition-all hover:bg-slate-900/60 group"
+                >
+                  <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors capitalize" style={{ fontFamily: 'var(--font-heading)' }}>
+                    {toDisplay(s.straat)}
+                  </p>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Andere wijken in stad ───────────────────────────────── */}
       {relatedWijken.length > 0 && (

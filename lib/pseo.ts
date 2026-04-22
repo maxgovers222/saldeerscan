@@ -185,6 +185,26 @@ export async function getStratenByWijk(
   return (data ?? []).filter(r => r.straat !== null) as Array<{ straat: string; provincie: string; stad: string; wijk: string }>
 }
 
+// Haalt top straten op voor een wijk (voor interne linking op wijkpagina)
+export async function getTopStratenByWijk(
+  provincie: string,
+  stad: string,
+  wijk: string,
+  limit = 8
+): Promise<Array<{ straat: string; provincie: string; stad: string; wijk: string }>> {
+  const { data } = await supabaseAdmin
+    .from('pseo_pages')
+    .select('straat, provincie, stad, wijk')
+    .eq('provincie', provincie)
+    .eq('stad', stad)
+    .eq('wijk', wijk)
+    .not('straat', 'is', null)
+    .eq('status', 'published')
+    .order('aantal_woningen', { ascending: false })
+    .limit(limit)
+  return (data ?? []).filter((r): r is { straat: string; provincie: string; stad: string; wijk: string } => r.straat !== null)
+}
+
 export async function getTopStadden(limit = 100) {
   const { data } = await supabaseAdmin
     .from('pseo_pages')
