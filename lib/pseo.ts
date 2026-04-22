@@ -163,6 +163,28 @@ export async function getStaddenByProvincie(provincie: string) {
     .sort((a, b) => b.totalWoningen - a.totalWoningen)
 }
 
+// Haalt andere straten op in dezelfde wijk (voor interne linking)
+export async function getStratenByWijk(
+  provincie: string,
+  stad: string,
+  wijk: string,
+  excludeStraat: string,
+  limit = 6
+): Promise<Array<{ straat: string; provincie: string; stad: string; wijk: string }>> {
+  const { data } = await supabaseAdmin
+    .from('pseo_pages')
+    .select('straat, provincie, stad, wijk')
+    .eq('provincie', provincie)
+    .eq('stad', stad)
+    .eq('wijk', wijk)
+    .neq('straat', excludeStraat)
+    .not('straat', 'is', null)
+    .eq('status', 'published')
+    .order('aantal_woningen', { ascending: false })
+    .limit(limit)
+  return (data ?? []).filter(r => r.straat !== null) as Array<{ straat: string; provincie: string; stad: string; wijk: string }>
+}
+
 export async function getTopStadden(limit = 100) {
   const { data } = await supabaseAdmin
     .from('pseo_pages')
