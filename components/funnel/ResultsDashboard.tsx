@@ -149,8 +149,9 @@ function GevalideerdStempel() {
   useEffect(() => { const t = setTimeout(() => setVisible(true), 800); return () => clearTimeout(t) }, [])
   return (
     <div className={`absolute -top-3 -right-3 transition-all duration-500 ${visible ? 'opacity-100 scale-100 rotate-12' : 'opacity-0 scale-50 rotate-0'}`}>
-      <div className="bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border-2 border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)]">
-        ✓ Gevalideerd 2027
+      <div className="bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border-2 border-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.4)] flex items-center gap-0.5">
+        <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        Gevalideerd 2027
       </div>
     </div>
   )

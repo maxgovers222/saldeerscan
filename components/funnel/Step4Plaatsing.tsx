@@ -22,8 +22,12 @@ function PlaatsingResultaat({ analyse }: { analyse: PlaatsingsAnalyse }) {
       </div>
       <div className="flex items-center gap-4">
         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border flex-1 ${analyse.nenCompliant ? 'bg-emerald-950/30 border-emerald-700/50' : 'bg-red-950/40 border-red-700/50'}`}>
-          <span className={`font-mono font-bold text-sm ${analyse.nenCompliant ? 'text-emerald-400' : 'text-red-400'}`}>
-            {analyse.nenCompliant ? 'NEN Compliant ✓' : 'NEN Non-compliant ✗'}
+          <span className={`font-mono font-bold text-sm flex items-center gap-1 ${analyse.nenCompliant ? 'text-emerald-400' : 'text-red-400'}`}>
+            {analyse.nenCompliant ? (
+              <><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>NEN Compliant</>
+            ) : (
+              <><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>NEN Non-compliant</>
+            )}
           </span>
         </div>
         <div className="bg-slate-900/60 border border-white/10 rounded-lg p-3 text-center min-w-20">

@@ -215,7 +215,11 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           ].map(({ label, value, done }) => (
             <div key={label} className="flex items-center justify-between text-xs font-mono">
               <span className="flex items-center gap-1.5 text-white/50">
-                <span className={done ? 'text-emerald-400' : 'text-white/20'}>✓</span>
+                {done ? (
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-emerald-400"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-white/20"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                )}
                 {label}
               </span>
               <span className="text-white/70 font-semibold">{value}</span>

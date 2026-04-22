@@ -20,20 +20,37 @@ function MeterkastResultaat({ analyse }: { analyse: MeterkastAnalyse }) {
         <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">Analyse compleet</span>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: 'Merk', value: analyse.merk ?? 'Onbekend', color: 'text-amber-400' },
-          { label: '3-fase', value: analyse.drieFase ? 'Ja ✓' : 'Nee ✗', color: analyse.drieFase ? 'text-emerald-400' : 'text-red-400' },
-          { label: 'Vrije groepen', value: String(analyse.vrijeGroepen), color: 'text-amber-400' },
-          { label: 'Max vermogen', value: analyse.maxVermogenKw !== null ? `${analyse.maxVermogenKw} kW` : '—', color: 'text-amber-400' },
-        ].map((item) => (
-          <div key={item.label} className="bg-slate-900/60 border border-white/10 rounded-md p-3">
-            <div className="text-[10px] font-mono text-white/40 mb-1">{item.label}</div>
-            <div className={`font-mono font-semibold text-sm ${item.color}`}>{item.value}</div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">Merk</div>
+          <div className="font-mono font-semibold text-sm text-amber-400">{analyse.merk ?? 'Onbekend'}</div>
+        </div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">3-fase</div>
+          <div className={`font-mono font-semibold text-sm flex items-center gap-1 ${analyse.drieFase ? 'text-emerald-400' : 'text-red-400'}`}>
+            {analyse.drieFase ? (
+              <><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Ja</>
+            ) : (
+              <><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>Nee</>
+            )}
           </div>
-        ))}
+        </div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">Vrije groepen</div>
+          <div className="font-mono font-semibold text-sm text-amber-400">{String(analyse.vrijeGroepen)}</div>
+        </div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">Max vermogen</div>
+          <div className="font-mono font-semibold text-sm text-amber-400">{analyse.maxVermogenKw !== null ? `${analyse.maxVermogenKw} kW` : '—'}</div>
+        </div>
       </div>
       <div className={`flex items-center gap-3 rounded-lg px-4 py-3 ${analyse.geschikt ? 'bg-emerald-950/30 border border-emerald-700/50' : 'bg-red-950/40 border border-red-700/50'}`}>
-        <span className="text-2xl">{analyse.geschikt ? '✓' : '✗'}</span>
+        <svg width="24" height="24" viewBox="0 0 14 14" fill="none" aria-hidden="true" className={analyse.geschikt ? 'text-emerald-400' : 'text-red-400'}>
+          {analyse.geschikt ? (
+            <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          ) : (
+            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          )}
+        </svg>
         <div>
           <div className={`font-mono font-bold text-sm ${analyse.geschikt ? 'text-emerald-400' : 'text-red-400'}`}>
             {analyse.geschikt ? 'Geschikt voor installatie' : 'Niet direct geschikt'}

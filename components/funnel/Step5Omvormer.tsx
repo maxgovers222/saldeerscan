@@ -21,17 +21,28 @@ function OmvormerResultaat({ analyse }: { analyse: OmvormerAnalyse }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: 'Merk', value: analyse.merk ?? 'Onbekend' },
-          { label: 'Model', value: analyse.model ?? '—' },
-          { label: 'Vermogen', value: analyse.vermogenKw !== null ? `${analyse.vermogenKw} kW` : '—' },
-          { label: 'Hybride klaar', value: analyse.hybrideKlaar ? 'Ja ✓' : 'Nee', color: analyse.hybrideKlaar ? 'text-emerald-400' : 'text-red-400' },
-        ].map((item) => (
-          <div key={item.label} className="bg-slate-900/60 border border-white/10 rounded-md p-3">
-            <div className="text-[10px] font-mono text-white/40 mb-1">{item.label}</div>
-            <div className={`font-mono font-semibold text-sm truncate ${'color' in item ? item.color : 'text-amber-400'}`}>{item.value}</div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">Merk</div>
+          <div className="font-mono font-semibold text-sm truncate text-amber-400">{analyse.merk ?? 'Onbekend'}</div>
+        </div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">Model</div>
+          <div className="font-mono font-semibold text-sm truncate text-amber-400">{analyse.model ?? '—'}</div>
+        </div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">Vermogen</div>
+          <div className="font-mono font-semibold text-sm truncate text-amber-400">{analyse.vermogenKw !== null ? `${analyse.vermogenKw} kW` : '—'}</div>
+        </div>
+        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
+          <div className="text-[10px] font-mono text-white/40 mb-1">Hybride klaar</div>
+          <div className={`font-mono font-semibold text-sm flex items-center gap-1 ${analyse.hybrideKlaar ? 'text-emerald-400' : 'text-red-400'}`}>
+            {analyse.hybrideKlaar ? (
+              <><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Ja</>
+            ) : (
+              <>Nee</>
+            )}
           </div>
-        ))}
+        </div>
       </div>
 
       {analyse.vervangenNodig && (
