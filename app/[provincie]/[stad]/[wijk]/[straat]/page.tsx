@@ -7,6 +7,12 @@ import { LocalSchema } from '@/components/pseo/LocalSchema'
 // Deduplicate Supabase fetches: generateMetadata + page component share one request
 const getCachedPseoPage = cache(getPseoPage)
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function toDisplay(slug: string) {
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
 // ISR: revalidate every 30 days
 export const revalidate = 2592000
 
@@ -70,6 +76,24 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
       {page.jsonLd && Object.keys(page.jsonLd).length > 0 && (
         <LocalSchema jsonLd={page.jsonLd} />
       )}
+
+      {/* BreadcrumbList JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://saldeerscan.nl/" },
+              { "@type": "ListItem", "position": 2, "name": toDisplay(p.provincie), "item": `https://saldeerscan.nl/${p.provincie}` },
+              { "@type": "ListItem", "position": 3, "name": toDisplay(p.stad), "item": `https://saldeerscan.nl/${p.provincie}/${p.stad}` },
+              { "@type": "ListItem", "position": 4, "name": toDisplay(p.wijk), "item": `https://saldeerscan.nl/${p.provincie}/${p.stad}/${p.wijk}` },
+              { "@type": "ListItem", "position": 5, "name": toDisplay(p.straat), "item": `https://saldeerscan.nl/${p.provincie}/${p.stad}/${p.wijk}/${p.straat}` },
+            ]
+          })
+        }}
+      />
 
       {/* Hero */}
       <section className="px-4 py-16 max-w-4xl mx-auto">
