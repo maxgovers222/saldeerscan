@@ -43,6 +43,11 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       siteName: 'SaldeerScan.nl',
       locale: 'nl_NL',
       type: 'website',
+      images: [{
+        url: `https://saldeerscan.nl/api/og?titel=${encodeURIComponent(page.titel ?? `Energiebesparing ${p.straat}`)}&score=${page.gemHealthScore ?? ''}&status=${page.netcongestieStatus ?? ''}&type=straat`,
+        width: 1200,
+        height: 630,
+      }],
     },
   }
 }

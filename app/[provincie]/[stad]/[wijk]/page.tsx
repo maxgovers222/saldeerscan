@@ -29,7 +29,15 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   return {
     title, description,
     alternates: { canonical: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}` },
-    openGraph: { title, description, type: 'website', locale: 'nl_NL', url: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}` },
+    openGraph: {
+      title, description, type: 'website', locale: 'nl_NL',
+      url: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}`,
+      images: [{
+        url: `https://saldeerscan.nl/api/og?titel=${encodeURIComponent(title)}&score=${page?.gemHealthScore ?? ''}&status=${page?.netcongestieStatus ?? ''}&type=wijk`,
+        width: 1200,
+        height: 630,
+      }],
+    },
   }
 }
 
