@@ -5,27 +5,25 @@ import { CountdownTimer } from '@/components/CountdownTimer'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 
 function SocialProofTicker() {
-  const [mounted, setMounted] = useState(false)
-  const [count, setCount] = useState(0)
-  const [minGeleden, setMinGeleden] = useState(0)
+  const [data, setData] = useState<{ count: number; minGeleden: number | null } | null>(null)
 
   useEffect(() => {
-    const base = Math.floor(Date.now() / 86_400_000) * 7 + 142
-    setCount(base)
-    setMinGeleden(Math.floor(Date.now() / 60_000) % 47 + 3)
-    setMounted(true)
-    const id = setInterval(() => setCount(c => c + 1), Math.random() * 75_000 + 45_000)
-    return () => clearInterval(id)
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(setData)
+      .catch(() => {})
   }, [])
 
-  if (!mounted) return null
+  if (!data || data.count === 0) return null
 
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-4"
       style={{ background: 'rgba(0,170,101,0.08)', border: '1px solid rgba(0,170,101,0.2)' }}>
       <span className="w-1.5 h-1.5 rounded-full bg-[#00aa65] animate-pulse shrink-0" />
-      <span className="text-[#00aa65] font-bold">{count}</span>
-      <span className="text-white/45">analyses vandaag · Laatste: {minGeleden} min geleden</span>
+      <span className="text-[#00aa65] font-bold">{data.count}</span>
+      <span className="text-white/45">
+        analyses{data.minGeleden !== null ? ` · Laatste: ${data.minGeleden} min geleden` : ''}
+      </span>
     </div>
   )
 }

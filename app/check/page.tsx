@@ -1,9 +1,22 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FunnelContainer } from '@/components/funnel/FunnelContainer'
 import { CountdownTimer } from '@/components/CountdownTimer'
+
+function StatsLine() {
+  const [count, setCount] = useState<number | null>(null)
+  useEffect(() => {
+    fetch('/api/stats').then(r => r.json()).then(d => setCount(d.count)).catch(() => {})
+  }, [])
+  if (!count) return null
+  return (
+    <p className="text-[10px] font-mono text-white/35 text-center mb-4">
+      {count} Nederlanders analyseerden — jij bent op de goede weg
+    </p>
+  )
+}
 
 function Header() {
   return (
@@ -39,10 +52,7 @@ function CheckPageInner() {
         <div className="mb-4">
           <CountdownTimer compact />
         </div>
-        <p className="text-[10px] font-mono text-white/35 text-center mb-4" suppressHydrationWarning>
-          {typeof window !== 'undefined' ? Math.floor(Date.now() / 86_400_000) * 7 + 142 : '—'}{' '}
-          Nederlanders analyseerden vandaag — jij bent op de goede weg
-        </p>
+        <StatsLine />
         <FunnelContainer initialAdres={initialAdres} initialWijk={initialWijk} initialStad={initialStad} />
       </div>
     </main>
