@@ -411,7 +411,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           }
         </div>
 
-        <div className="space-y-2">
+        <div className="border border-amber-500/30 bg-amber-950/10 rounded-xl p-3 space-y-2">
           <label className="flex items-start gap-3 cursor-pointer group" htmlFor="lead-gdpr">
             <div className="relative mt-0.5 shrink-0">
               <input id="lead-gdpr" type="checkbox" checked={form.gdprConsent}
