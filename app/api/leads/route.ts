@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       adres: String(adres),
       postcode: body.postcode ? String(body.postcode) : null,
       huisnummer: body.huisnummer ? String(body.huisnummer) : null,
+      wijk: body.wijk ? String(body.wijk) : null,
       stad: body.stad ? String(body.stad) : null,
       provincie: body.provincie ? String(body.provincie) : null,
       lat: body.lat ? Number(body.lat) : null,

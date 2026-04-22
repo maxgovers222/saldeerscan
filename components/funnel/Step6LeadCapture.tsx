@@ -149,6 +149,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           naam: form.naam.trim(), email: form.email.trim().toLowerCase(), telefoon: normalizePhone(form.telefoon, form.countryCode),
           adres: state.adres, postcode: state.bagData?.postcode,
           huisnummer: state.bagData?.huisnummer ? String(state.bagData.huisnummer) : null,
+          wijk: state.wijk || null,
           stad: state.stad || (state.bagData ? extractStad(state.adres) : null),
           provincie: state.netcongestie?.postcodePrefix
             ? extractProvincie(state.netcongestie.postcodePrefix)

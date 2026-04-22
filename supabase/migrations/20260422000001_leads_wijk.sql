@@ -1,0 +1,2 @@
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS wijk TEXT;
+CREATE INDEX IF NOT EXISTS leads_wijk_idx ON leads(wijk) WHERE wijk IS NOT NULL;
