@@ -123,3 +123,52 @@ export async function dispatchToPartners(leadId: string): Promise<{ dispatched: 
 
   return { dispatched }
 }
+
+// Bulk buyer adapter — activeer door BULK_BUYER_URL + BULK_BUYER_API_KEY in te stellen
+export async function dispatchToBulkBuyer(lead: Record<string, unknown>): Promise<void> {
+  const url = process.env.BULK_BUYER_URL
+  const apiKey = process.env.BULK_BUYER_API_KEY
+  if (!url || !apiKey) return
+
+  // GDPR consent gate
+  if (!lead.gdpr_consent) {
+    console.warn('[webhooks/bulk] Lead zonder GDPR consent — overgeslagen')
+    return
+  }
+
+  const payload = JSON.stringify({
+    event: 'lead.new',
+    timestamp: new Date().toISOString(),
+    lead_id: lead.id,
+    naam: lead.naam,
+    email: lead.email,
+    telefoon: lead.telefoon,
+    adres: lead.adres,
+    postcode: lead.postcode,
+    stad: lead.stad,
+    provincie: lead.provincie,
+    health_score: lead.health_score,
+    netcongestie: lead.netcongestie_status,
+    roi: lead.roi_berekening,
+    gdpr_consent: true,
+  })
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: payload,
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (res.ok) {
+      console.log('[webhooks/bulk] Lead verstuurd naar bulk inkoper')
+    } else {
+      console.error('[webhooks/bulk] Bulk inkoper responded', res.status)
+    }
+  } catch (err) {
+    console.error('[webhooks/bulk] Error:', err)
+  }
+}

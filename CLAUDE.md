@@ -251,7 +251,17 @@ npm run seed:netcongestie # Seed netcongestie_cache tabel
 npm run seed:pseo         # Seed eerste batch pSEO adrespagina's
 npm run seed:wijken       # 2000-wijk seed via Gemini (gebruik --batch=0,50 per run)
 npx playwright test       # E2E tests draaien (dev server moet actief zijn)
+npx tsx scripts/ping-wijk-indexing.ts --batch=START,END  # Google Indexing API, max 200/dag
 ```
+
+## Email adressen
+
+- `info@saldeerscan.nl` — algemeen contact (footer, JSON-LD), forward via ImprovMX → Gmail
+- `privacy@saldeerscan.nl` — AVG-verzoeken (privacyverklaring), forward via ImprovMX → Gmail
+
+## Google Indexing API voortgang
+
+Limiet 200 URLs/dag. Voortgang (apr 2026): batch 0–400 gedaan → volgende: `--batch=400,600`
 
 ## Handmatige DB-fixes (eenmalig uitvoeren in Supabase SQL editor)
 

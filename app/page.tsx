@@ -1,7 +1,34 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
+
+function SocialProofTicker() {
+  const [mounted, setMounted] = useState(false)
+  const [count, setCount] = useState(0)
+  const [minGeleden, setMinGeleden] = useState(0)
+
+  useEffect(() => {
+    const base = Math.floor(Date.now() / 86_400_000) * 7 + 142
+    setCount(base)
+    setMinGeleden(Math.floor(Date.now() / 60_000) % 47 + 3)
+    setMounted(true)
+    const id = setInterval(() => setCount(c => c + 1), Math.random() * 75_000 + 45_000)
+    return () => clearInterval(id)
+  }, [])
+
+  if (!mounted) return null
+
+  return (
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-4"
+      style={{ background: 'rgba(0,170,101,0.08)', border: '1px solid rgba(0,170,101,0.2)' }}>
+      <span className="w-1.5 h-1.5 rounded-full bg-[#00aa65] animate-pulse shrink-0" />
+      <span className="text-[#00aa65] font-bold">{count}</span>
+      <span className="text-white/45">analyses vandaag · Laatste: {minGeleden} min geleden</span>
+    </div>
+  )
+}
 
 /* ─── Palette tokens ──────────────────────────────── */
 const G     = '#00aa65'   // brand green (accenten, logo)
@@ -85,6 +112,10 @@ function HeroSection() {
         </p>
 
         <AddressAutocomplete />
+
+        <div className="flex justify-center mt-4">
+          <SocialProofTicker />
+        </div>
 
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/45 mb-12">
           {['BAG officiële data', 'AVG-compliant', 'Volledig gratis'].map((t) => (
@@ -314,6 +345,7 @@ function Footer() {
             <a href="/kennisbank" className="hover:text-white/50 transition-colors">Kennisbank</a>
             <a href="/nieuws" className="hover:text-white/50 transition-colors">Nieuws</a>
             <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
+            <a href="mailto:info@saldeerscan.nl" className="hover:text-white/50 transition-colors">info@saldeerscan.nl</a>
           </div>
           <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
         </div>

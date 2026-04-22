@@ -1,6 +1,6 @@
 import { applyRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { dispatchToPartners } from '@/lib/webhooks'
+import { dispatchToPartners, dispatchToBulkBuyer } from '@/lib/webhooks'
 import { Resend } from 'resend'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       telefoon: String(telefoon),
       adres: String(adres),
       postcode: body.postcode ? String(body.postcode) : null,
+      huisnummer: body.huisnummer ? String(body.huisnummer) : null,
       stad: body.stad ? String(body.stad) : null,
       provincie: body.provincie ? String(body.provincie) : null,
       lat: body.lat ? Number(body.lat) : null,
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
 
       // BAG + scoring data
       bag_data: body.bagData ?? {},
+      ep_data: body.epData ?? {},
       energielabel: body.energielabel ? String(body.energielabel) : null,
       health_score: body.healthScore ? Number(body.healthScore) : null,
       netcongestie_status: body.netcongestieStatus ? String(body.netcongestieStatus) : null,
@@ -93,55 +95,177 @@ export async function POST(request: Request) {
     console.error('[api/leads] webhook dispatch error:', err)
   )
 
+  // Dispatch to bulk buyer if configured (fire and forget)
+  dispatchToBulkBuyer({ ...lead, gdpr_consent: body.gdprConsent }).catch(err =>
+    console.error('[api/leads] bulk buyer dispatch error:', err)
+  )
+
   // Send confirmation email (awaited — fire-and-forget laat Promise vallen in serverless)
   if (resend) {
-    const score = body.healthScore ? Number(body.healthScore) : null
-    const besparing = (body.roiResult as { scenarioNu?: { besparingJaarEur?: number } } | null)?.scenarioNu?.besparingJaarEur ?? null
+    type RoiResult = {
+      aantalPanelen?: number
+      scenarioNu?: { besparingJaarEur?: number; terugverdientijdJaar?: number }
+      shockEffect2027?: { jaarlijksVerlies?: number }
+      isdeSchatting?: { bedragEur?: number }
+    }
+    const roi = (body.roiResult ?? {}) as RoiResult
+
+    const score          = body.healthScore ? Number(body.healthScore) : null
+    const energielabel   = body.energielabel ? String(body.energielabel) : null
+    const netStatus      = body.netcongestieStatus ? String(body.netcongestieStatus) : null
+    const besparing      = roi.scenarioNu?.besparingJaarEur ?? null
+    const terugverdien   = roi.scenarioNu?.terugverdientijdJaar ?? null
+    const aantalPanelen  = roi.aantalPanelen ?? null
+    const verliesNa2027  = roi.shockEffect2027?.jaarlijksVerlies ?? null
+    const isdeSubsidie   = roi.isdeSchatting?.bedragEur && roi.isdeSchatting.bedragEur > 0
+      ? roi.isdeSchatting.bedragEur : null
+
+    const voornaam = String(naam).split(' ')[0]
+
+    const netKleur: Record<string, string> = {
+      GROEN: '#10b981', ORANJE: '#f59e0b', ROOD: '#ef4444',
+    }
+    const netDot = netStatus
+      ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${netKleur[netStatus] ?? '#94a3b8'};margin-right:6px;vertical-align:middle"></span>`
+      : ''
+
+    const dataRij = (label: string, waarde: string) =>
+      `<tr>
+        <td style="padding:7px 0;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9">${label}</td>
+        <td style="padding:7px 0;font-size:13px;font-weight:600;color:#0f172a;text-align:right;border-bottom:1px solid #f1f5f9">${waarde}</td>
+      </tr>`
+
+    const dataRijen = [
+      score         !== null ? dataRij('Energie Score', `<span style="color:#f59e0b">${score}/100</span>`) : '',
+      energielabel              ? dataRij('Energielabel', energielabel) : '',
+      netStatus                 ? dataRij('Netcongestie', `${netDot}${netStatus}`) : '',
+      aantalPanelen !== null    ? dataRij('Aanbevolen panelen', `${aantalPanelen} stuks`) : '',
+      besparing     !== null    ? dataRij('Geschatte besparing', `<span style="color:#10b981">€${besparing.toLocaleString('nl-NL')}/jaar</span>`) : '',
+      isdeSubsidie  !== null    ? dataRij('ISDE subsidie', `<span style="color:#10b981">€${isdeSubsidie.toLocaleString('nl-NL')}</span>`) : '',
+      terugverdien  !== null    ? dataRij('Terugverdientijd', `${terugverdien} jaar`) : '',
+    ].filter(Boolean).join('')
 
     try {
     const emailResult = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to: String(email),
-      subject: `Uw gratis PDF-rapport is klaar — SaldeerScan.nl`,
+      subject: `Uw persoonlijk 2027-rapport is klaar, ${voornaam}`,
       html: `
 <!DOCTYPE html>
 <html lang="nl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:sans-serif">
-  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
-    <div style="background:#020617;padding:28px 32px">
-      <div style="font-size:20px;font-weight:700;color:#f59e0b;margin-bottom:4px">SaldeerScan.nl</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase">Persoonlijk 2027-Rapport</div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <div style="max-width:580px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+
+    <!-- HEADER -->
+    <div style="background:#020617;padding:28px 32px 24px">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:10px">
+              <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
+              <polygon points="14,7 21,11 21,17 14,21 7,17 7,11" fill="#f59e0b" opacity="0.15"/>
+              <path d="M14 9 L17 14 L14 19 L11 14 Z" fill="#f59e0b"/>
+            </svg>
+            <span style="font-size:18px;font-weight:700;color:#f59e0b;vertical-align:middle;letter-spacing:-0.3px">SaldeerScan.nl</span>
+          </td>
+          <td style="text-align:right;vertical-align:middle">
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1.5px;text-transform:uppercase">Persoonlijk Rapport</span>
+          </td>
+        </tr>
+      </table>
     </div>
-    <div style="background:#7c2d12;padding:10px 32px">
-      <span style="font-size:11px;color:#fca5a5">⚠ Per 1 januari 2027 stopt de salderingsregeling volledig — uw voordeel van 28% (2026) vervalt</span>
+
+    <!-- URGENTIE BAR -->
+    <div style="background:#1c1208;border-top:1px solid rgba(245,158,11,0.3);padding:9px 32px">
+      <span style="font-size:11px;color:#fbbf24;letter-spacing:0.3px">Salderingsregeling stopt volledig per 1 januari 2027</span>
     </div>
+
+    <!-- BODY -->
     <div style="padding:32px">
-      <p style="margin:0 0 8px;font-size:15px;color:#0f172a">Geachte ${String(naam)},</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6">
-        Uw persoonlijk 2027-rapport voor <strong>${String(body.adres)}</strong> is aangemaakt.
-        Open de SaldeerScan-pagina opnieuw om uw PDF te downloaden.
+      <p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#0f172a">Geachte ${voornaam},</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.75">
+        Uw persoonlijk 2027-rapport voor <strong style="color:#0f172a">${String(body.adres)}</strong> is opgesteld.
+        Een energieadviseur in uw regio neemt binnen <strong>2 werkdagen</strong> contact met u op.
       </p>
 
-      ${score || besparing ? `
-      <div style="background:#f8fafc;border-radius:8px;padding:16px 20px;margin-bottom:24px;border-left:4px solid #f59e0b">
-        <div style="font-size:10px;color:#94a3b8;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Uw scanresultaten</div>
-        ${score ? `<div style="font-size:13px;color:#0f172a;margin-bottom:4px">Energie Score: <strong style="color:#f59e0b">${score}/100</strong></div>` : ''}
-        ${besparing ? `<div style="font-size:13px;color:#0f172a">Geschatte besparing: <strong style="color:#10b981">€${besparing.toLocaleString('nl-NL')}/jaar</strong></div>` : ''}
+      ${verliesNa2027 ? `
+      <!-- SHOCK BOX -->
+      <div style="background:#fefce8;border-radius:10px;border-left:4px solid #f59e0b;padding:18px 20px;margin-bottom:24px">
+        <div style="font-size:10px;color:#92400e;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600">Uw 2027-impact</div>
+        <div style="font-size:28px;font-weight:800;color:#b45309;letter-spacing:-0.5px;margin-bottom:4px">
+          &minus;€${verliesNa2027.toLocaleString('nl-NL')}<span style="font-size:14px;font-weight:500">/jaar</span>
+        </div>
+        <div style="font-size:12px;color:#92400e">Verlies per jaar als u nu géén actie onderneemt</div>
       </div>
       ` : ''}
 
-      <a href="https://saldeerscan.nl/check" style="display:inline-block;background:#f59e0b;color:#020617;font-weight:700;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:14px;margin-bottom:24px">
-        Download uw PDF-rapport →
-      </a>
+      ${dataRijen ? `
+      <!-- SCAN DATA -->
+      <div style="margin-bottom:24px">
+        <div style="font-size:10px;color:#94a3b8;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;font-weight:600">Uw scanresultaten</div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          ${dataRijen}
+        </table>
+      </div>
+      ` : ''}
 
-      <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6">
-        Geen actie nodig — een gecertificeerde energie-expert in uw regio bekijkt uw dossier en neemt zo spoedig mogelijk contact op.
-      </p>
+      <!-- CTA BUTTON -->
+      <div style="text-align:center;margin-bottom:28px">
+        <a href="https://saldeerscan.nl" style="display:inline-block;background:#f59e0b;color:#020617;font-size:14px;font-weight:700;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.2px">
+          Bekijk uw rapport op SaldeerScan.nl
+        </a>
+      </div>
+
+      <!-- WAT NU -->
+      <div style="background:#f8fafc;border-radius:10px;padding:18px 20px;margin-bottom:0">
+        <div style="font-size:10px;color:#94a3b8;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;font-weight:600">Wat nu?</div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="width:28px;vertical-align:top;padding-bottom:10px">
+              <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">1</div>
+            </td>
+            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#334155;line-height:1.5;vertical-align:top">
+              <strong style="color:#0f172a">Adviseur belt u</strong> — binnen 2 werkdagen neemt een gecertificeerde energieadviseur uit uw regio contact op.
+            </td>
+          </tr>
+          <tr>
+            <td style="width:28px;vertical-align:top;padding-bottom:10px">
+              <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">2</div>
+            </td>
+            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#334155;line-height:1.5;vertical-align:top">
+              <strong style="color:#0f172a">Gratis locatiecheck</strong> — uw dak, situatie en netaansluiting worden ter plaatse beoordeeld.
+            </td>
+          </tr>
+          <tr>
+            <td style="width:28px;vertical-align:top">
+              <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">3</div>
+            </td>
+            <td style="padding-left:10px;font-size:13px;color:#334155;line-height:1.5;vertical-align:top">
+              <strong style="color:#0f172a">Definitief advies</strong> — u ontvangt een offerte op maat, inclusief de actuele ISDE-subsidiemogelijkheden.
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
-    <div style="background:#020617;padding:16px 32px;display:flex;justify-content:space-between">
-      <span style="font-size:11px;color:rgba(255,255,255,0.3)">© 2026 SaldeerScan.nl · AVG-compliant</span>
+
+    <!-- FOOTER -->
+    <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-size:11px;color:#94a3b8;line-height:1.6">
+            © ${new Date().getFullYear()} SaldeerScan.nl &nbsp;·&nbsp; AVG-compliant<br>
+            <a href="mailto:info@saldeerscan.nl" style="color:#94a3b8;text-decoration:none">info@saldeerscan.nl</a><br>
+            <span style="font-size:10px">U ontvangt geen verdere e-mails van ons. Dit is een eenmalige bevestiging.</span>
+          </td>
+        </tr>
+      </table>
     </div>
+
   </div>
 </body>
 </html>`,

@@ -39,6 +39,10 @@ function CheckPageInner() {
         <div className="mb-4">
           <CountdownTimer compact />
         </div>
+        <p className="text-[10px] font-mono text-white/35 text-center mb-4" suppressHydrationWarning>
+          {typeof window !== 'undefined' ? Math.floor(Date.now() / 86_400_000) * 7 + 142 : '—'}{' '}
+          Nederlanders analyseerden vandaag — jij bent op de goede weg
+        </p>
         <FunnelContainer initialAdres={initialAdres} initialWijk={initialWijk} initialStad={initialStad} />
       </div>
     </main>

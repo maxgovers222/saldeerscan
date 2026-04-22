@@ -4,6 +4,49 @@ import { useEffect, useRef, useState } from 'react'
 import type { FunnelState } from './types'
 import { PDFDownloadButton } from './PDFDownloadButton'
 
+function ReferralButtons({ stad }: { stad?: string }) {
+  const [copied, setCopied] = useState(false)
+  const url = `https://saldeerscan.nl/check?ref=buur&utm_source=referral&utm_medium=whatsapp`
+  const stadLabel = stad ? stad.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Nederland'
+  const waText = encodeURIComponent(`Ik heb net mijn huis laten scannen voor de 2027 salderingswijziging via SaldeerScan.nl. Jij loopt hetzelfde risico in ${stadLabel}! Doe hier de gratis check: ${url}`)
+
+  function handleCopy() {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
+
+  return (
+    <div className="flex gap-3 flex-wrap">
+      <a
+        href={`https://wa.me/?text=${waText}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-colors"
+        style={{ background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', color: '#25d366' }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.115 1.532 5.836L.057 23.927l6.256-1.641A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.793 9.793 0 01-5.003-1.373l-.358-.214-3.718.975.993-3.62-.234-.372A9.786 9.786 0 012.182 12C2.182 6.573 6.573 2.182 12 2.182S21.818 6.573 21.818 12 17.427 21.818 12 21.818z"/>
+        </svg>
+        Deel via WhatsApp
+      </a>
+      <button
+        onClick={handleCopy}
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-mono transition-colors"
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: copied ? '#34d399' : 'rgba(255,255,255,0.5)' }}
+      >
+        {copied ? (
+          <><svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 8l4 4 8-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Gekopieerd!</>
+        ) : (
+          <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Kopieer link</>
+        )}
+      </button>
+    </div>
+  )
+}
+
 function useCountUp(target: number, duration = 1400): number {
   const [val, setVal] = useState(0)
   const raf = useRef<number>(0)
@@ -239,15 +282,36 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
         <ROITijdlijn terugverdien={terugverdien} besparing={besparing} />
       </div>
 
-      {/* Volgende stap */}
+      {/* Wat gebeurt er nu */}
       <div className="bg-slate-900/40 border border-amber-500/15 rounded-2xl p-6 print-break-avoid">
-        <p className="text-xs font-semibold text-amber-400 mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Volgende stap</p>
-        <p className="text-base font-bold text-white mb-2" style={{ fontFamily: 'var(--font-heading)' }}>
-          Een energieadviseur neemt contact op
+        <p className="text-xs font-semibold text-amber-400 mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Wat gebeurt er nu?</p>
+        <div className="space-y-4">
+          {[
+            { dot: 'amber', label: 'Uw dossier verstuurd naar max 3 installateurs', timing: 'nu' },
+            { dot: 'amber', label: 'Gecertificeerde adviseur belt u op uw telefoonnummer', timing: 'binnen 24 uur' },
+            { dot: 'green', label: 'Gratis locatiecheck en definitief advies', timing: 'binnen 1 week' },
+          ].map(({ dot, label, timing }, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className={`mt-1 w-2 h-2 rounded-full shrink-0 animate-pulse ${dot === 'amber' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+              <div className="flex-1 flex items-baseline justify-between gap-2 min-w-0">
+                <span className="text-sm text-white/70 font-sans leading-snug">{label}</span>
+                <span className={`text-[10px] font-mono shrink-0 ${dot === 'amber' ? 'text-amber-400' : 'text-emerald-400'}`}>{timing}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] font-mono text-white/20 mt-4">
+          Niet gebeld na 24 uur? Mail ons: info@saldeerscan.nl
         </p>
-        <p className="text-sm text-white/50 leading-relaxed" style={{ fontFamily: 'var(--font-sans)' }}>
-          Uw dossier wordt bekeken door een energieadviseur in {regio}. Hij berekent de exacte configuratie en neemt zo spoedig mogelijk contact met u op.
+      </div>
+
+      {/* Referral */}
+      <div className="bg-slate-900/40 border border-amber-500/15 rounded-2xl p-5 no-print">
+        <p className="text-xs font-semibold text-amber-400 mb-1" style={{ fontFamily: 'var(--font-heading)' }}>Uw buur mist dit misschien ook</p>
+        <p className="text-sm text-white/50 mb-4 font-sans">
+          Stuur dit rapport door aan uw buren{state.stad ? ` in ${state.stad.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}` : ''} — zij lopen hetzelfde 2027-risico.
         </p>
+        <ReferralButtons stad={state.stad} />
       </div>
 
       {/* Download */}

@@ -117,6 +117,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [watGebeurtOpen, setWatGebeurtOpen] = useState(false)
 
   function validate(): boolean {
     const e: typeof errors = {}
@@ -247,22 +248,66 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
         )}
       </div>
 
-      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4">
-        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">Uw energiedossier</div>
-        <div className="space-y-1.5">
-          {[
-            { label: 'Adres', value: state.adres || '—', done: !!state.adres },
-            { label: 'ROI berekend', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur}/jaar besparing` : 'Niet berekend', done: !!state.roiResult },
-            { label: 'Meterkast', value: state.meterkastAnalyse ? (state.meterkastAnalyse.geschikt ? 'Geschikt ✓' : 'Advies nodig') : 'Niet gescand', done: !!state.meterkastAnalyse },
-            { label: 'Plaatsing', value: state.plaatsingsAnalyse ? `Score ${state.plaatsingsAnalyse.geschiktheidScore}/10` : 'Niet beoordeeld', done: !!state.plaatsingsAnalyse },
-            { label: 'Omvormer', value: state.omvormerAnalyse ? `${state.omvormerAnalyse.merk ?? 'Onbekend'}` : 'Niet gescand', done: !!state.omvormerAnalyse },
-          ].map(({ label, value, done }) => (
-            <div key={label} className="flex items-center justify-between text-xs font-mono">
-              <span className="text-white/40">{label}</span>
-              <span className={done ? 'text-white/70' : 'text-white/30'}>{value}</span>
-            </div>
-          ))}
+      {/* Trust signals */}
+      <div className="bg-slate-900/40 border border-white/8 rounded-xl p-3">
+        <div className="grid grid-cols-3 gap-2">
+          {/* Beveiligd */}
+          <div className="flex flex-col items-center text-center gap-1 py-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z" stroke="#00aa65" strokeWidth="1.5" strokeLinejoin="round"/>
+              <path d="M9 12l2 2 4-4" stroke="#00aa65" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="text-[11px] font-bold text-white/80">Beveiligd</span>
+            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">SSL · AVG</span>
+          </div>
+          {/* Max 3 installateurs */}
+          <div className="flex flex-col items-center text-center gap-1 py-2 border-x border-white/8">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="9" cy="7" r="3" stroke="#f59e0b" strokeWidth="1.5"/>
+              <circle cx="15" cy="7" r="3" stroke="#f59e0b" strokeWidth="1.5"/>
+              <path d="M3 19c0-3.314 2.686-6 6-6h6c3.314 0 6 2.686 6 6" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span className="text-[11px] font-bold text-amber-400">Max 3 installateurs</span>
+            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">ontvangen uw aanvraag</span>
+          </div>
+          {/* Binnen 24 uur */}
+          <div className="flex flex-col items-center text-center gap-1 py-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="#f59e0b" strokeWidth="1.5"/>
+              <path d="M12 7v5l3 3" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="text-[11px] font-bold text-white/80">Binnen 24 uur</span>
+            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">belt een adviseur</span>
+          </div>
         </div>
+      </div>
+
+      {/* Wat gebeurt er na uw aanvraag? */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setWatGebeurtOpen(o => !o)}
+          className="flex items-center gap-1.5 text-xs font-mono text-amber-400/70 hover:text-amber-400 transition-colors cursor-pointer"
+        >
+          <span>Wat gebeurt er na uw aanvraag?</span>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" className={`transition-transform ${watGebeurtOpen ? 'rotate-180' : ''}`}>
+            <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        {watGebeurtOpen && (
+          <div className="bg-slate-950/40 border border-white/8 rounded-xl p-4 mt-2 space-y-3">
+            {[
+              'Uw dossier gaat naar maximaal 3 gecertificeerde installateurs in uw regio',
+              'Een adviseur belt u binnen 24 uur (ma–vr, 08:00–18:00)',
+              'U ontvangt een vrijblijvende offerte op maat — geen verplichtingen',
+            ].map((tekst, i) => (
+              <div key={i} className="flex gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</div>
+                <span className="text-xs font-mono text-white/50">{tekst}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -369,7 +414,14 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           )}
         </button>
 
-        <p className="text-[10px] font-mono text-white/30 text-center">
+        <p className="text-[10px] font-mono text-center flex items-center justify-center gap-2 flex-wrap">
+          <span className="text-amber-400/60 font-bold">Max 3 installateurs ontvangen uw dossier</span>
+          <span className="text-white/20">·</span>
+          <span className="text-white/30">Geen verplichtingen</span>
+          <span className="text-white/20">·</span>
+          <span className="text-white/30">Gratis</span>
+        </p>
+        <p className="text-[10px] font-mono text-white/20 text-center">
           Uw data wordt beveiligd verwerkt en gevalideerd door een gecertificeerde expert in {regio} voor een definitieve 2027-check.
         </p>
       </form>

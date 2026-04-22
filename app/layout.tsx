@@ -41,7 +41,7 @@ const organizationSchema = {
   description: 'Gratis AI-scan voor de 2027 salderingsafschaffing — ROI berekening en investeringsrapport voor Nederlandse woningeigenaren.',
   areaServed: 'NL',
   serviceType: 'Energie-advies',
-  contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', availableLanguage: 'Dutch' },
+  contactPoint: { '@type': 'ContactPoint', email: 'info@saldeerscan.nl', contactType: 'customer support', availableLanguage: 'Dutch' },
 }
 
 export default function RootLayout({
