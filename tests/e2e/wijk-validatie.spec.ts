@@ -10,14 +10,12 @@ const WIJK_URLS = [
 ]
 
 /**
- * Straat-URLs: pas aan met bekende geseedde straten.
- * Voer `SELECT slug FROM pseo_pages WHERE straat IS NOT NULL LIMIT 5` uit in Supabase
- * om bekende slugs te vinden en hier in te vullen.
+ * Straat-URLs — leeg zolang seed:pseo nog niet gedraaid is.
+ * DB bevat nu alleen wijk-niveau pages (straat = null).
+ * Na `npm run seed:pseo` automatisch vullen met:
+ *   SELECT slug FROM pseo_pages WHERE straat IS NOT NULL ORDER BY aantal_woningen DESC LIMIT 4
  */
-const STRAAT_URLS: string[] = [
-  // Vul aan met bekende geseedde straat-slugs, bijv:
-  // '/utrecht/utrecht/leidsche-rijn/parkwijk-noord',
-]
+const STRAAT_URLS: string[] = []
 
 const NET_BADGE_TEXTS = ['ROOD', 'ORANJE', 'GROEN']
 
