@@ -10,12 +10,14 @@ const WIJK_URLS = [
 ]
 
 /**
- * Straat-URLs — leeg zolang seed:pseo nog niet gedraaid is.
- * DB bevat nu alleen wijk-niveau pages (straat = null).
- * Na `npm run seed:pseo` automatisch vullen met:
- *   SELECT slug FROM pseo_pages WHERE straat IS NOT NULL ORDER BY aantal_woningen DESC LIMIT 4
+ * Straat-URLs — geseed via `npm run seed:pseo` (golden batch, 5 pagina's).
+ * Voeg meer toe na extra seed-runs.
  */
-const STRAAT_URLS: string[] = []
+const STRAAT_URLS: string[] = [
+  '/noord-holland/amsterdam/centrum/prinsengracht',
+  '/utrecht/utrecht/oost/biltstraat',
+  '/gelderland/arnhem/presikhaaf/groningensingel',
+]
 
 const NET_BADGE_TEXTS = ['ROOD', 'ORANJE', 'GROEN']
 
