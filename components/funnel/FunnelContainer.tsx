@@ -31,6 +31,7 @@ import { Step3Meterkast } from './Step3Meterkast'
 import { Step4Plaatsing } from './Step4Plaatsing'
 import { Step5Omvormer } from './Step5Omvormer'
 import { Step6LeadCapture } from './Step6LeadCapture'
+import { ResultsDashboard } from './ResultsDashboard'
 
 function funnelReducer(state: FunnelState, action: FunnelAction): FunnelState {
   switch (action.type) {
@@ -125,6 +126,25 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Detect ?leadId= URL param — direct link vanuit bevestigingsmail naar ResultsDashboard
+  useEffect(() => {
+    const leadIdParam = searchParams.get('leadId')
+    if (leadIdParam) {
+      dispatch({ type: 'SET_LEAD_ID', leadId: leadIdParam })
+      // Herstel ook localStorage-state als die er is (voor ROI/adres context)
+      const loaded = loadState()
+      if (loaded) {
+        if (loaded.bagData) dispatch({ type: 'SET_BAG_DATA', bagData: loaded.bagData })
+        if (loaded.roiResult) dispatch({ type: 'SET_ROI', roiResult: loaded.roiResult })
+        if (loaded.netcongestie) dispatch({ type: 'SET_NETCONGESTIE', netcongestie: loaded.netcongestie })
+        if (loaded.healthScore) dispatch({ type: 'SET_HEALTH_SCORE', healthScore: loaded.healthScore })
+        if (loaded.adres) dispatch({ type: 'SET_ADRES', adres: loaded.adres })
+        if (loaded.wijk || loaded.stad) dispatch({ type: 'SET_WIJK', wijk: loaded.wijk, stad: loaded.stad })
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Save state on every change — debounced to avoid excessive I/O
   useEffect(() => {
     const t = setTimeout(() => saveState(state), 500)
@@ -209,15 +229,24 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
           </div>
         </div>
       )}
-      <FunnelProgress currentStep={state.step} />
-      <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden">
-        {state.step === 1 && <Step1Adres state={state} dispatch={trackingDispatch} />}
-        {state.step === 2 && <Step2ROI state={state} dispatch={trackingDispatch} />}
-        {state.step === 3 && <Step3Meterkast state={state} dispatch={trackingDispatch} />}
-        {state.step === 4 && <Step4Plaatsing state={state} dispatch={trackingDispatch} />}
-        {state.step === 5 && <Step5Omvormer state={state} dispatch={trackingDispatch} />}
-        {state.step === 6 && <Step6LeadCapture state={state} dispatch={trackingDispatch} />}
-      </div>
+      {/* ResultsDashboard — toon als lead ingediend is (ook via ?leadId= email-link) */}
+      {state.leadId ? (
+        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden">
+          <ResultsDashboard state={state} />
+        </div>
+      ) : (
+        <>
+          <FunnelProgress currentStep={state.step} />
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden">
+            {state.step === 1 && <Step1Adres state={state} dispatch={trackingDispatch} />}
+            {state.step === 2 && <Step2ROI state={state} dispatch={trackingDispatch} />}
+            {state.step === 3 && <Step3Meterkast state={state} dispatch={trackingDispatch} />}
+            {state.step === 4 && <Step4Plaatsing state={state} dispatch={trackingDispatch} />}
+            {state.step === 5 && <Step5Omvormer state={state} dispatch={trackingDispatch} />}
+            {state.step === 6 && <Step6LeadCapture state={state} dispatch={trackingDispatch} />}
+          </div>
+        </>
+      )}
     </div>
   )
 }

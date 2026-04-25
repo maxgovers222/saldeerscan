@@ -224,7 +224,7 @@ export async function POST(request: Request) {
 
       <!-- CTA BUTTON -->
       <div style="text-align:center;margin-bottom:28px">
-        <a href="https://saldeerscan.nl/check?adres=${encodeURIComponent(String(body.adres))}" style="display:inline-block;background:#f59e0b;color:#020617;font-size:14px;font-weight:700;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.2px">
+        <a href="https://saldeerscan.nl/check?leadId=${lead.id}" style="display:inline-block;background:#f59e0b;color:#020617;font-size:14px;font-weight:700;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.2px">
           Bekijk uw rapport op SaldeerScan.nl
         </a>
       </div>
