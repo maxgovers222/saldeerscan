@@ -65,6 +65,22 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
 
   const andereStraten = await getStratenByWijk(p.provincie, p.stad, p.wijk, p.straat, 6)
 
+  // Strip FAQPage schema van straat-niveau (vermijdt structured data spam bij 2270+ pagina's)
+  const pageJsonLd = (() => {
+    if (!page.jsonLd || Object.keys(page.jsonLd).length === 0) return page.jsonLd
+    try {
+      const parsed = page.jsonLd as Record<string, unknown>
+      if (parsed['@graph'] && Array.isArray(parsed['@graph'])) {
+        const filtered = (parsed['@graph'] as Array<{ '@type': string }>).filter(n => n['@type'] !== 'FAQPage')
+        return { ...parsed, '@graph': filtered }
+      }
+      if (parsed['@type'] === 'FAQPage') return null
+      return parsed
+    } catch {
+      return page.jsonLd
+    }
+  })()
+
   const healthLabel = page.gemHealthScore
     ? page.gemHealthScore >= 75 ? 'Uitstekend'
     : page.gemHealthScore >= 55 ? 'Goed'
@@ -79,9 +95,9 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
 
   return (
     <main className="min-h-screen bg-[#0f172a] text-slate-100">
-      {/* JSON-LD */}
-      {page.jsonLd && Object.keys(page.jsonLd).length > 0 && (
-        <LocalSchema jsonLd={page.jsonLd} />
+      {/* JSON-LD — FAQPage gefilterd op straat-niveau */}
+      {pageJsonLd && Object.keys(pageJsonLd).length > 0 && (
+        <LocalSchema jsonLd={pageJsonLd} />
       )}
 
       {/* BreadcrumbList JSON-LD */}
@@ -217,6 +233,31 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
           </div>
         </section>
       )}
+      {/* Kennisbank interne links — identiek patroon als wijk-pagina */}
+      <section className="py-10 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="max-w-4xl mx-auto">
+          <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">Lees ook in de Kennisbank</p>
+          <div className="flex flex-wrap gap-3">
+            {(page.netcongestieStatus === 'ROOD'
+              ? [
+                  { slug: 'wat-is-salderen', titel: 'Wat is salderen?' },
+                  { slug: 'einde-salderen-2027-uitleg', titel: 'Einde salderen 2027' },
+                  { slug: 'netcongestie-problemen-nederland', titel: 'Netcongestie in Nederland' },
+                ]
+              : [
+                  { slug: 'wat-is-salderen', titel: 'Wat is salderen?' },
+                  { slug: 'einde-salderen-2027-uitleg', titel: 'Einde salderen 2027' },
+                  { slug: 'thuisbatterij-saldering-alternatief', titel: 'Thuisbatterij als alternatief' },
+                ]
+            ).map(link => (
+              <a key={link.slug} href={`/kennisbank/${link.slug}`}
+                className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors text-sm border border-white/10 rounded-lg px-3 py-2 hover:border-amber-500/30">
+                {link.titel}
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
     </main>
   )
 }
