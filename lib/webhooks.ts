@@ -60,6 +60,7 @@ export async function dispatchToPartners(leadId: string): Promise<{ dispatched: 
 
   const partners = await getActivePartners(lead as Record<string, unknown>)
   let dispatched = 0
+  const RETRY_DELAYS_SECONDS = [5 * 60, 30 * 60, 4 * 3600] // 5m, 30m, 4h
 
   for (const partner of partners) {
     const payload = JSON.stringify({
@@ -86,9 +87,10 @@ export async function dispatchToPartners(leadId: string): Promise<{ dispatched: 
     })
 
     const signature = signPayload(payload, partner.api_key_hash)
+    let fetchRes: Response | null = null
 
     try {
-      const res = await fetch(partner.webhook_url, {
+      fetchRes = await fetch(partner.webhook_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,14 +102,31 @@ export async function dispatchToPartners(leadId: string): Promise<{ dispatched: 
         signal: AbortSignal.timeout(10_000),
       })
 
-      if (res.ok) {
+      if (fetchRes.ok) {
         dispatched++
         console.log(`[webhooks] Dispatched to ${partner.naam}`)
+        await supabaseAdmin.from('webhook_deliveries').upsert({
+          lead_id: leadId, partner_id: partner.id, partner_naam: partner.naam,
+          webhook_url: partner.webhook_url, status: 'delivered', attempts: 1,
+          delivered_at: new Date().toISOString(),
+        }, { onConflict: 'lead_id,partner_id' })
       } else {
-        console.error(`[webhooks] ${partner.naam} responded ${res.status}`)
+        console.error(`[webhooks] ${partner.naam} responded ${fetchRes.status}`)
+        throw new Error(`HTTP ${fetchRes.status}`)
       }
     } catch (err) {
-      console.error(`[webhooks] Error dispatching to ${partner.naam}:`, err)
+      const { data: existing } = await supabaseAdmin
+        .from('webhook_deliveries').select('attempts').eq('lead_id', leadId).eq('partner_id', partner.id).maybeSingle()
+      const attempts = (existing?.attempts ?? 0) + 1
+      const delay = RETRY_DELAYS_SECONDS[attempts - 1] ?? null
+      await supabaseAdmin.from('webhook_deliveries').upsert({
+        lead_id: leadId, partner_id: partner.id, partner_naam: partner.naam,
+        webhook_url: partner.webhook_url,
+        status: delay ? 'pending_retry' : 'failed',
+        attempts,
+        last_error: fetchRes ? `HTTP ${fetchRes.status}` : String(err),
+        next_retry_at: delay ? new Date(Date.now() + delay * 1000).toISOString() : null,
+      }, { onConflict: 'lead_id,partner_id' })
     }
   }
 

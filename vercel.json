@@ -15,6 +15,10 @@
     {
       "path": "/api/indexing/cron",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/webhooks/retry",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
