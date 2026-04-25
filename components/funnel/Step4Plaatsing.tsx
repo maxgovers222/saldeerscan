@@ -1,9 +1,36 @@
 'use client'
 
-import { type Dispatch } from 'react'
+import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, PlaatsingsAnalyse } from './types'
 import { PhotoUpload } from './PhotoUpload'
 import { StepHeader } from './StepHeader'
+
+function FallbackPlaatsing({ onComplete }: { onComplete: (data: PlaatsingsAnalyse) => void }) {
+  return (
+    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
+      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Kies uw voorkeurlocatie</div>
+      <div className="grid grid-cols-2 gap-2">
+        {([
+          { label: 'Garage', score: 9 },
+          { label: 'Bijkeuken', score: 8 },
+          { label: 'Kelder', score: 7 },
+          { label: 'Anders', score: 6 },
+        ]).map(({ label, score }) => (
+          <button key={label} type="button"
+            onClick={() => onComplete({
+              nenCompliant: score >= 8,
+              risicoItems: [],
+              aanbevelingen: ['Handmatig ingevuld — installateur verifieert locatie'],
+              geschiktheidScore: score,
+            })}
+            className="py-3 rounded-lg text-xs font-mono border bg-slate-800/50 text-white/60 border-white/10 hover:border-amber-500/40 hover:text-amber-400 transition-colors">
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 interface Step4PlaatsingProps {
   state: FunnelState
@@ -65,6 +92,8 @@ function PlaatsingResultaat({ analyse }: { analyse: PlaatsingsAnalyse }) {
 
 export function Step4Plaatsing({ state, dispatch }: Step4PlaatsingProps) {
   const analyse = state.plaatsingsAnalyse
+  const [showFallback, setShowFallback] = useState(false)
+
   return (
     <div className="p-6 space-y-6">
       <StepHeader stap="Stap 4 — Plaatsingslocatie" title="Locatie beoordeling" subtitle="NEN 2078:2023 brandveiligheidscheck voor batterijplaatsing" />
@@ -89,13 +118,31 @@ export function Step4Plaatsing({ state, dispatch }: Step4PlaatsingProps) {
           </div>
         </div>
       )}
-      {!analyse ? (
+      {!analyse && !showFallback && (
         <PhotoUpload visionType="plaatsingslocatie" onAnalysed={(r) => dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: r as PlaatsingsAnalyse })}
           title="Foto van plaatsingslocatie" description="Foto van de ruimte waar de batterij of omvormer geplaatst wordt (garage, meterkast, bijkeuken)" />
-      ) : (
+      )}
+      {!analyse && !showFallback && (
+        <button
+          type="button"
+          onClick={() => setShowFallback(true)}
+          className="w-full py-2.5 text-xs font-mono border border-amber-500/30 text-amber-400/70 rounded-xl hover:border-amber-500/60 hover:text-amber-400 transition-colors"
+        >
+          Geen foto? Kies voorkeurlocatie
+        </button>
+      )}
+      {!analyse && showFallback && (
+        <FallbackPlaatsing
+          onComplete={(data) => {
+            dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: data })
+            dispatch({ type: 'SET_STEP', step: 5 })
+          }}
+        />
+      )}
+      {analyse && (
         <div className="space-y-3">
           <PlaatsingResultaat analyse={analyse} />
-          <button onClick={() => dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: null })}
+          <button onClick={() => { dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: null }); setShowFallback(false) }}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-xs py-2 px-4 rounded-lg transition-colors">
             Andere foto uploaden
           </button>

@@ -1,9 +1,67 @@
 'use client'
 
-import { type Dispatch } from 'react'
+import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, MeterkastAnalyse } from './types'
 import { PhotoUpload } from './PhotoUpload'
 import { StepHeader } from './StepHeader'
+
+function FallbackMeterkast({ onComplete }: { onComplete: (data: MeterkastAnalyse) => void }) {
+  const [fase, setFase] = useState<'1-fase' | '3-fase' | null>(null)
+  const [groepen, setGroepen] = useState<number | null>(null)
+
+  return (
+    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
+      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Snel invullen</div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-mono text-white/50">Wat voor aansluiting heeft u?</p>
+        <div className="flex gap-2">
+          {(['1-fase', '3-fase'] as const).map(f => (
+            <button key={f} type="button" onClick={() => setFase(f)}
+              className={['flex-1 py-2 rounded-lg text-xs font-mono border transition-colors',
+                fase === f ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-800/50 text-white/50 border-white/10 hover:border-amber-500/40'
+              ].join(' ')}>
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-mono text-white/50">Hoeveel vrije groepen heeft uw meterkast?</p>
+        <div className="flex gap-2">
+          {[0, 1, 2, 4].map(n => (
+            <button key={n} type="button" onClick={() => setGroepen(n)}
+              className={['flex-1 py-2 rounded-lg text-xs font-mono border transition-colors',
+                groepen === n ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-800/50 text-white/50 border-white/10 hover:border-amber-500/40'
+              ].join(' ')}>
+              {n === 4 ? '4+' : n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        disabled={!fase || groepen === null}
+        onClick={() => {
+          if (!fase || groepen === null) return
+          onComplete({
+            merk: null,
+            drieFase: fase === '3-fase',
+            vrijeGroepen: groepen,
+            maxVermogenKw: null,
+            geschikt: groepen > 0,
+            opmerkingen: ['Handmatig ingevuld — geen foto-analyse uitgevoerd'],
+          })
+        }}
+        className="w-full py-2.5 bg-amber-500 text-slate-950 rounded-full text-xs font-mono font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Doorgaan
+      </button>
+    </div>
+  )
+}
 
 interface Step3MeterkastProps {
   state: FunnelState
@@ -76,6 +134,8 @@ function MeterkastResultaat({ analyse }: { analyse: MeterkastAnalyse }) {
 
 export function Step3Meterkast({ state, dispatch }: Step3MeterkastProps) {
   const analyse = state.meterkastAnalyse
+  const [showFallback, setShowFallback] = useState(false)
+
   return (
     <div className="p-6 space-y-6">
       <StepHeader stap="Stap 3 — Meterkast scan" title="Meterkast analyse" subtitle="AI-scan bepaalt geschiktheid voor zonnepanelen & batterij" />
@@ -90,13 +150,31 @@ export function Step3Meterkast({ state, dispatch }: Step3MeterkastProps) {
           </div>
         </div>
       )}
-      {!analyse ? (
+      {!analyse && !showFallback && (
         <PhotoUpload visionType="meterkast" onAnalysed={(r) => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: r as MeterkastAnalyse })}
           title="Foto van uw meterkast" description="Maak een foto van uw open meterkast, inclusief alle groepen zichtbaar" />
-      ) : (
+      )}
+      {!analyse && !showFallback && (
+        <button
+          type="button"
+          onClick={() => setShowFallback(true)}
+          className="w-full py-2.5 text-xs font-mono border border-amber-500/30 text-amber-400/70 rounded-xl hover:border-amber-500/60 hover:text-amber-400 transition-colors"
+        >
+          Geen foto? Vul handmatig in
+        </button>
+      )}
+      {!analyse && showFallback && (
+        <FallbackMeterkast
+          onComplete={(data) => {
+            dispatch({ type: 'SET_METERKAST', meterkastAnalyse: data })
+            dispatch({ type: 'SET_STEP', step: 4 })
+          }}
+        />
+      )}
+      {analyse && (
         <div className="space-y-3">
           <MeterkastResultaat analyse={analyse} />
-          <button onClick={() => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null })}
+          <button onClick={() => { dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null }); setShowFallback(false) }}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-xs py-2 px-4 rounded-lg transition-colors">
             Andere foto uploaden
           </button>

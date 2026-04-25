@@ -1,9 +1,38 @@
 'use client'
 
-import { type Dispatch } from 'react'
+import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, OmvormerAnalyse } from './types'
 import { PhotoUpload } from './PhotoUpload'
 import { StepHeader } from './StepHeader'
+
+function FallbackOmvormer({ onComplete }: { onComplete: (data: OmvormerAnalyse) => void }) {
+  return (
+    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
+      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Heeft u al zonnepanelen/omvormer?</div>
+      <div className="flex gap-2">
+        {([
+          { label: 'Ja, ik heb al panelen', heeft: true },
+          { label: 'Nee, nog niet', heeft: false },
+        ]).map(({ label, heeft }) => (
+          <button key={label} type="button"
+            onClick={() => onComplete({
+              merk: null,
+              model: null,
+              vermogenKw: null,
+              hybrideKlaar: false,
+              vervangenNodig: heeft,
+              opmerkingen: heeft
+                ? ['Handmatig ingevuld — installateur inspecteert omvormer']
+                : ['Geen omvormer aanwezig — nieuwe installatie'],
+            })}
+            className="flex-1 py-3 rounded-xl text-xs font-mono border bg-slate-800/50 text-white/60 border-white/10 hover:border-amber-500/40 hover:text-amber-400 transition-colors">
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 interface Step5OmvormerProps {
   state: FunnelState
@@ -81,6 +110,7 @@ function OmvormerResultaat({ analyse }: { analyse: OmvormerAnalyse }) {
 
 export function Step5Omvormer({ state, dispatch }: Step5OmvormerProps) {
   const analyse = state.omvormerAnalyse
+  const [showFallback, setShowFallback] = useState(false)
 
   return (
     <div className="p-6 space-y-6">
@@ -97,28 +127,40 @@ export function Step5Omvormer({ state, dispatch }: Step5OmvormerProps) {
           </div>
         </div>
       )}
-      {!analyse ? (
+      {!analyse && !showFallback && (
         <PhotoUpload
           visionType="omvormer"
           onAnalysed={(r) => dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: r as OmvormerAnalyse })}
           title="Foto van uw omvormer"
           description="Maak een foto van het label/sticker op de omvormer. Zorg dat merk en model leesbaar zijn."
         />
-      ) : (
+      )}
+      {!analyse && !showFallback && (
+        <button
+          type="button"
+          onClick={() => setShowFallback(true)}
+          className="w-full py-2.5 text-xs font-mono border border-amber-500/30 text-amber-400/70 rounded-xl hover:border-amber-500/60 hover:text-amber-400 transition-colors"
+        >
+          Geen foto? Vul handmatig in
+        </button>
+      )}
+      {!analyse && showFallback && (
+        <FallbackOmvormer
+          onComplete={(data) => {
+            dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: data })
+            dispatch({ type: 'SET_STEP', step: 6 })
+          }}
+        />
+      )}
+      {analyse && (
         <div className="space-y-3">
           <OmvormerResultaat analyse={analyse} />
           <button
-            onClick={() => dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: null })}
+            onClick={() => { dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: null }); setShowFallback(false) }}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-xs py-2 px-4 rounded-lg transition-colors"
           >
             Andere foto uploaden
           </button>
-        </div>
-      )}
-
-      {!analyse && (
-        <div className="text-xs text-white/30 text-center" style={{ fontFamily: 'var(--font-sans)' }}>
-          Nog geen zonnepanelen? U kunt deze stap overslaan.
         </div>
       )}
 
