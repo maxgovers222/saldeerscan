@@ -14,13 +14,17 @@ function SocialProofTicker() {
       .catch(() => {})
   }, [])
 
-  if (!data || data.count === 0) return null
+  const MIN_THRESHOLD = 25
+  if (!data || data.count < MIN_THRESHOLD) return null
+
+  // Afronden naar dichtstbijzijnde tiental voor geloofwaardigheid (27 → "20+")
+  const displayCount = Math.floor(data.count / 10) * 10
 
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono mb-4"
       style={{ background: 'rgba(0,170,101,0.08)', border: '1px solid rgba(0,170,101,0.2)' }}>
       <span className="w-1.5 h-1.5 rounded-full bg-[#00aa65] animate-pulse shrink-0" />
-      <span className="text-[#00aa65] font-bold">{data.count}</span>
+      <span className="text-[#00aa65] font-bold">{displayCount}+</span>
       <span className="text-white/45">
         analyses{data.minGeleden !== null ? ` · Laatste: ${data.minGeleden} min geleden` : ''}
       </span>
