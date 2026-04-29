@@ -2,124 +2,168 @@ import { test, expect } from '@playwright/test'
 
 /**
  * Step 6 validatie tests.
- * Deze tests navigeren direct naar /check en testen de validatielogica op Step 6.
- * Om Step 6 te bereiken zonder echte API calls, gebruiken we localStorage state injection.
+ * Navigeert direct naar /check en test de validatielogica op Step 6
+ * via localStorage state-injectie.
+ *
+ * Let op: localStorage key is 'wep_funnel_state', niet 'funnel_state'.
+ * ROI structuur: besparingJaarEur, investeringEur, terugverdientijdJaar (niet jaarlijkseBesparing).
  */
+
+const LS_KEY = 'wep_funnel_state'
 
 const FUNNEL_STATE_STEP6 = {
   step: 6,
   adres: 'Prinsengracht 263, Amsterdam',
+  wijk: '',
+  stad: '',
   bagData: {
-    adres: 'Prinsengracht 263, Amsterdam',
-    postcode: '1016GV',
-    huisnummer: '263',
-    lat: 52.3676,
-    lon: 4.8897,
     bouwjaar: 1880,
     oppervlakte: 120,
-    woningtype: 'appartement',
+    woningtype: 'Appartement',
+    postcode: '1016GV',
+    huisnummer: 263,
     dakOppervlakte: 45,
-    energielabel: 'D',
+    lat: 52.3676,
+    lon: 4.8897,
   },
   netcongestie: {
     status: 'GROEN',
     netbeheerder: 'Liander',
-    regio: 'Amsterdam',
-    postcodePrefix: '1016',
+    uitleg: 'Net heeft voldoende capaciteit',
     terugleveringBeperkt: false,
+    postcodePrefix: '1016',
+  },
+  healthScore: {
+    score: 62,
+    label: 'Goed',
+    kleur: 'geel',
+    breakdown: { bouwjaar: 15, energielabel: 12, dakpotentieel: 20, netcongestie: 15 },
+    aanbevelingen: ['Overweeg isolatie'],
   },
   roiResult: {
+    geschatVerbruikKwh: 3500,
     aantalPanelen: 8,
-    vermogenKwp: 3.2,
-    jaarproductieKwh: 2880,
-    scenarioNu: { jaarlijkseBesparing: 650, terugverdientijd: 7.8, roi25jaar: 12800 },
-    scenarioMetBatterij: { jaarlijkseBesparing: 820, terugverdientijd: 8.5, roi25jaar: 15600 },
-    scenarioWachten: { verliesPerJaar: 580, totalVerlies2027: 1160 },
-    shockEffect2027: { huidigSalderingspct: 64, volgendJaarPct: 28, eindeJaarPct: 0, jaarlijksVerlies: 580 },
+    productieKwh: 2800,
+    eigenGebruikPct: 65,
+    scenarioNu: {
+      naam: 'Alleen panelen',
+      beschrijving: 'Installeer alleen zonnepanelen',
+      besparingJaarEur: 650,
+      investeringEur: 6200,
+      terugverdientijdJaar: 9.5,
+    },
+    scenarioMetBatterij: {
+      naam: 'Panelen + Batterij',
+      beschrijving: 'Optimale combo',
+      besparingJaarEur: 820,
+      investeringEur: 10500,
+      terugverdientijdJaar: 12.8,
+    },
+    scenarioWachten: {
+      naam: 'Wachten',
+      beschrijving: 'Risico 2027',
+      besparingJaarEur: 0,
+      investeringEur: 0,
+      terugverdientijdJaar: 99,
+    },
+    shockEffect2027: {
+      jaarlijksVerlies: 580,
+      cumulatiefVerlies5Jaar: 2900,
+      maandelijksVerlies: 48,
+      boodschap: 'Saldering vervalt volledig op 1 januari 2027',
+    },
+    aanbeveling: 'beide',
+    aanbevelingTekst: 'Combinatie geeft hoogste ROI',
+    isdeSchatting: { bedragEur: 2400, apparaatType: 'Thuisbatterij', vermogenKwp: 3.2 },
   },
-  healthScore: { score: 62, label: 'Goed', kleur: 'amber', breakdown: {}, aanbevelingen: [] },
-  panelen: 8,
-  leadId: null,
   meterkastAnalyse: null,
   plaatsingsAnalyse: null,
   omvormerAnalyse: null,
-  isEigenaar: null,
-  heeftPanelen: null,
-  wijk: null,
-  stad: null,
-  provincie: null,
-  utmParams: {},
-  landingPage: '/',
+  dakrichting: null,
+  verbruik_bron: 'schatting',
+  huishouden_grootte: null,
+  is_eigenaar: null,
+  leadId: null,
+  loading: false,
+  error: null,
+  utmParams: null,
 }
 
 test.describe('Step 6 — Lead formulier validatie', () => {
   test.beforeEach(async ({ page }) => {
-    // Inject funnel state in localStorage zodat Step 6 direct zichtbaar is
+    // Mock de leads API
+    await page.route('/api/leads**', (route) =>
+      route.fulfill({ json: { leadId: 'test-lead-id-123', success: true } }),
+    )
+
     await page.goto('/check')
     await page.waitForLoadState('domcontentloaded')
 
-    await page.evaluate((state) => {
-      localStorage.setItem('funnel_state', JSON.stringify(state))
-    }, FUNNEL_STATE_STEP6)
+    // Injecteer state met correcte localStorage key
+    await page.evaluate(
+      ([key, state]) => localStorage.setItem(key as string, JSON.stringify(state)),
+      [LS_KEY, FUNNEL_STATE_STEP6],
+    )
 
-    // Herlaad pagina om de opgeslagen state te activeren
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1500)
+    await page.waitForTimeout(1000)
+
+    // Klik "Doorgaan" op de resume-banner als die verschijnt
+    const doorgaanBtn = page.locator('button:has-text("Doorgaan")')
+    if (await doorgaanBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await doorgaanBtn.click()
+      await page.waitForTimeout(500)
+    }
   })
 
-  test('Submit knop is disabled zonder naam', async ({ page }) => {
-    // Zoek de submit knop in Step 6
-    const submitBtn = page.locator('button[type="submit"], button:has-text("Aanvragen"), button:has-text("Verstuur")').last()
+  test('Stap 6 is geladen', async ({ page }) => {
+    await expect(page.locator('text=Stap 6')).toBeVisible({ timeout: 8000 })
+  })
 
-    // Zonder ingevuld formulier moet de knop disabled zijn OF validatie tonen na klik
+  test('Submit knop dient niet in zonder naam', async ({ page }) => {
+    const submitBtn = page.locator('button[type="submit"]')
     if (await submitBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const isDisabled = await submitBtn.isDisabled()
-      if (!isDisabled) {
-        // Klik en check voor validatiefout
-        await submitBtn.click()
-        const hasValidation = await page.locator('text=vereist, text=verplicht, text=naam').first().isVisible({ timeout: 3000 }).catch(() => false)
-        // Of de knop was al disabled - beide zijn acceptabel gedrag
-        expect(isDisabled || hasValidation).toBeTruthy()
-      }
+      await submitBtn.click()
+      await expect(page.locator('text=Naam is verplicht')).toBeVisible({ timeout: 3000 })
     }
   })
 
-  test('GDPR checkbox omrand met amber wrapper', async ({ page }) => {
-    // De GDPR checkbox moet zichtbaar zijn met amber styling
-    const gdprSection = page.locator('[class*="amber"][class*="border"]').filter({
-      has: page.locator('input[type="checkbox"]'),
-    }).first()
-
-    // Als step 6 geladen is, moet de GDPR wrapper zichtbaar zijn
-    if (await page.locator('input[type="checkbox"]').first().isVisible({ timeout: 5000 }).catch(() => false)) {
-      // Check dat er een amber wrapper aanwezig is
-      const amberWrapper = page.locator('.border-amber-500\\/30, [class*="amber-500/30"]').first()
-      // De wrapper hoeft niet verplicht zichtbaar te zijn als de state restore niet werkt
-      // maar we kunnen wel checken of de checkbox zelf aanwezig is
-      await expect(page.locator('input[type="checkbox"]').first()).toBeVisible()
-    }
-  })
-
-  test('Naam veld vereist minimaal 2 woorden', async ({ page }) => {
-    // Als Step 6 geladen, test naamvalidatie
-    const naamInput = page.locator('input[name="naam"], input[placeholder*="naam"], input[placeholder*="Naam"]').first()
-
+  test('Naam met 1 woord toont fout', async ({ page }) => {
+    const naamInput = page.locator('#lead-naam')
     if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-      // Vul slechts 1 woord in
       await naamInput.fill('Jan')
-      await naamInput.blur()
+      await page.locator('button[type="submit"]').click()
+      await expect(
+        page.locator('text=voor- en achternaam').or(page.locator('text=Voer uw voor- en achternaam')),
+      ).toBeVisible({ timeout: 3000 })
+    }
+  })
 
-      // Vul daarna een submit-poging
-      const submitBtn = page.locator('button[type="submit"]').last()
-      if (await submitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await submitBtn.click()
-        // Verwacht validatiebericht
-        const errorMsg = page.locator('text=Voor- en achternaam, text=twee woorden, text=volledige naam').first()
-        if (await errorMsg.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await expect(errorMsg).toBeVisible()
-        }
-      }
+  test('GDPR checkbox is zichtbaar', async ({ page }) => {
+    await expect(page.locator('#lead-gdpr')).toBeAttached({ timeout: 5000 })
+  })
+
+  test('GDPR niet aangevinkt blokkeert submit', async ({ page }) => {
+    const naamInput = page.locator('#lead-naam')
+    if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await naamInput.fill('Jan de Vries')
+      await page.locator('#lead-email').fill('jan@test.nl')
+      await page.locator('#lead-telefoon').fill('0612345678')
+      await page.locator('button[type="submit"]').click()
+      await expect(page.locator('text=akkoord gaan met de privacyverklaring')).toBeVisible({ timeout: 3000 })
+    }
+  })
+
+  test('Volledig valid formulier leidt tot SuccessState', async ({ page }) => {
+    const naamInput = page.locator('#lead-naam')
+    if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await naamInput.fill('Jan de Vries')
+      await page.locator('#lead-email').fill('jan@test.nl')
+      await page.locator('#lead-telefoon').fill('0612345678')
+      await page.locator('#lead-gdpr').click({ force: true })
+      await page.locator('button[type="submit"]').click()
+      await expect(page.locator('text=Gegevens ontvangen!')).toBeVisible({ timeout: 10000 })
     }
   })
 })
