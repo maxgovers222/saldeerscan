@@ -53,6 +53,8 @@ function funnelReducer(state: FunnelState, action: FunnelAction): FunnelState {
     case 'SET_VERBRUIK_BRON': return { ...state, verbruik_bron: action.bron }
     case 'SET_HUISHOUDEN': return { ...state, huishouden_grootte: action.grootte }
     case 'SET_IS_EIGENAAR': return { ...state, is_eigenaar: action.is_eigenaar }
+    case 'SET_HEEFT_PANELEN': return { ...state, heeft_panelen: action.heeft_panelen }
+    case 'SET_HUIDIGE_PANELEN_AANTAL': return { ...state, huidige_panelen_aantal: action.huidige_panelen_aantal }
     default: return state
   }
 }
@@ -74,6 +76,8 @@ function makeInitialState(initialAdres = '', initialWijk = '', initialStad = '')
     verbruik_bron: 'schatting',
     huishouden_grootte: null,
     is_eigenaar: null,
+    heeft_panelen: null,
+    huidige_panelen_aantal: null,
     leadId: null,
     loading: false,
     error: null,
@@ -140,6 +144,9 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
         if (loaded.healthScore) dispatch({ type: 'SET_HEALTH_SCORE', healthScore: loaded.healthScore })
         if (loaded.adres) dispatch({ type: 'SET_ADRES', adres: loaded.adres })
         if (loaded.wijk || loaded.stad) dispatch({ type: 'SET_WIJK', wijk: loaded.wijk, stad: loaded.stad })
+        dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: loaded.is_eigenaar ?? null })
+        dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: loaded.heeft_panelen ?? null })
+        dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: loaded.huidige_panelen_aantal ?? null })
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,12 +200,16 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
       meterkastAnalyse: savedState.meterkastAnalyse,
       plaatsingsAnalyse: savedState.plaatsingsAnalyse,
       omvormerAnalyse: savedState.omvormerAnalyse,
+      is_eigenaar: savedState.is_eigenaar,
+      heeft_panelen: savedState.heeft_panelen,
+      huidige_panelen_aantal: savedState.huidige_panelen_aantal,
     }).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
         const actionMap: Record<string, FunnelAction['type']> = {
           adres: 'SET_ADRES', bagData: 'SET_BAG_DATA', netcongestie: 'SET_NETCONGESTIE',
           healthScore: 'SET_HEALTH_SCORE', roiResult: 'SET_ROI', meterkastAnalyse: 'SET_METERKAST',
           plaatsingsAnalyse: 'SET_PLAATSING', omvormerAnalyse: 'SET_OMVORMER',
+          is_eigenaar: 'SET_IS_EIGENAAR', heeft_panelen: 'SET_HEEFT_PANELEN', huidige_panelen_aantal: 'SET_HUIDIGE_PANELEN_AANTAL',
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         dispatch({ type: actionMap[key]!, [key]: value } as any)

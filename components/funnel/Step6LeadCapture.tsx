@@ -53,6 +53,7 @@ interface LeadFormData {
   gdprConsent: boolean
   isEigenaar: boolean | null
   heeftPanelen: boolean | null
+  huidigePanelenAantal: string
 }
 
 function normalizePhone(raw: string, code: CountryCode): string {
@@ -115,7 +116,16 @@ function SuccessState({ state }: { state: FunnelState }) {
 const inputBase = 'w-full bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-sans text-sm transition-colors focus:outline-none amber-glow'
 
 export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
-  const [form, setForm] = useState<LeadFormData>({ naam: '', email: '', telefoon: '', countryCode: '+31', gdprConsent: false, isEigenaar: null, heeftPanelen: null })
+  const [form, setForm] = useState<LeadFormData>({
+    naam: '',
+    email: '',
+    telefoon: '',
+    countryCode: '+31',
+    gdprConsent: false,
+    isEigenaar: state.is_eigenaar,
+    heeftPanelen: state.heeft_panelen,
+    huidigePanelenAantal: state.huidige_panelen_aantal ? String(state.huidige_panelen_aantal) : '',
+  })
   const [errors, setErrors] = useState<Partial<Record<keyof LeadFormData | 'submit', string>>>({})
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -132,6 +142,11 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailNorm)) e.email = 'Voer een geldig e-mailadres in'
     if (!form.telefoon.trim()) e.telefoon = 'Telefoonnummer is verplicht'
     else if (!validatePhone(form.telefoon, form.countryCode)) e.telefoon = 'Ongeldig telefoonnummer voor het geselecteerde land'
+    if (form.heeftPanelen === true) {
+      const aantal = Number(form.huidigePanelenAantal)
+      if (!form.huidigePanelenAantal.trim()) e.huidigePanelenAantal = 'Vul in hoeveel panelen u al heeft'
+      else if (!Number.isInteger(aantal) || aantal <= 0 || aantal > 200) e.huidigePanelenAantal = 'Voer een geldig aantal panelen in (1-200)'
+    }
     if (!form.gdprConsent) e.gdprConsent = 'U moet akkoord gaan met de privacyverklaring om door te gaan.'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -164,6 +179,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           plaatsingsAnalyse: state.plaatsingsAnalyse, omvormerAnalyse: state.omvormerAnalyse,
           isdeSchatting: state.roiResult?.isdeSchatting, gdprConsent: form.gdprConsent,
           isEigenaar: form.isEigenaar, heeftPanelen: form.heeftPanelen,
+          huidigePanelenAantal: form.heeftPanelen ? Number(form.huidigePanelenAantal || 0) : null,
           dakrichting: state.dakrichting,
           verbruik_bron: state.verbruik_bron,
           huishouden_grootte: state.huishouden_grootte,
@@ -315,7 +331,16 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
               <button
                 key={String(val)}
                 type="button"
-                onClick={() => setForm(f => ({ ...f, heeftPanelen: val }))}
+                onClick={() => {
+                  setForm(f => ({
+                    ...f,
+                    heeftPanelen: val,
+                    huidigePanelenAantal: val ? f.huidigePanelenAantal : '',
+                  }))
+                  dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
+                  if (!val) dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: null })
+                  setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
+                }}
                 className={[
                   'py-2.5 rounded-lg text-sm font-sans border transition-all',
                   form.heeftPanelen === val
@@ -327,6 +352,31 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
               </button>
             ))}
           </div>
+          {form.heeftPanelen === true && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="huidige-panelen-aantal">
+                Hoeveel panelen liggen er nu?
+              </label>
+              <input
+                id="huidige-panelen-aantal"
+                type="number"
+                min={1}
+                max={200}
+                inputMode="numeric"
+                value={form.huidigePanelenAantal}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d]/g, '')
+                  setForm(f => ({ ...f, huidigePanelenAantal: value }))
+                  const parsed = value ? Number(value) : null
+                  dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: parsed && parsed > 0 ? parsed : null })
+                  setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
+                }}
+                placeholder="Bijv. 10"
+                className={[inputBase, errors.huidigePanelenAantal ? 'border-red-400' : 'border-white/10'].join(' ')}
+              />
+              {errors.huidigePanelenAantal && <p className="text-xs font-sans text-red-400">{errors.huidigePanelenAantal}</p>}
+            </div>
+          )}
         </div>
 
         {/* Huishoudensgrootte */}

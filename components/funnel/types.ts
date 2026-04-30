@@ -104,6 +104,8 @@ export interface FunnelState {
   verbruik_bron: 'schatting' | 'gebruiker'
   huishouden_grootte: 1 | 2 | 3 | null
   is_eigenaar: boolean | null
+  heeft_panelen: boolean | null
+  huidige_panelen_aantal: number | null
   leadId: string | null
   loading: boolean
   error: string | null
@@ -134,3 +136,5 @@ export type FunnelAction =
   | { type: 'SET_VERBRUIK_BRON'; bron: FunnelState['verbruik_bron'] }
   | { type: 'SET_HUISHOUDEN'; grootte: FunnelState['huishouden_grootte'] }
   | { type: 'SET_IS_EIGENAAR'; is_eigenaar: boolean | null }
+  | { type: 'SET_HEEFT_PANELEN'; heeft_panelen: boolean | null }
+  | { type: 'SET_HUIDIGE_PANELEN_AANTAL'; huidige_panelen_aantal: number | null }

@@ -80,8 +80,8 @@ function ShockChart({ besparing }: { besparing: number }) {
     <div className="space-y-3">
       {years.map(({ year, pct, label, color }) => (
         <div key={year} className="flex items-center gap-3">
-          <span className="text-xs font-mono text-white/40 w-10 shrink-0">{year}</span>
-          <div className="flex-1 bg-white/5 rounded-full h-5 overflow-hidden">
+          <span className="text-xs font-mono text-slate-500 w-10 shrink-0">{year}</span>
+          <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-1000"
               style={{
@@ -92,7 +92,7 @@ function ShockChart({ besparing }: { besparing: number }) {
             />
           </div>
           <span className="text-xs font-mono w-10 shrink-0 text-right" style={{ color }}>{label}</span>
-          <span className="text-xs font-mono text-white/30 w-24 shrink-0 hidden sm:block">
+          <span className="text-xs font-mono text-slate-500 w-24 shrink-0 hidden sm:block">
             {pct > 0 ? `€${Math.round(besparing * pct / 100).toLocaleString('nl-NL')}/jr` : '€0/jr'}
           </span>
         </div>
@@ -120,17 +120,17 @@ function ROITijdlijn({ terugverdien, besparing }: { terugverdien: number; bespar
 
   return (
     <div className="relative">
-      <div className="absolute top-5 left-5 right-5 h-px bg-white/8" />
+      <div className="absolute top-5 left-5 right-5 h-px bg-slate-200" />
       <div className="relative flex justify-between">
         {milestones.map((m, i) => (
           <div key={i} className="flex flex-col items-center gap-2.5 flex-1">
-            <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 bg-slate-950"
+            <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 bg-white"
               style={{ borderColor: m.kleur, color: m.kleur }}>
               {m.icon}
             </div>
             <div className="text-center">
               <p className="text-xs font-bold font-mono" style={{ color: m.kleur }}>{m.jaar}</p>
-              <p className="text-[10px] text-white/40 leading-tight mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>{m.label}</p>
+              <p className="text-[10px] text-slate-500 leading-tight mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>{m.label}</p>
             </div>
           </div>
         ))}
@@ -168,9 +168,23 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function ResultsDashboard({ state }: { state: FunnelState }) {
   const roi = state.roiResult
   const score = state.healthScore?.score ?? 0
-  const besparing = roi?.scenarioNu.besparingJaarEur ?? 0
+  const heeftPanelen = state.heeft_panelen === true
+  const huidigePanelenAantal = state.huidige_panelen_aantal
+  const batterijInvestering = Math.max(
+    (roi?.scenarioMetBatterij.investeringEur ?? 0) - (roi?.scenarioNu.investeringEur ?? 0),
+    0
+  )
+  const batterijMeerBesparing = Math.max(
+    (roi?.scenarioMetBatterij.besparingJaarEur ?? 0) - (roi?.scenarioNu.besparingJaarEur ?? 0),
+    0
+  )
+  const besparing = heeftPanelen
+    ? (roi?.scenarioMetBatterij.besparingJaarEur ?? roi?.scenarioNu.besparingJaarEur ?? 0)
+    : (roi?.scenarioNu.besparingJaarEur ?? 0)
   const verlies = roi?.shockEffect2027.jaarlijksVerlies ?? besparing
-  const terugverdien = roi?.scenarioNu.terugverdientijdJaar ?? 8
+  const terugverdien = heeftPanelen
+    ? (batterijMeerBesparing > 0 ? Math.round((batterijInvestering / batterijMeerBesparing) * 10) / 10 : 99)
+    : (roi?.scenarioNu.terugverdientijdJaar ?? 8)
   const investering = roi?.scenarioNu.investeringEur ?? 0
   const regio = state.wijk ? state.wijk.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : (state.stad || 'uw regio')
 
@@ -226,9 +240,9 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
       )}
 
       {/* Sectie 1: De Shock */}
-      <div className="bg-slate-900/40 border border-red-700/25 rounded-2xl p-6 print-break-avoid">
+      <div className="bg-white border border-red-200 rounded-2xl p-6 print-break-avoid text-slate-900">
         <SectionLabel>Impact 2027</SectionLabel>
-        <h3 className="text-base font-bold text-white mb-5" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h3 className="text-base font-bold mb-5" style={{ fontFamily: 'var(--font-heading)' }}>
           Jaarlijks saldeer-verlies na 1 januari 2027
         </h3>
 
@@ -236,7 +250,7 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
           <div className="text-5xl font-black font-mono mb-1.5" style={{ color: '#f59e0b' }}>
             −€{animVerlies.toLocaleString('nl-NL')}
           </div>
-          <p className="text-xs text-white/40" style={{ fontFamily: 'var(--font-sans)' }}>per jaar · vanaf 1 januari 2027</p>
+          <p className="text-xs text-slate-500" style={{ fontFamily: 'var(--font-sans)' }}>per jaar · vanaf 1 januari 2027</p>
         </div>
 
         <ShockChart besparing={besparing} />
@@ -246,45 +260,63 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
             <path d="M8 2L1 14h14L8 2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
             <path d="M8 6v4M8 11.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
-          <p className="text-xs text-red-300" style={{ fontFamily: 'var(--font-sans)' }}>
-            Zonder actie verliest u over 5 jaar <strong className="text-red-200">€{((verlies ?? 0) * 5).toLocaleString('nl-NL')}</strong> aan salderingsinkomsten
+          <p className="text-xs text-red-700" style={{ fontFamily: 'var(--font-sans)' }}>
+            {heeftPanelen
+              ? <>Zonder thuisbatterij verliest u over 5 jaar <strong className="text-red-800">€{((verlies ?? 0) * 5).toLocaleString('nl-NL')}</strong> aan terugleverwaarde op uw bestaande zonnepanelen.</>
+              : <>Zonder actie verliest u over 5 jaar <strong className="text-red-800">€{((verlies ?? 0) * 5).toLocaleString('nl-NL')}</strong> aan salderingsinkomsten.</>
+            }
           </p>
         </div>
       </div>
 
       {/* Sectie 2: De Oplossing */}
-      <div className="bg-slate-900/40 border border-emerald-700/25 rounded-2xl p-6 relative print-break-avoid">
+      <div className="bg-white border border-emerald-200 rounded-2xl p-6 relative print-break-avoid text-slate-900">
         <GevalideerdStempel />
         <SectionLabel>Geadviseerde configuratie</SectionLabel>
-        <h3 className="text-base font-bold text-white mb-5" style={{ fontFamily: 'var(--font-heading)' }}>
-          Uw optimale opstelling
+        <h3 className="text-base font-bold mb-5" style={{ fontFamily: 'var(--font-heading)' }}>
+          {heeftPanelen ? 'Uw optimale optimalisatie (bestaande panelen)' : 'Uw optimale opstelling'}
         </h3>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-slate-950/60 border border-amber-500/15 rounded-xl p-4">
-            <p className="text-[10px] text-amber-400/70 uppercase tracking-widest mb-1.5" style={{ fontFamily: 'var(--font-sans)' }}>Zonnepanelen</p>
-            <p className="text-2xl font-black font-mono text-amber-400">{roi?.aantalPanelen ?? '—'}</p>
-            <p className="text-[11px] text-white/30 mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>panelen · {roi ? Math.round((roi.aantalPanelen ?? 8) * 0.4) : '—'} m²</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-[10px] text-amber-700 uppercase tracking-widest mb-1.5" style={{ fontFamily: 'var(--font-sans)' }}>
+              {heeftPanelen ? 'Bestaande zonnepanelen' : 'Zonnepanelen'}
+            </p>
+            <p className="text-2xl font-black font-mono text-amber-600">{heeftPanelen ? (huidigePanelenAantal ?? roi?.aantalPanelen ?? '—') : (roi?.aantalPanelen ?? '—')}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>
+              {heeftPanelen ? 'reeds aanwezig op uw dak' : `panelen · ${roi ? Math.round((roi.aantalPanelen ?? 8) * 0.4) : '—'} m²`}
+            </p>
           </div>
-          <div className="bg-slate-950/60 border border-emerald-500/15 rounded-xl p-4">
-            <p className="text-[10px] text-emerald-400/70 uppercase tracking-widest mb-1.5" style={{ fontFamily: 'var(--font-sans)' }}>Thuisbatterij</p>
-            <p className="text-2xl font-black font-mono text-emerald-400">10 kWh</p>
-            <p className="text-[11px] text-white/30 mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>aanbevolen</p>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+            <p className="text-[10px] text-emerald-700 uppercase tracking-widest mb-1.5" style={{ fontFamily: 'var(--font-sans)' }}>Thuisbatterij</p>
+            <p className="text-2xl font-black font-mono text-emerald-600">10 kWh</p>
+            <p className="text-[11px] text-slate-500 mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>
+              {heeftPanelen ? 'primaire investering' : 'aanbevolen uitbreiding'}
+            </p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
             { label: 'Besparing/jaar', value: `€${animBesparing.toLocaleString('nl-NL')}`, color: '#f59e0b' },
-            { label: 'Investering', value: investering > 0 ? `€${investering.toLocaleString('nl-NL')}` : '—', color: 'rgba(255,255,255,0.6)' },
+            { label: heeftPanelen ? 'Batterij investering' : 'Investering', value: (heeftPanelen ? batterijInvestering : investering) > 0 ? `€${(heeftPanelen ? batterijInvestering : investering).toLocaleString('nl-NL')}` : '—', color: '#334155' },
             { label: 'Energie score', value: `${animScore}/100`, color: score >= 70 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-slate-950/40 rounded-xl p-3">
-              <p className="text-[10px] text-white/30 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>{label}</p>
+            <div key={label} className="bg-slate-100 rounded-xl p-3">
+              <p className="text-[10px] text-slate-500 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>{label}</p>
               <p className="font-bold font-mono text-sm" style={{ color }}>{value}</p>
             </div>
           ))}
         </div>
+
+        {heeftPanelen && (
+          <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+            <p className="text-xs text-emerald-800" style={{ fontFamily: 'var(--font-sans)' }}>
+              Advies: behoud uw huidige zonnepanelen en voeg een thuisbatterij toe. Extra besparing door batterij-opslag is ongeveer
+              <strong> €{batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</strong>.
+            </p>
+          </div>
+        )}
 
         {roi?.isdeSchatting && roi.isdeSchatting.bedragEur > 0 && (
           <div className="mt-3 bg-amber-950/20 border border-amber-500/15 rounded-xl px-4 py-3 flex items-center justify-between">
@@ -298,9 +330,9 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
       </div>
 
       {/* Sectie 3: ROI Tijdlijn */}
-      <div className="bg-slate-900/40 border border-white/8 rounded-2xl p-6 print-break-avoid">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 print-break-avoid text-slate-900">
         <SectionLabel>Terugverdientijd</SectionLabel>
-        <h3 className="text-base font-bold text-white mb-6" style={{ fontFamily: 'var(--font-heading)' }}>
+        <h3 className="text-base font-bold mb-6" style={{ fontFamily: 'var(--font-heading)' }}>
           ROI tijdlijn
         </h3>
         <ROITijdlijn terugverdien={terugverdien} besparing={besparing} />

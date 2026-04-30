@@ -121,8 +121,14 @@ export async function POST(request: Request) {
     const score          = body.healthScore ? Number(body.healthScore) : null
     const energielabel   = body.energielabel ? String(body.energielabel) : null
     const netStatus      = body.netcongestieStatus ? String(body.netcongestieStatus) : null
-    const besparing      = roi.scenarioNu?.besparingJaarEur ?? null
-    const terugverdien   = roi.scenarioNu?.terugverdientijdJaar ?? null
+    const heeftPanelen   = typeof body.heeftPanelen === 'boolean' ? body.heeftPanelen : null
+    const bestaandePanelen = body.huidigePanelenAantal ? Number(body.huidigePanelenAantal) : null
+    const batterijInvestering = Math.max((roi.scenarioMetBatterij?.investeringEur ?? 0) - (roi.scenarioNu?.investeringEur ?? 0), 0)
+    const batterijMeerBesparing = Math.max((roi.scenarioMetBatterij?.besparingJaarEur ?? 0) - (roi.scenarioNu?.besparingJaarEur ?? 0), 0)
+    const besparing      = heeftPanelen ? (roi.scenarioMetBatterij?.besparingJaarEur ?? roi.scenarioNu?.besparingJaarEur ?? null) : (roi.scenarioNu?.besparingJaarEur ?? null)
+    const terugverdien   = heeftPanelen
+      ? (batterijMeerBesparing > 0 ? Math.round((batterijInvestering / batterijMeerBesparing) * 10) / 10 : null)
+      : (roi.scenarioNu?.terugverdientijdJaar ?? null)
     const aantalPanelen  = roi.aantalPanelen ?? null
     const verliesNa2027  = roi.shockEffect2027?.jaarlijksVerlies ?? null
     const isdeSubsidie   = roi.isdeSchatting?.bedragEur && roi.isdeSchatting.bedragEur > 0
@@ -139,8 +145,8 @@ export async function POST(request: Request) {
 
     const dataRij = (label: string, waarde: string) =>
       `<tr>
-        <td style="padding:7px 0;font-size:13px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.06)">${label}</td>
-        <td style="padding:7px 0;font-size:13px;font-weight:600;color:#e2e8f0;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06)">${waarde}</td>
+        <td style="padding:7px 0;font-size:13px;color:#64748b;border-bottom:1px solid #e2e8f0">${label}</td>
+        <td style="padding:7px 0;font-size:13px;font-weight:600;color:#0f172a;text-align:right;border-bottom:1px solid #e2e8f0">${waarde}</td>
       </tr>`
 
     const dataRijen = [
@@ -164,60 +170,63 @@ export async function POST(request: Request) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="light">
 </head>
-<body style="margin:0;padding:0;background:#020617;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
-  <div style="max-width:580px;margin:32px auto;background:#0f172a;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <div style="max-width:580px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
 
     <!-- HEADER -->
-    <div style="background:#020617;padding:28px 32px 24px">
+    <div style="background:#ffffff;padding:24px 32px 18px;border-bottom:1px solid #e2e8f0">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td>
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:10px">
-              <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
-              <polygon points="14,7 21,11 21,17 14,21 7,17 7,11" fill="#f59e0b" opacity="0.15"/>
-              <path d="M14 9 L17 14 L14 19 L11 14 Z" fill="#f59e0b"/>
+              <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" fill="none" stroke="#00aa65" stroke-width="1.5"/>
+              <polygon points="14,7 21,11 21,17 14,21 7,17 7,11" fill="#00aa65" opacity="0.15"/>
+              <path d="M14 9 L17 14 L14 19 L11 14 Z" fill="#00aa65"/>
             </svg>
-            <span style="font-size:18px;font-weight:700;color:#f59e0b;vertical-align:middle;letter-spacing:-0.3px">SaldeerScan.nl</span>
+            <span style="font-size:18px;font-weight:700;color:#0f172a;vertical-align:middle;letter-spacing:-0.3px">SaldeerScan.nl</span>
           </td>
           <td style="text-align:right;vertical-align:middle">
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1.5px;text-transform:uppercase">Persoonlijk Rapport</span>
+            <span style="font-size:10px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase">Persoonlijk Rapport</span>
           </td>
         </tr>
       </table>
     </div>
 
     <!-- URGENTIE BAR -->
-    <div style="background:#1c1208;border-top:1px solid rgba(245,158,11,0.3);padding:9px 32px">
-      <span style="font-size:11px;color:#fbbf24;letter-spacing:0.3px">Salderingsregeling stopt volledig per 1 januari 2027</span>
+    <div style="background:#fff7ed;border-top:1px solid #fdba74;border-bottom:1px solid #fed7aa;padding:9px 32px">
+      <span style="font-size:11px;color:#9a3412;letter-spacing:0.3px">Salderingsregeling stopt volledig per 1 januari 2027</span>
     </div>
 
     <!-- BODY -->
     <div style="padding:32px">
-      <p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#e2e8f0">Geachte ${voornaam},</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#94a3b8;line-height:1.75">
-        Uw persoonlijk 2027-rapport voor <strong style="color:#e2e8f0">${String(body.adres)}</strong> is opgesteld.
+      <p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#0f172a">Geachte ${voornaam},</p>
+      <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.75">
+        Uw persoonlijk 2027-rapport voor <strong style="color:#0f172a">${String(body.adres)}</strong> is opgesteld.
         Een energieadviseur in uw regio neemt zo spoedig mogelijk contact met u op.
       </p>
 
       ${verliesNa2027 ? `
       <!-- SHOCK BOX -->
-      <div style="background:rgba(28,18,8,0.95);border-radius:10px;border-left:4px solid #f59e0b;padding:18px 20px;margin-bottom:24px">
-        <div style="font-size:10px;color:#fbbf24;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600;opacity:0.7">Uw 2027-impact</div>
-        <div style="font-size:28px;font-weight:800;color:#fbbf24;letter-spacing:-0.5px;margin-bottom:4px">
+      <div style="background:#fff1f2;border-radius:10px;border-left:4px solid #dc2626;padding:18px 20px;margin-bottom:24px">
+        <div style="font-size:10px;color:#b91c1c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600;opacity:0.8">Uw 2027-impact</div>
+        <div style="font-size:28px;font-weight:800;color:#b91c1c;letter-spacing:-0.5px;margin-bottom:4px">
           &minus;€${verliesNa2027.toLocaleString('nl-NL')}<span style="font-size:14px;font-weight:500">/jaar</span>
         </div>
-        <div style="font-size:12px;color:#fbbf24;opacity:0.7">Verlies per jaar als u nu géén actie onderneemt</div>
+        <div style="font-size:12px;color:#7f1d1d;opacity:0.85">${heeftPanelen ? 'Verlies per jaar zonder thuisbatterij op uw bestaande panelen' : 'Verlies per jaar als u nu géén actie onderneemt'}</div>
       </div>
       ` : ''}
 
       ${dataRijen ? `
       <!-- SCAN DATA -->
       <div style="margin-bottom:24px">
-        <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;font-weight:600">Uw scanresultaten</div>
+        <div style="font-size:10px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;font-weight:600">Uw scanresultaten</div>
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
           ${dataRijen}
+          ${heeftPanelen && bestaandePanelen ? dataRij('Bestaande panelen', `${bestaandePanelen} stuks`) : ''}
+          ${heeftPanelen && batterijInvestering > 0 ? dataRij('Batterij investering', `€${batterijInvestering.toLocaleString('nl-NL')}`) : ''}
+          ${heeftPanelen && batterijMeerBesparing > 0 ? dataRij('Extra besparing batterij', `<span style="color:#16a34a">+€${batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</span>`) : ''}
         </table>
       </div>
       ` : ''}
@@ -230,44 +239,45 @@ export async function POST(request: Request) {
       </div>
 
       <!-- WAT NU -->
-      <div style="background:#1e293b;border-radius:10px;padding:18px 20px;margin-bottom:0">
-        <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;font-weight:600">Wat nu?</div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;margin-bottom:0">
+        <div style="font-size:10px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;font-weight:600">Wat nu?</div>
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td style="width:28px;vertical-align:top;padding-bottom:10px">
               <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">1</div>
             </td>
-            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#94a3b8;line-height:1.5;vertical-align:top">
-              <strong style="color:#e2e8f0">Adviseur neemt contact op</strong> — een gecertificeerde energieadviseur uit uw regio neemt zo spoedig mogelijk contact met u op.
+            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#475569;line-height:1.5;vertical-align:top">
+              <strong style="color:#0f172a">Adviseur neemt contact op</strong> — een gecertificeerde energieadviseur uit uw regio neemt zo spoedig mogelijk contact met u op.
             </td>
           </tr>
           <tr>
             <td style="width:28px;vertical-align:top;padding-bottom:10px">
               <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">2</div>
             </td>
-            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#94a3b8;line-height:1.5;vertical-align:top">
-              <strong style="color:#e2e8f0">Gratis locatiecheck</strong> — uw dak, situatie en netaansluiting worden ter plaatse beoordeeld.
+            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#475569;line-height:1.5;vertical-align:top">
+              <strong style="color:#0f172a">Gratis locatiecheck</strong> — uw dak, situatie en netaansluiting worden ter plaatse beoordeeld.
             </td>
           </tr>
           <tr>
             <td style="width:28px;vertical-align:top">
               <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">3</div>
             </td>
-            <td style="padding-left:10px;font-size:13px;color:#94a3b8;line-height:1.5;vertical-align:top">
-              <strong style="color:#e2e8f0">Definitief advies</strong> — u ontvangt een vrijblijvende offerte op maat, inclusief de actuele ISDE-subsidiemogelijkheden.
+            <td style="padding-left:10px;font-size:13px;color:#475569;line-height:1.5;vertical-align:top">
+              <strong style="color:#0f172a">Definitief advies</strong> — u ontvangt een vrijblijvende offerte op maat, inclusief de actuele ISDE-subsidiemogelijkheden.
             </td>
           </tr>
         </table>
+        ${heeftPanelen ? '<p style="margin:14px 0 0;font-size:12px;color:#166534;line-height:1.6"><strong>Advies voor uw situatie:</strong> u heeft al zonnepanelen, dus de belangrijkste vervolgstap is doorgaans een thuisbatterij om 2027-verlies te beperken.</p>' : ''}
       </div>
     </div>
 
     <!-- FOOTER -->
-    <div style="background:#020617;border-top:1px solid rgba(255,255,255,0.08);padding:16px 32px">
+    <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="font-size:11px;color:rgba(255,255,255,0.3);line-height:1.6">
+          <td style="font-size:11px;color:#64748b;line-height:1.6">
             © ${new Date().getFullYear()} SaldeerScan.nl &nbsp;·&nbsp; AVG-compliant<br>
-            <a href="mailto:info@saldeerscan.nl" style="color:rgba(255,255,255,0.3);text-decoration:none">info@saldeerscan.nl</a><br>
+            <a href="mailto:info@saldeerscan.nl" style="color:#64748b;text-decoration:none">info@saldeerscan.nl</a><br>
             <span style="font-size:10px">U ontvangt geen verdere e-mails van ons. Dit is een eenmalige bevestiging.</span>
           </td>
         </tr>

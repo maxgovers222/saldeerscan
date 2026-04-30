@@ -76,6 +76,22 @@ export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
   const bag = state.bagData
   const net = state.netcongestie
   const isde = roi?.isdeSchatting
+  const heeftPanelen = state.heeft_panelen === true
+  const huidigePanelen = state.huidige_panelen_aantal
+  const batterijInvestering = Math.max(
+    (roi?.scenarioMetBatterij.investeringEur ?? 0) - (roi?.scenarioNu.investeringEur ?? 0),
+    0
+  )
+  const batterijMeerBesparing = Math.max(
+    (roi?.scenarioMetBatterij.besparingJaarEur ?? 0) - (roi?.scenarioNu.besparingJaarEur ?? 0),
+    0
+  )
+  const besparingRapport = heeftPanelen
+    ? (roi?.scenarioMetBatterij.besparingJaarEur ?? roi?.scenarioNu.besparingJaarEur ?? 0)
+    : (roi?.scenarioNu.besparingJaarEur ?? 0)
+  const terugverdienRapport = heeftPanelen
+    ? (batterijMeerBesparing > 0 ? Math.round((batterijInvestering / batterijMeerBesparing) * 10) / 10 : 99)
+    : (roi?.scenarioNu.terugverdientijdJaar ?? null)
 
   const datum = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -122,13 +138,13 @@ export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
             </View>
             <View style={S.statCard}>
               <Text style={S.statLabel}>Besparing per jaar</Text>
-              <Text style={S.statValue}>€{roi?.scenarioNu.besparingJaarEur.toLocaleString('nl-NL') ?? '—'}</Text>
-              <Text style={S.statUnit}>zonder saldering</Text>
+              <Text style={S.statValue}>€{Number.isFinite(besparingRapport) ? besparingRapport.toLocaleString('nl-NL') : '—'}</Text>
+              <Text style={S.statUnit}>{heeftPanelen ? 'met huidige panelen' : 'zonder saldering'}</Text>
             </View>
             <View style={S.statCard}>
               <Text style={S.statLabel}>Terugverdientijd</Text>
-              <Text style={S.statValue}>{roi?.scenarioNu.terugverdientijdJaar ?? '—'}<Text style={{ fontSize: 11, color: '#94a3b8' }}> jr</Text></Text>
-              <Text style={S.statUnit}>bij huidig tarief</Text>
+              <Text style={S.statValue}>{terugverdienRapport ?? '—'}<Text style={{ fontSize: 11, color: '#94a3b8' }}> jr</Text></Text>
+              <Text style={S.statUnit}>{heeftPanelen ? 'voor batterij-upgrade' : 'bij huidig tarief'}</Text>
             </View>
           </View>
 
@@ -149,7 +165,7 @@ export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
             </View>
             {roi?.shockEffect2027 && (
               <View style={[S.tableRow, { marginTop: 8, borderBottom: 'none' }]}>
-                <Text style={S.tableLabel}>Verwacht jaarlijks verlies vanaf 2027</Text>
+                <Text style={S.tableLabel}>{heeftPanelen ? 'Verlies zonder thuisbatterij vanaf 2027' : 'Verwacht jaarlijks verlies vanaf 2027'}</Text>
                 <Text style={S.tableValueRed}>−€{roi.shockEffect2027.jaarlijksVerlies.toLocaleString('nl-NL')}/jaar</Text>
               </View>
             )}
@@ -163,16 +179,28 @@ export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
               <Text style={S.sectionLabel}>ROI Analyse</Text>
               {[
                 { label: 'Geschat verbruik', value: `${roi.geschatVerbruikKwh.toLocaleString('nl-NL')} kWh/jaar` },
-                { label: 'Aantal panelen (advies)', value: `${roi.aantalPanelen} panelen` },
+                { label: heeftPanelen ? 'Bestaande panelen' : 'Aantal panelen (advies)', value: `${heeftPanelen ? (huidigePanelen ?? roi.aantalPanelen) : roi.aantalPanelen} panelen` },
                 { label: 'Geschatte productie', value: `${roi.productieKwh.toLocaleString('nl-NL')} kWh/jaar` },
                 { label: 'Eigen gebruik', value: `${roi.eigenGebruikPct}%` },
-                { label: 'Investering (schatting)', value: `€${roi.scenarioNu.investeringEur.toLocaleString('nl-NL')}` },
+                { label: heeftPanelen ? 'Batterij investering (schatting)' : 'Investering (schatting)', value: `€${(heeftPanelen ? batterijInvestering : roi.scenarioNu.investeringEur).toLocaleString('nl-NL')}` },
               ].map(({ label, value }) => (
                 <View key={label} style={S.tableRow}>
                   <Text style={S.tableLabel}>{label}</Text>
                   <Text style={S.tableValue}>{value}</Text>
                 </View>
               ))}
+              {heeftPanelen && (
+                <>
+                  <View style={S.tableRow}>
+                    <Text style={S.tableLabel}>Extra besparing door batterij</Text>
+                    <Text style={S.tableValueGreen}>+€{batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</Text>
+                  </View>
+                  <View style={[S.tableRow, { borderBottom: 'none' }]}>
+                    <Text style={S.tableLabel}>Advies</Text>
+                    <Text style={S.tableValue}>Behoud panelen, investeer in thuisbatterij</Text>
+                  </View>
+                </>
+              )}
             </View>
           )}
 
