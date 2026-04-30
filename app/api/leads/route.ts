@@ -112,7 +112,8 @@ export async function POST(request: Request) {
   if (resend) {
     type RoiResult = {
       aantalPanelen?: number
-      scenarioNu?: { besparingJaarEur?: number; terugverdientijdJaar?: number }
+      scenarioNu?: { besparingJaarEur?: number; terugverdientijdJaar?: number; investeringEur?: number }
+      scenarioMetBatterij?: { besparingJaarEur?: number; investeringEur?: number }
       shockEffect2027?: { jaarlijksVerlies?: number }
       isdeSchatting?: { bedragEur?: number }
     }
