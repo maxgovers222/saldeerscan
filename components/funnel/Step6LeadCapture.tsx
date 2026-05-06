@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, type Dispatch } from 'react'
+import { useState, useEffect, type Dispatch } from 'react'
+import { useRouter } from 'next/navigation'
 import type { FunnelState, FunnelAction } from './types'
 import { StepHeader } from './StepHeader'
 import { PDFDownloadButton } from './PDFDownloadButton'
@@ -116,6 +117,15 @@ function SuccessState({ state }: { state: FunnelState }) {
 const inputBase = 'w-full bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-sans text-sm transition-colors focus:outline-none amber-glow'
 
 export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
+  const router = useRouter()
+  const step2PanelenComplete =
+    state.heeft_panelen !== null
+    && (state.heeft_panelen === false
+      || (typeof state.huidige_panelen_aantal === 'number' && state.huidige_panelen_aantal > 0))
+
+  const [editPanelen, setEditPanelen] = useState(false)
+  const panelenAntwoordLocked = step2PanelenComplete && !editPanelen
+
   const [form, setForm] = useState<LeadFormData>({
     naam: '',
     email: '',
@@ -132,6 +142,16 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [watGebeurtOpen, setWatGebeurtOpen] = useState(false)
 
+  useEffect(() => {
+    if (editPanelen) return
+    setForm(f => ({
+      ...f,
+      isEigenaar: state.is_eigenaar,
+      heeftPanelen: state.heeft_panelen ?? f.heeftPanelen,
+      huidigePanelenAantal: state.huidige_panelen_aantal ? String(state.huidige_panelen_aantal) : '',
+    }))
+  }, [state.is_eigenaar, state.heeft_panelen, state.huidige_panelen_aantal, editPanelen])
+
   function validate(): boolean {
     const e: typeof errors = {}
     const naamParts = form.naam.trim().split(/\s+/)
@@ -142,10 +162,14 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailNorm)) e.email = 'Voer een geldig e-mailadres in'
     if (!form.telefoon.trim()) e.telefoon = 'Telefoonnummer is verplicht'
     else if (!validatePhone(form.telefoon, form.countryCode)) e.telefoon = 'Ongeldig telefoonnummer voor het geselecteerde land'
-    if (form.heeftPanelen === true) {
-      const aantal = Number(form.huidigePanelenAantal)
-      if (!form.huidigePanelenAantal.trim()) e.huidigePanelenAantal = 'Vul in hoeveel panelen u al heeft'
-      else if (!Number.isInteger(aantal) || aantal <= 0 || aantal > 200) e.huidigePanelenAantal = 'Voer een geldig aantal panelen in (1-200)'
+    const hp = panelenAntwoordLocked ? state.heeft_panelen : form.heeftPanelen
+    if (hp === true) {
+      const aantal = panelenAntwoordLocked
+        ? state.huidige_panelen_aantal
+        : Number(form.huidigePanelenAantal)
+      if (aantal === null || aantal === undefined || !Number.isInteger(aantal) || aantal <= 0 || aantal > 200) {
+        e.huidigePanelenAantal = 'Voer een geldig aantal panelen in (1-200)'
+      }
     }
     if (!form.gdprConsent) e.gdprConsent = 'U moet akkoord gaan met de privacyverklaring om door te gaan.'
     setErrors(e)
@@ -159,6 +183,11 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
     setSubmitError(null)
     setErrors({})
     try {
+      const heeftPayload = panelenAntwoordLocked ? state.heeft_panelen : form.heeftPanelen
+      const huidigePayload = heeftPayload === true
+        ? (panelenAntwoordLocked ? state.huidige_panelen_aantal : Number(form.huidigePanelenAantal || 0))
+        : null
+
       const res = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -178,8 +207,8 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           roiResult: state.roiResult, meterkastAnalyse: state.meterkastAnalyse,
           plaatsingsAnalyse: state.plaatsingsAnalyse, omvormerAnalyse: state.omvormerAnalyse,
           isdeSchatting: state.roiResult?.isdeSchatting, gdprConsent: form.gdprConsent,
-          isEigenaar: form.isEigenaar, heeftPanelen: form.heeftPanelen,
-          huidigePanelenAantal: form.heeftPanelen ? Number(form.huidigePanelenAantal || 0) : null,
+          isEigenaar: form.isEigenaar, heeftPanelen: heeftPayload,
+          huidigePanelenAantal: huidigePayload,
           dakrichting: state.dakrichting,
           verbruik_bron: state.verbruik_bron,
           huishouden_grootte: state.huishouden_grootte,
@@ -194,8 +223,18 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
         setErrors({ submit: (err as { error?: string }).error ?? 'Er is een fout opgetreden. Probeer opnieuw.' })
         return
       }
-      const data = await res.json() as { leadId: string }
+      const data = await res.json() as { leadId: string; reportToken?: string | null }
+      if (typeof data.reportToken === 'string' && data.reportToken.length > 0) {
+        dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: data.reportToken })
+      } else {
+        dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: null })
+      }
       dispatch({ type: 'SET_LEAD_ID', leadId: data.leadId })
+      const reportQs =
+        typeof data.reportToken === 'string' && data.reportToken.length > 0
+          ? `?leadId=${encodeURIComponent(data.leadId)}&token=${encodeURIComponent(data.reportToken)}`
+          : `?leadId=${encodeURIComponent(data.leadId)}`
+      router.replace(`/check${reportQs}`, { scroll: false })
       setSubmitted(true)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Indienen mislukt. Probeer het opnieuw.')
@@ -229,7 +268,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
             { label: 'ROI-berekening', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}/jaar` : '—', done: !!state.roiResult },
             { label: 'ISDE subsidie check', value: isde ? `€${isde.bedragEur.toLocaleString('nl-NL')}` : '—', done: !!isde },
             { label: 'Netcongestie analyse', value: state.netcongestie?.status ?? '—', done: !!state.netcongestie },
-            { label: 'Installateur advies', value: 'Zo snel mogelijk', done: true },
+            { label: 'Installateur advies', value: 'Na uw aanvraag', done: true },
             { label: '2027 urgentie tijdlijn', value: 'Inbegrepen', done: true },
           ].map(({ label, value, done }) => (
             <div key={label} className="flex items-center justify-between text-xs font-mono">
@@ -279,7 +318,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
             <span className="text-[11px] font-bold text-white/80">Beveiligd</span>
             <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">SSL · AVG</span>
           </div>
-          {/* Max 3 installateurs */}
+          {/* Partners / regio */}
           <div className="flex flex-col items-center text-center gap-1 py-2 border-x border-white/8">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="9" cy="7" r="3" stroke="#f59e0b" strokeWidth="1.5"/>
@@ -287,16 +326,16 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
               <path d="M3 19c0-3.314 2.686-6 6-6h6c3.314 0 6 2.686 6 6" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
             <span className="text-[11px] font-bold text-amber-400">Lokale installateurs</span>
-            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">in uw regio</span>
+            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">o.b.v. uw aanvraag</span>
           </div>
-          {/* Binnen 24 uur */}
+          {/* Geen koopplicht */}
           <div className="flex flex-col items-center text-center gap-1 py-2">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="12" cy="12" r="9" stroke="#f59e0b" strokeWidth="1.5"/>
               <path d="M12 7v5l3 3" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <span className="text-[11px] font-bold text-white/80">Vrijblijvend</span>
-            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">geen verplichtingen</span>
+            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">geen koopplicht</span>
           </div>
         </div>
       </div>
@@ -324,60 +363,85 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           </div>
         </div>
 
-        <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-sans text-white/50 uppercase tracking-widest">Heeft u al zonnepanelen?</p>
-          <div className="grid grid-cols-2 gap-2">
-            {([false, true] as const).map((val) => (
-              <button
-                key={String(val)}
-                type="button"
-                onClick={() => {
-                  setForm(f => ({
-                    ...f,
-                    heeftPanelen: val,
-                    huidigePanelenAantal: val ? f.huidigePanelenAantal : '',
-                  }))
-                  dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
-                  if (!val) dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: null })
-                  setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
-                }}
-                className={[
-                  'py-2.5 rounded-lg text-sm font-sans border transition-all',
-                  form.heeftPanelen === val
-                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-400 font-semibold'
-                    : 'bg-slate-800/40 border-white/8 text-white/40 hover:border-white/20 hover:text-white/60',
-                ].join(' ')}
-              >
-                {val ? 'Ja, ik heb panelen' : 'Nee, nog geen panelen'}
-              </button>
-            ))}
+        {panelenAntwoordLocked ? (
+          <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-sans text-white/50 uppercase tracking-widest">Zonnepanelen (stap 2)</p>
+            <p className="text-sm font-sans text-white/75 leading-relaxed">
+              {state.heeft_panelen
+                ? <>U gaf aan <strong className="text-amber-400">wél panelen</strong> te hebben — <strong className="text-amber-400">{state.huidige_panelen_aantal}</strong> stuks.</>
+                : <>U gaf aan <strong className="text-amber-400">nog geen panelen</strong> te hebben.</>}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setEditPanelen(true)
+                setForm(f => ({
+                  ...f,
+                  heeftPanelen: state.heeft_panelen,
+                  huidigePanelenAantal: state.huidige_panelen_aantal ? String(state.huidige_panelen_aantal) : '',
+                }))
+              }}
+              className="text-xs font-mono text-amber-400/80 hover:text-amber-300 underline underline-offset-2"
+            >
+              Wijzigen (wordt ook opgeslagen in uw rapport)
+            </button>
           </div>
-          {form.heeftPanelen === true && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="huidige-panelen-aantal">
-                Hoeveel panelen liggen er nu?
-              </label>
-              <input
-                id="huidige-panelen-aantal"
-                type="number"
-                min={1}
-                max={200}
-                inputMode="numeric"
-                value={form.huidigePanelenAantal}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^\d]/g, '')
-                  setForm(f => ({ ...f, huidigePanelenAantal: value }))
-                  const parsed = value ? Number(value) : null
-                  dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: parsed && parsed > 0 ? parsed : null })
-                  setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
-                }}
-                placeholder="Bijv. 10"
-                className={[inputBase, errors.huidigePanelenAantal ? 'border-red-400' : 'border-white/10'].join(' ')}
-              />
-              {errors.huidigePanelenAantal && <p className="text-xs font-sans text-red-400">{errors.huidigePanelenAantal}</p>}
+        ) : (
+          <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-sans text-white/50 uppercase tracking-widest">Heeft u al zonnepanelen?</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([false, true] as const).map((val) => (
+                <button
+                  key={String(val)}
+                  type="button"
+                  onClick={() => {
+                    setForm(f => ({
+                      ...f,
+                      heeftPanelen: val,
+                      huidigePanelenAantal: val ? f.huidigePanelenAantal : '',
+                    }))
+                    dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
+                    if (!val) dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: null })
+                    setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
+                  }}
+                  className={[
+                    'py-2.5 rounded-lg text-sm font-sans border transition-all',
+                    form.heeftPanelen === val
+                      ? 'bg-amber-500/15 border-amber-500/60 text-amber-400 font-semibold'
+                      : 'bg-slate-800/40 border-white/8 text-white/40 hover:border-white/20 hover:text-white/60',
+                  ].join(' ')}
+                >
+                  {val ? 'Ja, ik heb panelen' : 'Nee, nog geen panelen'}
+                </button>
+              ))}
             </div>
-          )}
-        </div>
+            {form.heeftPanelen === true && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="huidige-panelen-aantal">
+                  Hoeveel panelen liggen er nu?
+                </label>
+                <input
+                  id="huidige-panelen-aantal"
+                  type="number"
+                  min={1}
+                  max={200}
+                  inputMode="numeric"
+                  value={form.huidigePanelenAantal}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^\d]/g, '')
+                    setForm(f => ({ ...f, huidigePanelenAantal: value }))
+                    const parsed = value ? Number(value) : null
+                    dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: parsed && parsed > 0 ? parsed : null })
+                    setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
+                  }}
+                  placeholder="Bijv. 10"
+                  className={[inputBase, errors.huidigePanelenAantal ? 'border-red-400' : 'border-white/10'].join(' ')}
+                />
+                {errors.huidigePanelenAantal && <p className="text-xs font-sans text-red-400">{errors.huidigePanelenAantal}</p>}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Huishoudensgrootte */}
         <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
@@ -424,7 +488,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           <div className="bg-slate-950/40 border border-white/8 rounded-xl p-4 mt-2 space-y-3">
             {[
               'Uw aanvraag wordt doorgestuurd naar gecertificeerde installateurs in uw regio',
-              'Een adviseur neemt zo spoedig mogelijk contact met u op',
+              'Een adviseur neemt naar aanleiding van uw aanvraag contact met u op',
               'U ontvangt een vrijblijvende offerte op maat — geen verplichtingen',
             ].map((tekst, i) => (
               <div key={i} className="flex gap-3">

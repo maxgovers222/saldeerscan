@@ -16,13 +16,14 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://saldeerscan.nl"),
   title: "SaldeerScan.nl — Gratis 2027 saldeercheck voor uw woning",
   description: "Ontdek in 3 minuten wat de afschaffing van salderen op 1 januari 2027 voor uw woning betekent. Gratis AI-scan, BAG-data en persoonlijk investeringsrapport.",
   icons: {
     icon: [
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "32x32" },
       { url: "/icon", type: "image/png", sizes: "32x32" },
     ],
-    shortcut: [{ url: "/favicon.ico", type: "image/x-icon" }],
     apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
   },
   openGraph: {

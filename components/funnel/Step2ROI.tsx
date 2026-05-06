@@ -102,7 +102,10 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
   const [verbruik, setVerbruik] = useState<number>(state.roiResult?.geschatVerbruikKwh ?? geschatVerbruik)
   const [dakOpp, setDakOpp] = useState<number>(Math.min(state.bagData?.dakOppervlakte ?? 35, dakMax))
   const panelenMax = Math.max(40, Math.floor((dakMax * 0.70) / 4))
-  const [panelen, setPanelen] = useState<number>(state.roiResult?.aantalPanelen ?? (Math.floor((dakMax * 0.55) / 4) || 10))
+  const [panelen, setPanelen] = useState<number>(() => {
+    if (state.huidige_panelen_aantal && state.huidige_panelen_aantal > 0) return state.huidige_panelen_aantal
+    return state.roiResult?.aantalPanelen ?? (Math.floor((dakMax * 0.55) / 4) || 10)
+  })
   const [kwhPerPaneel, setKwhPerPaneel] = useState(350)
   const [localRoi, setLocalRoi] = useState<ROIResult | null>(state.roiResult ?? null)
   const [loading, setLoading] = useState(false)
@@ -111,6 +114,11 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
   const hasLoadedOnce = useRef(false)
 
   const aanbevolenPanelen = Math.floor((dakOpp * 0.55) / 4) || 1
+
+  useEffect(() => {
+    if (state.heeft_panelen !== true || !state.huidige_panelen_aantal) return
+    setPanelen(state.huidige_panelen_aantal)
+  }, [state.heeft_panelen, state.huidige_panelen_aantal])
 
   useEffect(() => {
     if (!state.bagData?.oppervlakte || !state.bagData?.bouwjaar) return
@@ -155,7 +163,64 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
 
   return (
     <div className="p-6 space-y-6">
-      <StepHeader stap="Stap 2 — ROI berekening" title="Uw besparingsanalyse" subtitle="Pas de sliders aan voor een persoonlijke berekening" />
+      <StepHeader stap="Stap 2 — ROI berekening" title="Uw besparingsanalyse" subtitle="Eerst uw huidige situatie, daarna parameters voor de berekening" />
+
+      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
+        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Huidige situatie</div>
+        <p className="text-xs text-white/55 font-sans leading-relaxed">
+          Dit is leidend voor het advies: met bestaande panelen verschuift de nadruk naar batterij en optimalisatie (niet naar nieuwe panelen als primaire stap).
+        </p>
+        <p className="text-xs font-mono text-white/40 uppercase tracking-widest">Heeft u nu al zonnepanelen?</p>
+        <div className="grid grid-cols-2 gap-2">
+          {([false, true] as const).map((val) => (
+            <button
+              key={String(val)}
+              type="button"
+              onClick={() => {
+                dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
+                if (!val) {
+                  dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: null })
+                  setPanelen(Math.max(1, aanbevolenPanelen))
+                }
+              }}
+              className={[
+                'py-2.5 rounded-lg text-sm font-sans border transition-all',
+                state.heeft_panelen === val
+                  ? 'bg-amber-500/15 border-amber-500/60 text-amber-400 font-semibold'
+                  : 'bg-slate-800/40 border-white/8 text-white/40 hover:border-white/20 hover:text-white/60',
+              ].join(' ')}
+            >
+              {val ? 'Ja, ik heb panelen' : 'Nee, nog geen panelen'}
+            </button>
+          ))}
+        </div>
+        {state.heeft_panelen === true && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-mono text-white/40 uppercase tracking-widest" htmlFor="st2-huidige-panelen">
+              Hoeveel panelen liggen er nu op uw dak?
+            </label>
+            <input
+              id="st2-huidige-panelen"
+              type="number"
+              min={1}
+              max={200}
+              inputMode="numeric"
+              value={state.huidige_panelen_aantal ?? ''}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^\d]/g, '')
+                const n = raw ? Number(raw) : null
+                dispatch({
+                  type: 'SET_HUIDIGE_PANELEN_AANTAL',
+                  huidige_panelen_aantal: n && n > 0 && n <= 200 ? n : null,
+                })
+                if (n && n > 0 && n <= 200) setPanelen(n)
+              }}
+              placeholder="Bijv. 10"
+              className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/80 font-mono text-sm focus:outline-none focus:border-amber-500/50"
+            />
+          </div>
+        )}
+      </div>
 
       <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-5">
         <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Parameters</div>
@@ -166,8 +231,16 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
           note={state.bagData?.oppervlakte ? `Geschat o.b.v. ${state.bagData.oppervlakte}m²` : undefined} />
         <SliderInput label="Dakoppervlak" value={dakOpp} onChange={setDakOpp} min={10} max={dakMax} step={1} unit="m²"
           note={state.bagData?.dakOppervlakte ? `BAG: ${state.bagData.dakOppervlakte}m²` : undefined} />
-        <SliderInput label="Zonnepanelen" value={panelen} onChange={setPanelen} min={0} max={panelenMax} step={1} unit="stuks"
-          note="0 = toon advies" />
+        <SliderInput
+          label={state.heeft_panelen === true ? 'Uw huidige panelen (scenario)' : 'Zonnepanelen (scenario)'}
+          value={panelen}
+          onChange={setPanelen}
+          min={0}
+          max={panelenMax}
+          step={1}
+          unit="stuks"
+          note={state.heeft_panelen === true ? 'Gekoppeld aan stap 2 — pas eventueel aan voor uitbreiding' : '0 = toon advies'}
+        />
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
@@ -245,19 +318,39 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
       {panelen === 0 ? (
         <div className="bg-slate-900/40 border border-amber-500/30 rounded-xl p-4 space-y-3">
           <div className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">Advies op basis van uw situatie</div>
-          <p className="text-sm font-mono text-white/70 leading-relaxed">
-            Op basis van uw verbruik van{' '}
-            <span className="text-amber-400 font-bold">{verbruik.toLocaleString('nl-NL')} kWh/jaar</span>{' '}
-            en <span className="text-amber-400 font-bold">{dakOpp} m²</span> dakoppervlak
-            adviseren wij{' '}
-            <span className="text-amber-400 font-bold">{aanbevolenPanelen} zonnepanelen</span>.
-          </p>
-          <button
-            onClick={() => setPanelen(aanbevolenPanelen)}
-            className="text-xs font-mono text-amber-400 underline underline-offset-2 hover:text-amber-300"
-          >
-            Gebruik aanbevolen aantal →
-          </button>
+          {state.heeft_panelen === true ? (
+            <>
+              <p className="text-sm font-mono text-white/70 leading-relaxed">
+                U heeft al panelen: de grootste hefboom richting 2027 is doorgaans <span className="text-amber-400 font-bold">thuisbatterij + slim verbruik</span>.
+                Optioneel kunt u uitbreiden met extra panelen tot ongeveer{' '}
+                <span className="text-amber-400 font-bold">{aanbevolenPanelen}</span> op dit dakmodel.
+              </p>
+              <button
+                type="button"
+                onClick={() => setPanelen(Math.max(1, state.huidige_panelen_aantal ?? aanbevolenPanelen))}
+                className="text-xs font-mono text-amber-400 underline underline-offset-2 hover:text-amber-300"
+              >
+                Gebruik mijn huidige aantal / advies →
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-mono text-white/70 leading-relaxed">
+                Op basis van uw verbruik van{' '}
+                <span className="text-amber-400 font-bold">{verbruik.toLocaleString('nl-NL')} kWh/jaar</span>{' '}
+                en <span className="text-amber-400 font-bold">{dakOpp} m²</span> dakoppervlak
+                adviseren wij{' '}
+                <span className="text-amber-400 font-bold">{aanbevolenPanelen} zonnepanelen</span> als instap-scenario.
+              </p>
+              <button
+                type="button"
+                onClick={() => setPanelen(aanbevolenPanelen)}
+                className="text-xs font-mono text-amber-400 underline underline-offset-2 hover:text-amber-300"
+              >
+                Gebruik aanbevolen aantal →
+              </button>
+            </>
+          )}
         </div>
       ) : roi && (
         <>
@@ -298,8 +391,16 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
       <div className="flex gap-3">
         <button onClick={() => dispatch({ type: 'SET_STEP', step: 1 })}
           className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm py-3 px-4 rounded-full transition-colors">← Terug</button>
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 3 })} disabled={!roi || panelen === 0}
-          className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}>
+        <button
+          onClick={() => dispatch({ type: 'SET_STEP', step: 3 })}
+          disabled={
+            state.heeft_panelen === null
+            || (state.heeft_panelen === true && (!state.huidige_panelen_aantal || state.huidige_panelen_aantal < 1))
+            || !roi
+            || panelen === 0
+          }
+          className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}
+        >
           Meterkast scannen →
         </button>
       </div>

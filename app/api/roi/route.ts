@@ -6,12 +6,34 @@ export async function POST(request: Request) {
   const limitResult = await applyRateLimit(request, 120, 3_600_000)
   if (limitResult.response) return limitResult.response
 
-  const body = await request.json()
-  const { oppervlakte, bouwjaar, dakOppervlakte, huidigVerbruikKwh, budgetEur,
-          energielabel, netcongestieStatus, aantalPanelenOverride, kwhPerPaneel,
-          dakrichting, huishouden_grootte } = body
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return Response.json({ error: 'Ongeldig JSON body' }, { status: 400 })
+  }
+  const oppervlakte = Number(body.oppervlakte)
+  const bouwjaar = Number(body.bouwjaar)
+  const dakOppervlakte = Number(body.dakOppervlakte)
+  const huidigVerbruikKwh = body.huidigVerbruikKwh !== undefined && body.huidigVerbruikKwh !== null ? Number(body.huidigVerbruikKwh) : undefined
+  const budgetEur = body.budgetEur !== undefined && body.budgetEur !== null ? Number(body.budgetEur) : undefined
+  const energielabel = typeof body.energielabel === 'string' ? body.energielabel : null
+  const netcongestieStatus =
+    body.netcongestieStatus === 'ROOD' || body.netcongestieStatus === 'ORANJE' || body.netcongestieStatus === 'GROEN'
+      ? body.netcongestieStatus
+      : null
+  const aantalPanelenOverride = body.aantalPanelenOverride
+  const kwhPerPaneel = body.kwhPerPaneel
+  const dakrichting =
+    body.dakrichting === 'Zuid' || body.dakrichting === 'Oost/West' || body.dakrichting === 'Noord'
+      ? body.dakrichting
+      : null
+  const huishouden_grootte =
+    body.huishouden_grootte === 1 || body.huishouden_grootte === 2 || body.huishouden_grootte === 3
+      ? body.huishouden_grootte
+      : null
 
-  if (!oppervlakte || !bouwjaar || !dakOppervlakte) {
+  if (!Number.isFinite(oppervlakte) || !Number.isFinite(bouwjaar) || !Number.isFinite(dakOppervlakte)) {
     return Response.json({ error: 'oppervlakte, bouwjaar en dakOppervlakte zijn verplicht' }, { status: 400 })
   }
   if (bouwjaar < 1000 || bouwjaar > 2030) {

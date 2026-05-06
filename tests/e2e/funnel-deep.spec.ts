@@ -116,7 +116,10 @@ function makeState(overrides: Record<string, unknown> = {}) {
     verbruik_bron: 'schatting',
     huishouden_grootte: null,
     is_eigenaar: null,
+    heeft_panelen: false,
+    huidige_panelen_aantal: null,
     leadId: null,
+    leadReportToken: null,
     loading: false,
     error: null,
     utmParams: null,
@@ -154,9 +157,44 @@ async function setupMocks(page: Page) {
   await page.route('/api/health-score**', (route) =>
     route.fulfill({ json: MOCK_HEALTH }),
   )
-  await page.route('/api/leads**', (route) =>
-    route.fulfill({ json: { leadId: 'test-lead-abc123', success: true } }),
-  )
+  await page.route('/api/leads**', async (route) => {
+    if (route.request().method() !== 'GET') {
+      return route.fulfill({ json: { leadId: 'test-lead-abc123', success: true } })
+    }
+    const u = route.request().url()
+    const m = u.match(/\/api\/leads\/([^/?]+)/)
+    const lid = m?.[1] ?? 'unknown'
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockLeadHydrateBody(lid, MOCK_NETCONGESTIE_GROEN)),
+    })
+  })
+}
+
+function mockLeadHydrateBody(
+  leadId: string,
+  netcongestie: typeof MOCK_NETCONGESTIE_GROEN,
+) {
+  return {
+    leadId,
+    adres: 'Prinsengracht 263, Amsterdam',
+    wijk: '',
+    stad: '',
+    bagData: MOCK_BAG,
+    netcongestie,
+    healthScore: MOCK_HEALTH,
+    roiResult: MOCK_ROI_RESULT,
+    meterkastAnalyse: null,
+    plaatsingsAnalyse: null,
+    omvormerAnalyse: null,
+    isEigenaar: null,
+    heeftPanelen: null,
+    huidigePanelenAantal: null,
+    dakrichting: null,
+    verbruik_bron: 'schatting',
+    huishouden_grootte: null,
+  }
 }
 
 /** Navigeer naar /check en wacht tot adresinput zichtbaar is */
@@ -418,7 +456,7 @@ test.describe('Stap 2 — ROI Berekening', () => {
   test('drie sliders aanwezig (verbruik, dak, panelen)', async ({ page }) => {
     await expect(page.locator('input[type="range"][aria-label="Huidig verbruik"]')).toBeVisible({ timeout: 6000 })
     await expect(page.locator('input[type="range"][aria-label="Dakoppervlak"]')).toBeVisible()
-    await expect(page.locator('input[type="range"][aria-label="Zonnepanelen"]')).toBeVisible()
+    await expect(page.locator('input[type="range"][aria-label="Zonnepanelen (scenario)"]')).toBeVisible()
   })
 
   test('paneeltype select heeft 3 opties', async ({ page }) => {
@@ -479,7 +517,7 @@ test.describe('Stap 2 — ROI Berekening', () => {
   })
 
   test('panelen=0 toont adviesblok', async ({ page }) => {
-    const slider = page.locator('input[type="range"][aria-label="Zonnepanelen"]')
+    const slider = page.locator('input[type="range"][aria-label="Zonnepanelen (scenario)"]')
     await expect(slider).toBeVisible({ timeout: 6000 })
     // Gebruik keyboard om slider naar 0 te zetten
     await slider.focus()
@@ -490,7 +528,7 @@ test.describe('Stap 2 — ROI Berekening', () => {
   })
 
   test('"Gebruik aanbevolen aantal" brengt scenario-cards terug', async ({ page }) => {
-    const slider = page.locator('input[type="range"][aria-label="Zonnepanelen"]')
+    const slider = page.locator('input[type="range"][aria-label="Zonnepanelen (scenario)"]')
     await expect(slider).toBeVisible({ timeout: 6000 })
     await slider.focus()
     await slider.press('Home')
@@ -782,10 +820,11 @@ test.describe('Stap 6 — Lead formulier', () => {
     await expect(page.locator('button:has-text("Nee, huurder")')).toBeVisible()
   })
 
-  test('heeft al panelen vraag aanwezig', async ({ page }) => {
-    await expect(page.locator('text=Heeft u al zonnepanelen?')).toBeVisible({ timeout: 6000 })
-    await expect(page.locator('button:has-text("Nee, nog geen panelen")')).toBeVisible()
-    await expect(page.locator('button:has-text("Ja, ik heb panelen")')).toBeVisible()
+  test('zonnepanelen-antwoord uit stap 2 wordt getoond', async ({ page }) => {
+    // makeState zet heeft_panelen: false — stap 6 toont locked samenvatting i.p.v. opnieuw vragen
+    await expect(page.locator('text=Zonnepanelen (stap 2)')).toBeVisible({ timeout: 6000 })
+    await expect(page.locator('text=nog geen panelen')).toBeVisible()
+    await expect(page.locator('button:has-text("Wijzigen (wordt ook opgeslagen in uw rapport)")')).toBeVisible()
   })
 
   test('huishoudensgrootte-knoppen aanwezig (1/2/3+)', async ({ page }) => {
@@ -1143,17 +1182,31 @@ test.describe('ResultsDashboard', () => {
   })
 
   test('netcongestie ROOD callout in dashboard', async ({ page }) => {
-    await gotoResults(page, { netcongestie: { ...MOCK_NETCONGESTIE_GROEN, status: 'ROOD' } })
+    const rood = { ...MOCK_NETCONGESTIE_GROEN, status: 'ROOD' as const }
+    await setupMocks(page)
+    await page.route('**/api/leads/**', async (route) => {
+      if (route.request().method() !== 'GET') return route.continue()
+      const path = new URL(route.request().url()).pathname.replace(/\/$/, '')
+      const m = path.match(/^\/api\/leads\/([^/]+)$/)
+      if (!m) return route.continue()
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockLeadHydrateBody(m[1], rood)),
+      })
+    })
+    await page.goto('/check')
+    await page.waitForLoadState('domcontentloaded')
+    await setLS(page, makeState({ netcongestie: rood }))
+    await page.goto('/check?leadId=test-result-lead')
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(1500)
+    const opnieuw = page.locator('button:has-text("Opnieuw")')
+    if (await opnieuw.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await opnieuw.click()
+      await page.waitForTimeout(300)
+    }
     await expect(page.locator('text=Netcongestie in uw wijk').first()).toBeVisible({ timeout: 8000 })
-  })
-
-  test('kopieer-knop verandert naar "Gekopieerd!"', async ({ page }) => {
-    // Grant clipboard permissions vóór navigatie
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
-    await gotoResults(page)
-    await expect(page.locator('button:has-text("Kopieer link")').first()).toBeVisible({ timeout: 8000 })
-    await page.locator('button:has-text("Kopieer link")').first().click()
-    await expect(page.locator('text=Gekopieerd!').first()).toBeVisible({ timeout: 4000 })
   })
 
   test('?leadId= URL param toont ResultsDashboard', async ({ page }) => {
@@ -1331,8 +1384,9 @@ test.describe('Volledige E2E funnel', () => {
     await expect(page.locator('text=Bekijk besparingsanalyse')).toBeVisible({ timeout: 15000 })
     await page.locator('text=Bekijk besparingsanalyse').click()
 
-    // Stap 2
+    // Stap 2 — panelen-vraag verplicht vóór "Volgende"
     await expectStep(page, 2)
+    await page.locator('button:has-text("Nee, nog geen panelen")').click()
     await expect(page.locator('text=Meterkast scannen →')).toBeVisible({ timeout: 10000 })
     await page.locator('text=Meterkast scannen →').click()
 

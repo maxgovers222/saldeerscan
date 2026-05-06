@@ -14,6 +14,8 @@ Gebruik altijd de relevante superpowers skills vóór elke taak:
 
 Bij twijfel: gebruik de skill. Niet gebruiken is nooit de veilige keuze.
 
+**Projectgeheugen (`CLAUDE.md`):** bij stack-, env-, API- of operatie-relevante wijzigingen dit bestand meenemen; niet elke kleine UI-copy hoeft hier terug te komen.
+
 # Saldeerscan.nl — pSEO Lead Fabriek
 
 Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.000+ statische pagina's (pSEO op straat- én wijk-niveau) die converteren via een 6-staps funnel naar 'Technisch Dossiers' voor B2B partners (installateurs). Kernurgentie: einde salderen per 1 januari 2027.
@@ -32,6 +34,8 @@ Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.00
 | AI — screening | Gemini 2.5 Flash (`@google/generative-ai`) |
 | AI — diepanalyse | Claude claude-sonnet-4-6 (`@anthropic-ai/sdk`) |
 | Email | Resend (transactioneel, fire-and-forget) |
+| Rate limiting | Upstash Redis (`@upstash/ratelimit` + `@upstash/redis`) met in-memory fallback voor lokale dev |
+| Error tracking | Sentry (`@sentry/nextjs`) — `sentry.client.config.ts` + `sentry.server.config.ts`, DSN via `NEXT_PUBLIC_SENTRY_DSN` |
 | E2E testen | Playwright (chromium, `tests/e2e/`) |
 | Scripts | `tsx` — draai met `npx tsx scripts/<naam>.ts` |
 
@@ -47,6 +51,11 @@ app/
   icon.tsx                          # Dynamische favicon 32x32 (edge runtime, navy cirkel + amber hexagon)
   apple-icon.tsx                    # Apple touch icon 180x180 (zelfde stijl)
   check/page.tsx                    # 6-staps Super Funnel (Suspense + useSearchParams voor ?adres=, ?wijk=, ?stad= prefill)
+  postcode/[code]/page.tsx          # pSEO postcode-pagina 'zonnepanelen 1234 AB' (ISR 30d), via getWijkenByPostcode()
+  nieuws/page.tsx                   # Nieuwsoverzicht (lib/nieuws.ts)
+  nieuws/[slug]/page.tsx            # Nieuwsartikel detail
+  kennisbank/page.tsx               # Kennisbank overzicht
+  kennisbank/[slug]/page.tsx        # Kennisbank artikel detail
   [provincie]/page.tsx              # Provincie overzichtspagina met steden (ISR 30d)
   [provincie]/[stad]/page.tsx       # Stad overzichtspagina met wijken + urgentie strip (ISR 30d)
   [provincie]/[stad]/[wijk]/page.tsx          # pSEO wijk-pagina (ISR 30d) + breadcrumb + ranking badge + CountdownTimer
@@ -60,12 +69,15 @@ app/
     vision/route.ts                 # Two-tier Vision analyse
     generate-content/route.ts       # Gemini Flash pSEO content
     leads/route.ts                  # Lead opslaan + webhook trigger + Resend bevestigingsmail
+    leads/[id]/route.ts             # GDPR DELETE — verwijdert lead na email-token verificatie + bevestigingsmail
     webhooks/b2b/route.ts           # B2B partner webhook dispatcher
+    webhooks/retry/route.ts         # Webhook retry job — 3 pogingen (5m/30m/4h backoff), 1x/dag cron (Hobby limiet)
+    indexing/cron/route.ts          # Dagelijkse Google Indexing API cron (automatisch, max 200 URLs/dag)
 
 components/
   CountdownTimer.tsx                # Client countdown naar 2027-01-01, SSR-safe (-- placeholder), 4 glass cards
   funnel/
-    FunnelContainer.tsx             # useReducer state machine (6 stappen), accepteert initialAdres/initialWijk/initialStad props + localStorage persistentie
+    FunnelContainer.tsx             # useReducer state machine (6 stappen), accepteert initialAdres/initialWijk/initialStad props + localStorage persistentie + ?leadId=&token= email-link hydration (server fetch → ResultsDashboard)
     Step1Adres.tsx                  # Auto-zoekt bij mount als initialAdres aanwezig; AnalysisLoading tijdens fetch
     Step2ROI.tsx … Step6LeadCapture.tsx
     ResultsDashboard.tsx            # Volledig resultaten dashboard na lead submit: ShockChart + ROITijdlijn + GevalideerdStempel + PDF/print (geen nep-expert sectie)
@@ -88,21 +100,33 @@ lib/
   gemini.ts                         # Gemini 2.5 Flash adapter (pSEO content + screening + generateWijkContent met 800w + 5 FAQs)
   vision.ts                         # Two-tier: Gemini screen → Claude diepanalyse + withRetry
   webhooks.ts                       # HMAC-SHA256 signed B2B dispatcher (consent-gated)
-  rate-limit.ts                     # In-memory sliding window, namespace per route
-  pseo.ts                           # pSEO page helpers: getWijkPage, getTopWijken, getWijkenByStad, getStaddenByProvincie, getTopStadden
+  rate-limit.ts                     # Upstash Redis sliding window, namespace per route; in-memory fallback lokaal
+  pseo.ts                           # pSEO helpers: slug-lookup (getWijkPage/getPseoPage); lijsten/sitemaps aggregeren op `slug` (prefix / segmenten), niet op titelcase `provincie`-kolom
   json-ld.ts                        # JSON-LD builder
+  nieuws.ts                         # Nieuws data adapter
+  kennisbank.ts                     # Kennisbank data adapter
+  google-indexing.ts                # Google Indexing API helper
+  analytics.ts                      # Analytics helpers
+  utils.ts                          # Gedeelde utility functies
+  lead-report-token.ts              # HMAC-SHA256 signing/verificatie van `?token=` op rapport-URLs (e-mail + ?leadId= hydration)
+  roi-result-guard.ts               # `parseStoredRoi(raw)` — valideert en normaliseert roi_berekening uit DB; retourneert null bij corrupt/incompleet record
   supabase/server.ts|browser.ts|admin.ts
 
 scripts/
   seed-netcongestie.ts              # Seed netcongestie_cache tabel
-  seed-pseo.ts                      # Seed eerste batch pSEO adrespagina's
+  seed-pseo.ts                      # Seed eerste batch pSEO adrespagina's (met PDOK WFS integratie voor echte straat-data per wijk: --wijk --stad --provincie)
   seed-wijken.ts                    # 2000-wijk seed via Gemini AI (--skip-existing, --batch=0,50, --dry-run flags; CBS PDOK WFS voor aantalWoningen; JSON-LD @graph)
+  seed-nieuws.ts                    # Seed 8 actuele nieuwsartikelen
 
 tests/
   e2e/
-    wijk-validatie.spec.ts          # Test 2 bekende golden batch wijk URLs (200 status + H1 + JSON-LD)
+    wijk-validatie.spec.ts          # Test bekende golden batch wijk + straat URLs (200 status + H1 + JSON-LD)
     funnel-handshake.spec.ts        # Test URL params + countdown timer aanwezig
     funnel-validatie.spec.ts        # Test disabled button, progress bar, homepage CTA
+    funnel-deep.spec.ts             # Diepgaande funnel tests — alle 6 stappen (133 tests)
+    funnel-compleet.spec.ts         # Volledige funnel doorloop (5 tests)
+    leadid-hydrate.spec.ts          # Email leadId rapport-hydratie: ?leadId= URL laadt ResultsDashboard via mock-API (2 tests)
+    step6-validatie.spec.ts         # Step 6 lead capture validatie (naam/email/telefoon)
 
 supabase/migrations/
   20260407000001_leads.sql
@@ -134,7 +158,10 @@ De B2B webhook dispatcher in `lib/webhooks.ts` controleert altijd `gdpr_consent 
 `lib/roi.ts` heeft een `SALDERING_SCHEMA` map (2025: 64%, 2026: 28%, 2027: 0%). Het `shockEffect2027` object drijft urgentie in `Shock2027Banner.tsx` én op pSEO-pagina's.
 
 ### Rate limiting
-`lib/rate-limit.ts` — in-memory sliding window, 5 req/IP/uur, **namespace per route** (key = `${pathname}:${ip}`). Voorkomt dat BAG + ROI + netcongestie calls dezelfde teller delen. `pruneExpiredEntries()` verwijdert verlopen entries als de Map > 1000 entries bereikt. Voor productie vervangen door Upstash Redis.
+`lib/rate-limit.ts` — **Upstash Redis** sliding window (5 req/IP/uur) via `@upstash/ratelimit`, namespace per route (key = `${pathname}:${ip}`). Redis instantie is lazy-loaded en gecached in module scope. In-memory fallback als `UPSTASH_REDIS_REST_URL` ontbreekt (lokale dev — geen persistentie tussen requests).
+
+### www-redirect
+Wordt afgehandeld door het **Vercel dashboard** (niet in `vercel.json`). Dubbele redirect-configuratie veroorzaakte browser-cache redirect loops.
 
 ### URL pre-fill handshake
 `app/check/page.tsx` leest `useSearchParams()` (wrapped in `Suspense`):
@@ -146,11 +173,15 @@ wijk-pSEO CTA linkt naar `/check?wijk=[wijk]&stad=[stad]` om de URL handshake te
 ### Funnel localStorage persistentie
 `FunnelContainer` slaat volledige `FunnelState` op in `localStorage` (key: `funnel_state`). Bij herladen verschijnt een "Doorgaan waar je was?" banner — ook als URL-params aanwezig zijn (initialAdres/Wijk/Stad). Opslaan is gedebounced met 500ms om I/O te beperken.
 
+### Social proof teller
+Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden op tiental (bijv. 37 → "30+"). Logica in `app/page.tsx`.
+
 ### pSEO routes — drie niveaus
 - **Provincie-niveau**: `app/[provincie]/page.tsx` — ISR 7d, steden overzicht, JSON-LD AdministrativeArea
 - **Stad-niveau**: `app/[provincie]/[stad]/page.tsx` — ISR 7d, wijken overzicht, urgentie strip, JSON-LD City
 - **Wijk-niveau**: `app/[provincie]/[stad]/[wijk]/page.tsx` — ISR 7d, `generateStaticParams()` via `getTopWijken(500)`, AI-content via `generateWijkContent()`, breadcrumb, ranking badge, CountdownTimer, BreadcrumbList JSON-LD, gerelateerde wijken sectie onderaan
 - **Straat-niveau**: `app/[provincie]/[stad]/[wijk]/[straat]/page.tsx` — ISR 30d, `generateStaticParams()` pre-bouwt top-500 straten op `aantal_woningen`
+- **Postcode-niveau**: `app/postcode/[code]/page.tsx` — ISR 30d, 4-cijferige postcode, toont wijken via `getWijkenByPostcode()`
 
 ### Wijk ranking badge
 `neighborhoodRanking(bouwjaar, score)` in wijk pagina:
@@ -205,6 +236,8 @@ Beide zijn optioneel (null = niet ingevuld). Vragen zijn pill-buttons, niet verp
 ### Interne linking structuur
 Breadcrumbs: Home → Provincie → Stad → Wijk op alle pSEO pagina's. Provincie pagina's linken naar alle steden. Stad pagina's linken naar alle wijken. Wijk CTAs linken naar `/check?wijk=...&stad=...`. Sitemap bevat alle drie niveaus. Wijkpagina's bevatten ook een "Andere wijken in {stad}" sectie (max 6 links, via `getWijkenByStad()`) voor extra interne linking.
 
+`lib/pseo.ts`: wijk/stad/provincie-**lijsten** en top-straten gebruiken **`slug`-prefix of segmenten** (zelfde canon als de App Router), zodat oude rijen met afwijkende `provincie`/`stad`-tekst in de kolommen toch correct linken. `scripts/seed-pseo.ts` (SAMPLE) schrijft `provincie`/`stad` voortaan als **URL-slugs**; PDOK-mode deed dat al.
+
 BreadcrumbList JSON-LD aanwezig op provincie (Home→Provincie), stad (Home→Provincie→Stad) en wijk pagina's (Home→Provincie→Stad→Wijk). Canonical URLs zijn absoluut (`https://saldeerscan.nl/...`) op alle pSEO routes. Organization JSON-LD schema staat in root layout. `app/robots.ts` genereert `/robots.txt` via Next.js MetadataRoute.
 
 ## Design systeem
@@ -252,6 +285,11 @@ GOOGLE_AI_API_KEY=          # Gemini 2.5 Flash (screening + pSEO content + wijk 
 ANTHROPIC_API_KEY=          # Claude claude-sonnet-4-6 (vision diepanalyse)
 RESEND_API_KEY=             # Transactionele email (lead bevestiging)
 EPONLINE_API_KEY=           # EP-online RVO (energie labels)
+UPSTASH_REDIS_REST_URL=     # Upstash Redis (rate limiting, persistent)
+UPSTASH_REDIS_REST_TOKEN=   # Upstash Redis token
+NEXT_PUBLIC_SENTRY_DSN=     # Sentry error tracking
+LEAD_REPORT_HMAC_SECRET=    # Optioneel: eigen geheim voor ?token= op rapportlinks (anders fallback service role)
+LEAD_REPORT_LEGACY_OPEN_READ=true  # Alleen rollback: GET /api/leads/[id] zonder token toestaan
 ```
 
 ## NPM scripts
@@ -273,12 +311,11 @@ npx tsx scripts/ping-wijk-indexing.ts --batch=START,END  # Google Indexing API, 
 
 ## TODO na hoofdinkoper
 
-Zodra er een overeenkomst is met een hoofdinkoper, moeten de volgende vage placeholders worden aangescherpt met concrete claims:
+Contact-/opvolgteksten gebruiken nu **neutrale** bewoording (“naar aanleiding van uw aanvraag”, “na uw aanvraag”) — geen impliciete SLA. Zodra er een overeenkomst is met een hoofdinkoper, kun je overal dezelfde **concrete** beloftes (responstijd, aantal partners, etc.) doorvoeren:
 
-- `components/funnel/Step6LeadCapture.tsx` — TrustBar kolom 2 ("Lokale installateurs") en kolom 3 ("Vrijblijvend") → vervangen door echte SLA-tekst
-- `components/funnel/Step6LeadCapture.tsx` — Collapsible stap 2 ("zo spoedig mogelijk") → vervangen door concrete termijn
-- `components/funnel/ResultsDashboard.tsx` — Tijdlijn stap 2 ("zo spoedig mogelijk") en stap 3 ("zo spoedig mogelijk") → concrete termijn
-- `app/api/leads/route.ts` — Email intro + "Wat nu?" stap 1 ("zo spoedig mogelijk") → concrete termijn
+- `components/funnel/Step6LeadCapture.tsx` — TrustBar titels (“Lokale installateurs”, “Vrijblijvend”) desgewenst vervangen door concrete partner-/SLA-copy; subtitels nu neutraal (“o.b.v. uw aanvraag”, “geen koopplicht”)
+- `components/funnel/ResultsDashboard.tsx` — blok “Wat gebeurt er nu?”
+- `app/api/leads/route.ts` — intro + “Wat nu?” in de bevestigingsmail
 
 ## Google Indexing API voortgang
 
@@ -303,7 +340,7 @@ SET netcongestie_status = 'ROOD'
 WHERE stad = 'bergen-op-zoom' AND provincie = 'noord-brabant';
 ```
 
-Migraties uitgevoerd t/m `20260422000003_rls.sql`. Alle tabellen hebben RLS ingeschakeld (apr 2026).
+Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `20260502000001_leads_huidige_panelen_aantal.sql` (kolom `huidige_panelen_aantal` op `leads`). Alle tabellen hebben RLS ingeschakeld (apr 2026).
 
 ## Verificatie checklist
 
@@ -315,7 +352,7 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Alle tabellen hebben RLS inge
 - `/check?wijk=IJburg&stad=Amsterdam` → Step 1 AnalysisLoading toont "Netcapaciteit IJburg verifiëren..."
 - Step 6: naam vereist 2 woorden, telefoonnummer toont live groen preview na validatie
 - Step 6 submit → SuccessState toont ResultsDashboard met ShockChart + ROITijdlijn
-- Favicon zichtbaar in browsertabblad (niet Vercel logo)
+- Favicon zichtbaar in browsertabblad én als `<link rel="icon">` in page source (niet Vercel logo); Google crawl-update via GSC "Request Indexing" op homepage om favicon in zoekresultaten te versnellen
 - Homepage urgentie strip is amber (niet rood)
 - pSEO straat-route laadt met JSON-LD in `<head>`
 - pSEO wijk-route (`/utrecht/utrecht/leidsche-rijn`) laadt na seed, breadcrumb aanwezig
@@ -326,4 +363,7 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Alle tabellen hebben RLS inge
 - Lead zonder `gdpr_consent` → webhook nooit verstuurd
 - `/sitemap/noord-holland.xml` → Noord-Holland URLs incl. provincie + stad URLs
 - Vision: verkeerde foto → 422 screening error, juiste foto → analyse JSON
-- `npx playwright test` → 9 tests passing
+- `npx playwright test --project=chromium` → groen (~156 tests: funnel-deep 133 + funnel-compleet 5 + step6-validatie 6 + funnel-handshake 3 + funnel-validatie 4 + leadid-hydrate 2 + wijk-validatie 3; max 1 skip als lokale pSEO-straat-data ontbreekt); volledige suite incl. `mobile-chrome` ≈ dubbel; `playwright.config` start `npm run dev` met `webServer.timeout` 180s voor trage cold starts
+- `/postcode/1234` → postcode-pagina laadt met wijken in omgeving
+- Rapportlink: `GET /api/leads/{uuid}?token=…` met geldige token → JSON; zonder token (zonder legacy-env) → 401; te veel requests zelfde IP → 429 op report-read namespace
+- Na geslaagde lead-submit: browser-URL wordt `/check?leadId=…&token=…` (bookmark/herlaad); POST JSON bevat `reportToken`

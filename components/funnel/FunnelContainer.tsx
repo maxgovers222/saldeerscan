@@ -4,6 +4,7 @@ import { useReducer, useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import type { FunnelState, FunnelAction, HealthScoreResult, ROIResult, MeterkastAnalyse, PlaatsingsAnalyse, OmvormerAnalyse } from './types'
 import { trackEvent } from '@/lib/analytics'
+import { parseStoredRoi } from '@/lib/roi-result-guard'
 
 const STORAGE_KEY = 'wep_funnel_state'
 
@@ -21,7 +22,7 @@ function loadState(): FunnelState | null {
     const parsed = JSON.parse(raw) as FunnelState
     // Only restore if there's real progress (past step 1 or has data)
     if (parsed.step <= 1 && !parsed.bagData) return null
-    return parsed
+    return { ...parsed, leadReportToken: parsed.leadReportToken ?? null }
   } catch { return null }
 }
 import { FunnelProgress } from './FunnelProgress'
@@ -45,6 +46,7 @@ function funnelReducer(state: FunnelState, action: FunnelAction): FunnelState {
     case 'SET_PLAATSING': return { ...state, plaatsingsAnalyse: action.plaatsingsAnalyse }
     case 'SET_OMVORMER': return { ...state, omvormerAnalyse: action.omvormerAnalyse }
     case 'SET_LEAD_ID': return { ...state, leadId: action.leadId }
+    case 'SET_LEAD_REPORT_TOKEN': return { ...state, leadReportToken: action.token }
     case 'SET_ADRES': return { ...state, adres: action.adres }
     case 'SET_LOADING': return { ...state, loading: action.loading }
     case 'SET_ERROR': return { ...state, error: action.error }
@@ -79,6 +81,7 @@ function makeInitialState(initialAdres = '', initialWijk = '', initialStad = '')
     heeft_panelen: null,
     huidige_panelen_aantal: null,
     leadId: null,
+    leadReportToken: null,
     loading: false,
     error: null,
     utmParams: null,
@@ -98,6 +101,8 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   const [savedState, setSavedState] = useState<FunnelState | null>(null)
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false)
   const searchParams = useSearchParams()
+  const leadIdParam = searchParams.get('leadId')
+  const leadReportTokenParam = searchParams.get('token')
 
   function trackingDispatch(action: FunnelAction) {
     // Only track forward navigation — backward steps are not completions
@@ -132,14 +137,119 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
 
   // Detect ?leadId= URL param — direct link vanuit bevestigingsmail naar ResultsDashboard
   useEffect(() => {
-    const leadIdParam = searchParams.get('leadId')
-    if (leadIdParam) {
-      dispatch({ type: 'SET_LEAD_ID', leadId: leadIdParam })
-      // Herstel ook localStorage-state als die er is (voor ROI/adres context)
-      const loaded = loadState()
-      if (loaded) {
+    if (!leadIdParam) return
+    const leadId = leadIdParam
+
+    const alreadySynced =
+      state.leadId === leadId
+      && parseStoredRoi(state.roiResult) !== null
+      && !!leadReportTokenParam
+      && state.leadReportToken === leadReportTokenParam
+    if (alreadySynced) return
+
+    let cancelled = false
+    dispatch({ type: 'SET_LEAD_ID', leadId })
+    dispatch({ type: 'SET_LOADING', loading: true })
+    dispatch({ type: 'SET_ERROR', error: null })
+
+    async function hydrateFromServer() {
+      try {
+        const tokenQs = leadReportTokenParam
+          ? `?token=${encodeURIComponent(leadReportTokenParam)}`
+          : ''
+        const response = await fetch(`/api/leads/${encodeURIComponent(leadId)}${tokenQs}`)
+        if (!response.ok) {
+          if (!cancelled) {
+            let msg = 'Rapport kon niet worden geladen. Probeer het later opnieuw.'
+            if (response.status === 404) {
+              msg = 'Rapport niet gevonden. Controleer de link in uw e-mail.'
+            } else if (response.status === 401) {
+              try {
+                const errBody = (await response.json()) as { error?: string }
+                msg = errBody.error ?? msg
+              } catch {
+                msg =
+                  'Deze rapportlink is ongeldig of verlopen. Open de link uit uw bevestigingsmail, of start een nieuwe check.'
+              }
+            }
+            dispatch({ type: 'SET_ERROR', error: msg })
+          }
+          return
+        }
+        const data = await response.json() as {
+          adres?: string
+          wijk?: string
+          stad?: string
+          bagData?: FunnelState['bagData']
+          roiResult?: unknown
+          netcongestie?: FunnelState['netcongestie']
+          healthScore?: FunnelState['healthScore']
+          meterkastAnalyse?: FunnelState['meterkastAnalyse']
+          plaatsingsAnalyse?: FunnelState['plaatsingsAnalyse']
+          omvormerAnalyse?: FunnelState['omvormerAnalyse']
+          isEigenaar?: boolean | null
+          heeftPanelen?: boolean | null
+          huidigePanelenAantal?: number | null
+          dakrichting?: FunnelState['dakrichting']
+          verbruik_bron?: FunnelState['verbruik_bron']
+          huishouden_grootte?: FunnelState['huishouden_grootte']
+        }
+        if (cancelled) return
+
+        if (data.adres) dispatch({ type: 'SET_ADRES', adres: data.adres })
+        if (data.wijk || data.stad) dispatch({ type: 'SET_WIJK', wijk: data.wijk ?? '', stad: data.stad ?? '' })
+        if (data.bagData) dispatch({ type: 'SET_BAG_DATA', bagData: data.bagData })
+        if (data.netcongestie) dispatch({ type: 'SET_NETCONGESTIE', netcongestie: data.netcongestie })
+        if (data.healthScore) dispatch({ type: 'SET_HEALTH_SCORE', healthScore: data.healthScore })
+        if (data.meterkastAnalyse) dispatch({ type: 'SET_METERKAST', meterkastAnalyse: data.meterkastAnalyse })
+        if (data.plaatsingsAnalyse) dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: data.plaatsingsAnalyse })
+        if (data.omvormerAnalyse) dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: data.omvormerAnalyse })
+        dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: data.isEigenaar ?? null })
+        dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: data.heeftPanelen ?? null })
+        dispatch({
+          type: 'SET_HUIDIGE_PANELEN_AANTAL',
+          huidige_panelen_aantal: typeof data.huidigePanelenAantal === 'number' ? data.huidigePanelenAantal : null,
+        })
+        dispatch({ type: 'SET_DAKRICHTING', dakrichting: data.dakrichting ?? null })
+        dispatch({ type: 'SET_VERBRUIK_BRON', bron: data.verbruik_bron ?? 'schatting' })
+        dispatch({ type: 'SET_HUISHOUDEN', grootte: data.huishouden_grootte ?? null })
+
+        const roiParsed = parseStoredRoi(data.roiResult)
+        if (roiParsed) {
+          dispatch({ type: 'SET_ROI', roiResult: roiParsed as NonNullable<FunnelState['roiResult']> })
+          dispatch({ type: 'SET_ERROR', error: null })
+          if (leadReportTokenParam) {
+            dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: leadReportTokenParam })
+          }
+        } else {
+          dispatch({
+            type: 'SET_ERROR',
+            error: 'Rapportdata is onvolledig of verlopen (geen geldige ROI opgeslagen). Start opnieuw via de check of neem contact op via info@saldeerscan.nl.',
+          })
+        }
+      } catch {
+        const loaded = loadState()
+        if (cancelled || !loaded) {
+          if (!cancelled) {
+            dispatch({
+              type: 'SET_ERROR',
+              error: 'Rapport kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.',
+            })
+          }
+          return
+        }
+        const roiParsed = parseStoredRoi(loaded.roiResult)
+        if (!roiParsed) {
+          if (!cancelled) {
+            dispatch({
+              type: 'SET_ERROR',
+              error: 'Geen geldig rapport in deze browser gevonden. Open de link op hetzelfde apparaat waar u de check afrondde, of start opnieuw.',
+            })
+          }
+          return
+        }
         if (loaded.bagData) dispatch({ type: 'SET_BAG_DATA', bagData: loaded.bagData })
-        if (loaded.roiResult) dispatch({ type: 'SET_ROI', roiResult: loaded.roiResult })
+        dispatch({ type: 'SET_ROI', roiResult: roiParsed as NonNullable<FunnelState['roiResult']> })
         if (loaded.netcongestie) dispatch({ type: 'SET_NETCONGESTIE', netcongestie: loaded.netcongestie })
         if (loaded.healthScore) dispatch({ type: 'SET_HEALTH_SCORE', healthScore: loaded.healthScore })
         if (loaded.adres) dispatch({ type: 'SET_ADRES', adres: loaded.adres })
@@ -147,10 +257,15 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
         dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: loaded.is_eigenaar ?? null })
         dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: loaded.heeft_panelen ?? null })
         dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: loaded.huidige_panelen_aantal ?? null })
+        dispatch({ type: 'SET_ERROR', error: null })
+      } finally {
+        if (!cancelled) dispatch({ type: 'SET_LOADING', loading: false })
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+
+    hydrateFromServer()
+    return () => { cancelled = true }
+  }, [leadIdParam, leadReportTokenParam, state.leadId, state.leadReportToken, state.roiResult])
 
   // Save state on every change — debounced to avoid excessive I/O
   useEffect(() => {
@@ -191,6 +306,11 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
     if (savedState.wijk || savedState.stad) {
       dispatch({ type: 'SET_WIJK', wijk: savedState.wijk, stad: savedState.stad })
     }
+    if (savedState.leadId) {
+      dispatch({ type: 'SET_LEAD_ID', leadId: savedState.leadId })
+    }
+    dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: savedState.leadReportToken ?? null })
+
     Object.entries({
       adres: savedState.adres,
       bagData: savedState.bagData,
@@ -219,7 +339,8 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
     setSavedState(null)
   }
 
-  const showResumeBanner = savedState && !resumeBannerDismissed
+  const showResumeBanner = !leadIdParam && !state.leadId && savedState && !resumeBannerDismissed
+  const reportRoiReady = parseStoredRoi(state.roiResult) !== null
 
   return (
     <div className="space-y-6">
@@ -243,7 +364,26 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
       {/* ResultsDashboard — toon als lead ingediend is (ook via ?leadId= email-link) */}
       {state.leadId ? (
         <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden">
-          <ResultsDashboard state={state} />
+          {state.loading ? (
+            <div className="p-10 flex flex-col items-center justify-center gap-4 text-center">
+              <div className="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" aria-hidden />
+              <p className="text-sm font-mono text-amber-300/90">Rapport laden…</p>
+            </div>
+          ) : !reportRoiReady ? (
+            <div className="p-8 space-y-4 text-center">
+              <p className="text-sm font-sans text-white/80 leading-relaxed">
+                {state.error ?? 'Onvoldoende data om het rapport te tonen. De opgeslagen berekening ontbreekt of is ongeldig.'}
+              </p>
+              <a
+                href="/check"
+                className="inline-flex items-center justify-center gap-2 text-sm font-bold bg-amber-500 text-slate-950 px-5 py-2.5 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.35)]"
+              >
+                Nieuwe check starten
+              </a>
+            </div>
+          ) : (
+            <ResultsDashboard state={state} />
+          )}
         </div>
       ) : (
         <>

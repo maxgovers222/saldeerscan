@@ -1,5 +1,8 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+
+const KENNISBANK_REVALIDATE = 86400
 
 export interface KennisbankArticle {
   id: string
@@ -16,34 +19,68 @@ export interface KennisbankArticle {
   generatedAt: string | null
 }
 
-export async function getKennisbankArticle(slug: string): Promise<KennisbankArticle | null> {
-  const { data, error } = await supabaseAdmin
-    .from('kennisbank_articles')
-    .select('*')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .single()
+export const getKennisbankArticle = unstable_cache(
+  async (slug: string): Promise<KennisbankArticle | null> => {
+    const { data, error } = await supabaseAdmin
+      .from('kennisbank_articles')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .single()
 
-  if (error || !data) return null
+    if (error || !data) return null
 
-  return mapRow(data)
-}
+    return mapRow(data)
+  },
+  ['kennisbank', 'article'],
+  { revalidate: KENNISBANK_REVALIDATE }
+)
 
-export async function getAllKennisbankSlugs(): Promise<string[]> {
-  const { data } = await supabaseAdmin
-    .from('kennisbank_articles')
-    .select('slug')
-    .eq('status', 'published')
+export const getAllKennisbankSlugs = unstable_cache(
+  async (): Promise<string[]> => {
+    const { data } = await supabaseAdmin
+      .from('kennisbank_articles')
+      .select('slug')
+      .eq('status', 'published')
 
-  return (data ?? []).map(r => r.slug)
-}
+    return (data ?? []).map(r => r.slug)
+  },
+  ['kennisbank', 'allSlugs'],
+  { revalidate: KENNISBANK_REVALIDATE }
+)
 
-export async function getAllPublishedKennisbank(): Promise<Pick<KennisbankArticle, 'slug' | 'titel' | 'category' | 'intro' | 'generatedAt'>[]> {
+export const getAllPublishedKennisbank = unstable_cache(
+  async (): Promise<Pick<KennisbankArticle, 'slug' | 'titel' | 'category' | 'intro' | 'generatedAt'>[]> => {
+    const { data } = await supabaseAdmin
+      .from('kennisbank_articles')
+      .select('slug, titel, category, intro, generated_at')
+      .eq('status', 'published')
+      .order('generated_at', { ascending: false })
+
+    return (data ?? []).map(r => ({
+      slug: r.slug,
+      titel: r.titel,
+      category: r.category ?? 'algemeen',
+      intro: r.intro ?? null,
+      generatedAt: r.generated_at ?? null,
+    }))
+  },
+  ['kennisbank', 'allPublished'],
+  { revalidate: KENNISBANK_REVALIDATE }
+)
+
+/** Alleen voor gerelateerde artikelen — geen volledige tabel per pagina tijdens build. */
+export async function getKennisbankSummariesBySlugs(
+  slugs: string[]
+): Promise<Pick<KennisbankArticle, 'slug' | 'titel' | 'category' | 'intro' | 'generatedAt'>[]> {
+  const unique = [...new Set(slugs.filter(Boolean))]
+  if (unique.length === 0) return []
+
   const { data } = await supabaseAdmin
     .from('kennisbank_articles')
     .select('slug, titel, category, intro, generated_at')
     .eq('status', 'published')
-    .order('generated_at', { ascending: false })
+    .in('slug', unique.slice(0, 20))
 
   return (data ?? []).map(r => ({
     slug: r.slug,

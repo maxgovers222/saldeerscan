@@ -484,7 +484,11 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
       {/* ── Populaire straten in wijk ───────────────────────────────────────────── */}
       {topStraten.length > 0 && (
-        <section className="py-10 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <section
+          data-testid="pseo-populaire-straten"
+          className="py-10 px-6 border-t"
+          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+        >
           <div className="max-w-5xl mx-auto">
             <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">
               Populaire straten in {toDisplay(wijk)}
@@ -493,7 +497,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
               {topStraten.map((s) => (
                 <a
                   key={s.straat}
-                  href={`/${s.provincie}/${s.stad}/${s.wijk}/${s.straat}`}
+                  href={`/${provincie}/${stad}/${wijk}/${s.straat}`}
                   className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-3 transition-all hover:bg-slate-900/60 group"
                 >
                   <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors capitalize" style={{ fontFamily: 'var(--font-heading)' }}>

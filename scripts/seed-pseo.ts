@@ -84,7 +84,9 @@ async function seed() {
   console.log(`Seeding ${SAMPLE_PAGES.length} pSEO pages...`)
 
   for (const page of SAMPLE_PAGES) {
-    const slug = `/${page.provincie.toLowerCase().replace(/\s+/g, '-')}/${page.stad.toLowerCase()}/${page.wijk}/${page.straat}`
+    const provincieSlug = page.provincie.toLowerCase().replace(/\s+/g, '-')
+    const stadSlug = page.stad.toLowerCase().replace(/\s+/g, '-')
+    const slug = `/${provincieSlug}/${stadSlug}/${page.wijk}/${page.straat}`
     console.log(`Generating content for ${slug}...`)
 
     try {
@@ -101,8 +103,8 @@ async function seed() {
         .from('pseo_pages')
         .upsert({
           slug,
-          provincie: page.provincie,
-          stad: page.stad,
+          provincie: provincieSlug,
+          stad: stadSlug,
           wijk: page.wijk,
           straat: page.straat,
           postcode_prefix: page.postcode_prefix,

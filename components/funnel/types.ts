@@ -107,6 +107,8 @@ export interface FunnelState {
   heeft_panelen: boolean | null
   huidige_panelen_aantal: number | null
   leadId: string | null
+  /** HMAC-token voor GET /api/leads/:id (zelfde als e-maillink); bewaard na submit + hydratie. */
+  leadReportToken: string | null
   loading: boolean
   error: string | null
   utmParams: {
@@ -128,6 +130,7 @@ export type FunnelAction =
   | { type: 'SET_PLAATSING'; plaatsingsAnalyse: PlaatsingsAnalyse | null }
   | { type: 'SET_OMVORMER'; omvormerAnalyse: OmvormerAnalyse | null }
   | { type: 'SET_LEAD_ID'; leadId: string }
+  | { type: 'SET_LEAD_REPORT_TOKEN'; token: string | null }
   | { type: 'SET_ADRES'; adres: string }
   | { type: 'SET_LOADING'; loading: boolean }
   | { type: 'SET_ERROR'; error: string | null }

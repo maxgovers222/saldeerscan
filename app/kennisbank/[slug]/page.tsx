@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getKennisbankArticle, getAllKennisbankSlugs, getAllPublishedKennisbank } from '@/lib/kennisbank'
+import { getKennisbankArticle, getAllKennisbankSlugs, getKennisbankSummariesBySlugs } from '@/lib/kennisbank'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
 import { NavDark, FooterDark } from '@/components/NavDark'
 import { RelatedWijken } from '@/components/pseo/RelatedWijken'
@@ -79,16 +79,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default async function KennisbankArtikel({ params }: { params: Promise<Params> }) {
   const { slug } = await params
-  const [article, allArticles] = await Promise.all([
-    getKennisbankArticle(slug),
-    getAllPublishedKennisbank(),
-  ])
-
+  const article = await getKennisbankArticle(slug)
   if (!article) notFound()
 
-  const related = allArticles.filter(a =>
-    article.relatedSlugs.includes(a.slug) && a.slug !== slug
-  ).slice(0, 3)
+  const relatedSummaries = await getKennisbankSummariesBySlugs(article.relatedSlugs)
+  const related = relatedSummaries.filter(a => a.slug !== slug).slice(0, 3)
 
   const publishedDate = article.generatedAt
     ? new Date(article.generatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })

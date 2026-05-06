@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import type { FunnelState } from './types'
 import { PDFDownloadButton } from './PDFDownloadButton'
+import { parseStoredRoi } from '@/lib/roi-result-guard'
 
-function ReferralButtons({ stad }: { stad?: string }) {
+const ReferralButtons = memo(function ReferralButtons({ stad }: { stad?: string }) {
   const [copied, setCopied] = useState(false)
   const waUrl = `https://saldeerscan.nl/check?ref=buur&utm_source=referral&utm_medium=whatsapp`
   const copyUrl = `https://saldeerscan.nl/check?ref=buur&utm_source=referral&utm_medium=copy`
@@ -12,10 +13,26 @@ function ReferralButtons({ stad }: { stad?: string }) {
   const waText = encodeURIComponent(`Ik heb net mijn huis laten scannen voor de 2027 salderingswijziging via SaldeerScan.nl. Jij loopt hetzelfde risico in ${stadLabel}! Doe hier de gratis check: ${waUrl}`)
 
   function handleCopy() {
-    navigator.clipboard.writeText(copyUrl).then(() => {
+    const done = () => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    }).catch(() => {})
+    }
+    navigator.clipboard.writeText(copyUrl).then(done).catch(() => {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = copyUrl
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'fixed'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        const ok = document.execCommand('copy')
+        document.body.removeChild(ta)
+        if (ok) done()
+      } catch {
+        /* geen clipboard in deze context */
+      }
+    })
   }
 
   return (
@@ -34,6 +51,8 @@ function ReferralButtons({ stad }: { stad?: string }) {
         Deel via WhatsApp
       </a>
       <button
+        type="button"
+        data-testid="referral-copy-link"
         onClick={handleCopy}
         className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-mono transition-colors"
         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: copied ? '#34d399' : 'rgba(255,255,255,0.5)' }}
@@ -46,7 +65,7 @@ function ReferralButtons({ stad }: { stad?: string }) {
       </button>
     </div>
   )
-}
+})
 
 function useCountUp(target: number, duration = 1400): number {
   const [val, setVal] = useState(0)
@@ -166,26 +185,36 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function ResultsDashboard({ state }: { state: FunnelState }) {
-  const roi = state.roiResult
+  const roi = parseStoredRoi(state.roiResult ?? null)
+  if (!roi) {
+    return (
+      <div className="p-8 text-center space-y-3">
+        <p className="text-sm font-sans text-white/80 leading-relaxed">
+          Onvoldoende data om dit rapport te tonen. Start de check opnieuw of open de link uit uw bevestigingsmail opnieuw.
+        </p>
+      </div>
+    )
+  }
+
   const score = state.healthScore?.score ?? 0
   const heeftPanelen = state.heeft_panelen === true
   const huidigePanelenAantal = state.huidige_panelen_aantal
   const batterijInvestering = Math.max(
-    (roi?.scenarioMetBatterij.investeringEur ?? 0) - (roi?.scenarioNu.investeringEur ?? 0),
+    roi.scenarioMetBatterij.investeringEur - roi.scenarioNu.investeringEur,
     0
   )
   const batterijMeerBesparing = Math.max(
-    (roi?.scenarioMetBatterij.besparingJaarEur ?? 0) - (roi?.scenarioNu.besparingJaarEur ?? 0),
+    roi.scenarioMetBatterij.besparingJaarEur - roi.scenarioNu.besparingJaarEur,
     0
   )
   const besparing = heeftPanelen
-    ? (roi?.scenarioMetBatterij.besparingJaarEur ?? roi?.scenarioNu.besparingJaarEur ?? 0)
-    : (roi?.scenarioNu.besparingJaarEur ?? 0)
-  const verlies = roi?.shockEffect2027.jaarlijksVerlies ?? besparing
+    ? roi.scenarioMetBatterij.besparingJaarEur
+    : roi.scenarioNu.besparingJaarEur
+  const verlies = roi.shockEffect2027.jaarlijksVerlies
   const terugverdien = heeftPanelen
     ? (batterijMeerBesparing > 0 ? Math.round((batterijInvestering / batterijMeerBesparing) * 10) / 10 : 99)
-    : (roi?.scenarioNu.terugverdientijdJaar ?? 8)
-  const investering = roi?.scenarioNu.investeringEur ?? 0
+    : (roi.scenarioNu.terugverdientijdJaar ?? 8)
+  const investering = roi.scenarioNu.investeringEur
   const regio = state.wijk ? state.wijk.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : (state.stad || 'uw regio')
 
   const animBesparing = useCountUp(besparing, 1600)
@@ -261,10 +290,13 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
             <path d="M8 6v4M8 11.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
           <p className="text-xs text-red-700" style={{ fontFamily: 'var(--font-sans)' }}>
-            {heeftPanelen
-              ? <>Zonder thuisbatterij verliest u over 5 jaar <strong className="text-red-800">€{((verlies ?? 0) * 5).toLocaleString('nl-NL')}</strong> aan terugleverwaarde op uw bestaande zonnepanelen.</>
-              : <>Zonder actie verliest u over 5 jaar <strong className="text-red-800">€{((verlies ?? 0) * 5).toLocaleString('nl-NL')}</strong> aan salderingsinkomsten.</>
-            }
+            {Math.abs(verlies) < 1 ? (
+              <>Op basis van uw invoer is het berekende 2027-effect in deze bandbreedte minimaal. Het advies blijft wel: voorbereiden op einde saldering (2027).</>
+            ) : heeftPanelen ? (
+              <>Zonder thuisbatterij bouwt u over 5 jaar ongeveer <strong className="text-red-800">€{(verlies * 5).toLocaleString('nl-NL')}</strong> minder voordeel op t.o.v. tijdig handelen (op basis van deze scan).</>
+            ) : (
+              <>Zonder actie bouwt u over 5 jaar ongeveer <strong className="text-red-800">€{(verlies * 5).toLocaleString('nl-NL')}</strong> minder voordeel op t.o.v. tijdig handelen (op basis van deze scan).</>
+            )}
           </p>
         </div>
       </div>
@@ -282,9 +314,11 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
             <p className="text-[10px] text-amber-700 uppercase tracking-widest mb-1.5" style={{ fontFamily: 'var(--font-sans)' }}>
               {heeftPanelen ? 'Bestaande zonnepanelen' : 'Zonnepanelen'}
             </p>
-            <p className="text-2xl font-black font-mono text-amber-600">{heeftPanelen ? (huidigePanelenAantal ?? roi?.aantalPanelen ?? '—') : (roi?.aantalPanelen ?? '—')}</p>
+            <p className="text-2xl font-black font-mono text-amber-600">{heeftPanelen ? (huidigePanelenAantal ?? '—') : roi.aantalPanelen}</p>
             <p className="text-[11px] text-slate-500 mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>
-              {heeftPanelen ? 'reeds aanwezig op uw dak' : `panelen · ${roi ? Math.round((roi.aantalPanelen ?? 8) * 0.4) : '—'} m²`}
+              {heeftPanelen
+                ? 'huidige situatie (stap 2)'
+                : `adviesmodel · ${Math.round(roi.aantalPanelen * 0.4)} m²`}
             </p>
           </div>
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
@@ -312,8 +346,11 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
         {heeftPanelen && (
           <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
             <p className="text-xs text-emerald-800" style={{ fontFamily: 'var(--font-sans)' }}>
-              Advies: behoud uw huidige zonnepanelen en voeg een thuisbatterij toe. Extra besparing door batterij-opslag is ongeveer
-              <strong> €{batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</strong>.
+              {batterijMeerBesparing > 0 ? (
+                <>Advies: behoud uw zonnepanelen en overweeg een thuisbatterij. Extra besparing door batterij-opslag is ongeveer<strong> €{batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</strong> in dit model.</>
+              ) : (
+                <>Advies: met bestaande panelen is optimalisatie (o.a. verbruikstiming / batterij) maatwerk. Vraag een adviseur om een locatiecheck — de extra winst valt sterk per situatie verschillend uit.</>
+              )}
             </p>
           </div>
         )}
@@ -344,7 +381,7 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
         <div className="space-y-4">
           {[
             { dot: 'amber', label: 'Uw aanvraag is geregistreerd', timing: 'nu' },
-            { dot: 'amber', label: 'Een adviseur neemt zo spoedig mogelijk contact met u op', timing: '' },
+            { dot: 'amber', label: 'Een adviseur neemt naar aanleiding van uw aanvraag contact met u op', timing: '' },
             { dot: 'green', label: 'Vrijblijvende offerte op maat', timing: '' },
           ].map(({ dot, label, timing }, i) => (
             <div key={i} className="flex items-start gap-3">

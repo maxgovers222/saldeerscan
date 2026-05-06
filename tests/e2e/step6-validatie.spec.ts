@@ -83,18 +83,64 @@ const FUNNEL_STATE_STEP6 = {
   verbruik_bron: 'schatting',
   huishouden_grootte: null,
   is_eigenaar: null,
+  heeft_panelen: false,
+  huidige_panelen_aantal: null,
   leadId: null,
+  leadReportToken: null,
   loading: false,
   error: null,
   utmParams: null,
 }
 
+const MOCK_LEAD_GET = {
+  leadId: 'test-lead-id-123',
+  adres: 'Prinsengracht 263, Amsterdam',
+  wijk: '',
+  stad: '',
+  bagData: FUNNEL_STATE_STEP6.bagData,
+  netcongestie: FUNNEL_STATE_STEP6.netcongestie,
+  healthScore: FUNNEL_STATE_STEP6.healthScore,
+  roiResult: FUNNEL_STATE_STEP6.roiResult,
+  meterkastAnalyse: null,
+  plaatsingsAnalyse: null,
+  omvormerAnalyse: null,
+  isEigenaar: null,
+  heeftPanelen: false,
+  huidigePanelenAantal: null,
+  dakrichting: null,
+  verbruik_bron: 'schatting',
+  huishouden_grootte: null,
+}
+
 test.describe('Step 6 — Lead formulier validatie', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock de leads API
-    await page.route('/api/leads**', (route) =>
-      route.fulfill({ json: { leadId: 'test-lead-id-123', success: true } }),
-    )
+    await page.route('**/api/leads**', async (route) => {
+      const url = route.request().url()
+      const method = route.request().method()
+      const path = new URL(url).pathname.replace(/\/$/, '') || '/'
+      const isCollectionPost = method === 'POST' && path === '/api/leads'
+      const isItemGet = method === 'GET' && /^\/api\/leads\/[^/]+$/.test(path)
+
+      if (isCollectionPost) {
+        return route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            leadId: 'test-lead-id-123',
+            reportToken: 'test-report-token',
+            status: 'ingediend',
+          }),
+        })
+      }
+      if (isItemGet) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(MOCK_LEAD_GET),
+        })
+      }
+      return route.continue()
+    })
 
     await page.goto('/check')
     await page.waitForLoadState('domcontentloaded')
@@ -118,7 +164,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
   })
 
   test('Stap 6 is geladen', async ({ page }) => {
-    await expect(page.locator('text=Stap 6')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText('Stap 6 — Uw rapport')).toBeVisible({ timeout: 8000 })
   })
 
   test('Submit knop dient niet in zonder naam', async ({ page }) => {
@@ -134,9 +180,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
     if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       await naamInput.fill('Jan')
       await page.locator('button[type="submit"]').click()
-      await expect(
-        page.locator('text=voor- en achternaam').or(page.locator('text=Voer uw voor- en achternaam')),
-      ).toBeVisible({ timeout: 3000 })
+      await expect(page.getByText('Voer uw voor- en achternaam in')).toBeVisible({ timeout: 3000 })
     }
   })
 
@@ -155,7 +199,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
     }
   })
 
-  test('Volledig valid formulier leidt tot SuccessState', async ({ page }) => {
+  test('Volledig valid formulier leidt tot ResultsDashboard', async ({ page }) => {
     const naamInput = page.locator('#lead-naam')
     if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       await naamInput.fill('Jan de Vries')
@@ -163,7 +207,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
       await page.locator('#lead-telefoon').fill('0612345678')
       await page.locator('#lead-gdpr').click({ force: true })
       await page.locator('button[type="submit"]').click()
-      await expect(page.locator('text=Gegevens ontvangen!')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('text=Uw SaldeerScan rapport').first()).toBeVisible({ timeout: 15000 })
     }
   })
 })

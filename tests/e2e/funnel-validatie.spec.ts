@@ -18,8 +18,8 @@ test.describe('Funnel Step 1 — Adres validatie', () => {
     await page.waitForSelector('input[placeholder*="Prinsengracht"]', { timeout: 15000 })
     await page.waitForLoadState('domcontentloaded')
 
-    // Funnel laadt: h1 aanwezig
-    await expect(page.locator('h1').first()).toBeVisible({ timeout: 5000 })
+    // FunnelProgress: role="progressbar" + aria-label "Stap 1 van 6" (geen h1 in /check content)
+    await expect(page.getByRole('progressbar', { name: /Stap 1 van 6/ })).toBeVisible({ timeout: 8000 })
   })
 
   test('Countdown timer zichtbaar op homepage', async ({ page }) => {

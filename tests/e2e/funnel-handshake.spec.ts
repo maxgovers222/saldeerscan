@@ -21,12 +21,9 @@ test.describe('Funnel URL handshake', () => {
   test('Countdown timer zichtbaar op /check', async ({ page }) => {
     await page.goto('/check')
 
-    // Timer labels aanwezig
-    await expect(page.locator('text=Dagen')).toBeVisible()
-    await expect(page.locator('text=Uren')).toBeVisible()
-
-    // Saldering tekst aanwezig
-    await expect(page.locator('text=Salderingsregeling eindigt over')).toBeVisible()
+    // /check gebruikt <CountdownTimer compact /> — één regel i.p.v. Dagen/Uren-kaarten
+    await expect(page.locator('text=saldering eindigt 1 jan 2027').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=Nog').first()).toBeVisible()
   })
 
   test('?adres param prefilled op /check', async ({ page }) => {

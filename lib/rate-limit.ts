@@ -1,23 +1,31 @@
 // lib/rate-limit.ts — Upstash Redis sliding window met in-memory fallback voor lokale dev
 
-let ratelimiter: unknown = null
+const ratelimiterCache = new Map<string, unknown>()
 
-async function getUpstashLimiter() {
+function toUpstashWindow(windowMs: number): `${number} ${'s' | 'm' | 'h'}` {
+  if (windowMs % 3_600_000 === 0) return `${Math.max(1, Math.round(windowMs / 3_600_000))} h`
+  if (windowMs % 60_000 === 0) return `${Math.max(1, Math.round(windowMs / 60_000))} m`
+  return `${Math.max(1, Math.round(windowMs / 1000))} s`
+}
+
+async function getUpstashLimiter(limit: number, windowMs: number) {
   if (!process.env.UPSTASH_REDIS_REST_URL) return null
-  if (ratelimiter) return ratelimiter as { limit: (key: string) => Promise<{ success: boolean; remaining: number; reset: number }> }
+  const cacheKey = `${limit}:${windowMs}`
+  const existing = ratelimiterCache.get(cacheKey)
+  if (existing) return existing as { limit: (key: string) => Promise<{ success: boolean; remaining: number; reset: number }> }
 
   const { Ratelimit } = await import('@upstash/ratelimit')
   const { Redis } = await import('@upstash/redis')
 
-  ratelimiter = new Ratelimit({
+  const limiter = new Ratelimit({
     redis: new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL!,
       token: process.env.UPSTASH_REDIS_REST_TOKEN!,
     }),
-    limiter: Ratelimit.slidingWindow(5, '1 h'),
+    limiter: Ratelimit.slidingWindow(limit, toUpstashWindow(windowMs)),
   })
-
-  return ratelimiter as { limit: (key: string) => Promise<{ success: boolean; remaining: number; reset: number }> }
+  ratelimiterCache.set(cacheKey, limiter)
+  return limiter as { limit: (key: string) => Promise<{ success: boolean; remaining: number; reset: number }> }
 }
 
 // In-memory fallback voor lokale dev (geen persistentie)
@@ -51,7 +59,7 @@ export async function applyRateLimit(
 
   let result: { success: boolean; remaining: number; reset: number }
 
-  const limiter = await getUpstashLimiter()
+  const limiter = await getUpstashLimiter(limit, windowMs)
   if (limiter) {
     result = await limiter.limit(key)
   } else {
@@ -62,7 +70,7 @@ export async function applyRateLimit(
     return {
       response: Response.json(
         { error: 'Te veel verzoeken. Probeer over een uur opnieuw.' },
-        { status: 429, headers: { 'Retry-After': '3600', 'X-RateLimit-Remaining': '0' } }
+        { status: 429, headers: { 'Retry-After': String(Math.max(1, Math.round(windowMs / 1000))), 'X-RateLimit-Remaining': '0' } }
       ),
       rl: null,
     }

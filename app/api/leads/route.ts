@@ -1,5 +1,7 @@
 import { applyRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { parseStoredRoi } from '@/lib/roi-result-guard'
+import { signLeadReportAccessToken } from '@/lib/lead-report-token'
 import { dispatchToPartners, dispatchToBulkBuyer } from '@/lib/webhooks'
 import { Resend } from 'resend'
 
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
   if (!naam || !email || !telefoon || !adres) {
     return Response.json({ error: 'naam, email, telefoon en adres zijn verplicht' }, { status: 400 })
   }
-  if (!gdprConsent) {
+  if (gdprConsent !== true) {
     return Response.json({ error: 'GDPR consent is vereist' }, { status: 400 })
   }
 
@@ -70,6 +72,10 @@ export async function POST(request: Request) {
       // Kwalificatie
       is_eigenaar: typeof body.isEigenaar === 'boolean' ? body.isEigenaar : null,
       heeft_panelen: typeof body.heeftPanelen === 'boolean' ? body.heeftPanelen : null,
+      huidige_panelen_aantal:
+        typeof body.huidigePanelenAantal === 'number' && Number.isFinite(body.huidigePanelenAantal)
+          ? Math.min(200, Math.max(1, Math.round(body.huidigePanelenAantal)))
+          : null,
       dakrichting: body.dakrichting ? String(body.dakrichting) : null,
       verbruik_bron: body.verbruik_bron ? String(body.verbruik_bron) : 'schatting',
       huishouden_grootte: body.huishouden_grootte ? Number(body.huishouden_grootte) : null,
@@ -108,34 +114,43 @@ export async function POST(request: Request) {
     console.error('[api/leads] bulk buyer dispatch error:', err)
   )
 
+  const reportAccessToken = signLeadReportAccessToken(lead.id)
+  if (!reportAccessToken) {
+    console.warn(
+      '[api/leads] signLeadReportAccessToken: geen LEAD_REPORT_HMAC_SECRET of SUPABASE_SERVICE_ROLE_KEY — rapport-URL mist token'
+    )
+  }
+
   // Send confirmation email (awaited — fire-and-forget laat Promise vallen in serverless)
   if (resend) {
-    type RoiResult = {
-      aantalPanelen?: number
-      scenarioNu?: { besparingJaarEur?: number; terugverdientijdJaar?: number; investeringEur?: number }
-      scenarioMetBatterij?: { besparingJaarEur?: number; investeringEur?: number }
-      shockEffect2027?: { jaarlijksVerlies?: number }
-      isdeSchatting?: { bedragEur?: number }
-    }
-    const roi = (body.roiResult ?? {}) as RoiResult
+    const roi = parseStoredRoi(body.roiResult ?? null)
 
     const score          = body.healthScore ? Number(body.healthScore) : null
     const energielabel   = body.energielabel ? String(body.energielabel) : null
     const netStatus      = body.netcongestieStatus ? String(body.netcongestieStatus) : null
     const heeftPanelen   = typeof body.heeftPanelen === 'boolean' ? body.heeftPanelen : null
     const bestaandePanelen = body.huidigePanelenAantal ? Number(body.huidigePanelenAantal) : null
-    const batterijInvestering = Math.max((roi.scenarioMetBatterij?.investeringEur ?? 0) - (roi.scenarioNu?.investeringEur ?? 0), 0)
-    const batterijMeerBesparing = Math.max((roi.scenarioMetBatterij?.besparingJaarEur ?? 0) - (roi.scenarioNu?.besparingJaarEur ?? 0), 0)
-    const besparing      = heeftPanelen ? (roi.scenarioMetBatterij?.besparingJaarEur ?? roi.scenarioNu?.besparingJaarEur ?? null) : (roi.scenarioNu?.besparingJaarEur ?? null)
-    const terugverdien   = heeftPanelen
+    const batterijInvestering = roi
+      ? Math.max(roi.scenarioMetBatterij.investeringEur - roi.scenarioNu.investeringEur, 0)
+      : 0
+    const batterijMeerBesparing = roi
+      ? Math.max(roi.scenarioMetBatterij.besparingJaarEur - roi.scenarioNu.besparingJaarEur, 0)
+      : 0
+    const besparing      = !roi ? null : heeftPanelen
+      ? (roi.scenarioMetBatterij.besparingJaarEur ?? roi.scenarioNu.besparingJaarEur)
+      : roi.scenarioNu.besparingJaarEur
+    const terugverdien   = !roi ? null : heeftPanelen
       ? (batterijMeerBesparing > 0 ? Math.round((batterijInvestering / batterijMeerBesparing) * 10) / 10 : null)
-      : (roi.scenarioNu?.terugverdientijdJaar ?? null)
-    const aantalPanelen  = roi.aantalPanelen ?? null
-    const verliesNa2027  = roi.shockEffect2027?.jaarlijksVerlies ?? null
-    const isdeSubsidie   = roi.isdeSchatting?.bedragEur && roi.isdeSchatting.bedragEur > 0
+      : roi.scenarioNu.terugverdientijdJaar
+    const aantalPanelenAdvies = roi?.aantalPanelen ?? null
+    const verliesNa2027 = roi ? roi.shockEffect2027.jaarlijksVerlies : null
+    const isdeSubsidie   = roi?.isdeSchatting && roi.isdeSchatting.bedragEur > 0
       ? roi.isdeSchatting.bedragEur : null
 
     const voornaam = String(naam).split(' ')[0]
+    const reportCheckUrl = reportAccessToken
+      ? `https://saldeerscan.nl/check?leadId=${encodeURIComponent(lead.id)}&token=${encodeURIComponent(reportAccessToken)}`
+      : `https://saldeerscan.nl/check?leadId=${encodeURIComponent(lead.id)}`
 
     const netKleur: Record<string, string> = {
       GROEN: '#10b981', ORANJE: '#f59e0b', ROOD: '#ef4444',
@@ -154,8 +169,16 @@ export async function POST(request: Request) {
       score         !== null ? dataRij('Energie Score', `<span style="color:#f59e0b">${score}/100</span>`) : '',
       energielabel              ? dataRij('Energielabel', energielabel) : '',
       netStatus                 ? dataRij('Netcongestie', `${netDot}${netStatus}`) : '',
-      aantalPanelen !== null    ? dataRij('Aanbevolen panelen', `${aantalPanelen} stuks`) : '',
-      besparing     !== null    ? dataRij('Geschatte besparing', `<span style="color:#10b981">€${besparing.toLocaleString('nl-NL')}/jaar</span>`) : '',
+      !heeftPanelen && aantalPanelenAdvies !== null
+        ? dataRij('Adviesmodel (max. dak)', `${aantalPanelenAdvies} stuks`)
+        : '',
+      heeftPanelen === true && bestaandePanelen
+        ? dataRij('Huidige installatie', `${bestaandePanelen} panelen`)
+        : '',
+      besparing     !== null    ? dataRij(
+        heeftPanelen ? 'Geschatte besparing (incl. batterij-scenario)' : 'Geschatte besparing',
+        `<span style="color:#10b981">€${besparing.toLocaleString('nl-NL')}/jaar</span>`
+      ) : '',
       isdeSubsidie  !== null    ? dataRij('ISDE subsidie', `<span style="color:#10b981">€${isdeSubsidie.toLocaleString('nl-NL')}</span>`) : '',
       terugverdien  !== null    ? dataRij('Terugverdientijd', `${terugverdien} jaar`) : '',
     ].filter(Boolean).join('')
@@ -205,17 +228,17 @@ export async function POST(request: Request) {
       <p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#0f172a">Geachte ${voornaam},</p>
       <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.75">
         Uw persoonlijk 2027-rapport voor <strong style="color:#0f172a">${String(body.adres)}</strong> is opgesteld.
-        Een energieadviseur in uw regio neemt zo spoedig mogelijk contact met u op.
+        Een energieadviseur in uw regio neemt naar aanleiding van uw aanvraag contact met u op.
       </p>
 
-      ${verliesNa2027 ? `
+      ${roi ? `
       <!-- SHOCK BOX -->
       <div style="background:#fff1f2;border-radius:10px;border-left:4px solid #dc2626;padding:18px 20px;margin-bottom:24px">
         <div style="font-size:10px;color:#b91c1c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600;opacity:0.8">Uw 2027-impact</div>
         <div style="font-size:28px;font-weight:800;color:#b91c1c;letter-spacing:-0.5px;margin-bottom:4px">
-          &minus;€${verliesNa2027.toLocaleString('nl-NL')}<span style="font-size:14px;font-weight:500">/jaar</span>
+          &minus;€${(verliesNa2027 ?? 0).toLocaleString('nl-NL')}<span style="font-size:14px;font-weight:500">/jaar</span>
         </div>
-        <div style="font-size:12px;color:#7f1d1d;opacity:0.85">${heeftPanelen ? 'Verlies per jaar zonder thuisbatterij op uw bestaande panelen' : 'Verlies per jaar als u nu géén actie onderneemt'}</div>
+        <div style="font-size:12px;color:#7f1d1d;opacity:0.85">${heeftPanelen ? 'Verschil per jaar zonder thuisbatterij t.o.v. voor 2027 handelen (op basis van uw scan)' : 'Verschil per jaar als u nu géén actie onderneemt t.o.v. voor 2027 handelen'}</div>
       </div>
       ` : ''}
 
@@ -225,16 +248,15 @@ export async function POST(request: Request) {
         <div style="font-size:10px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;font-weight:600">Uw scanresultaten</div>
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
           ${dataRijen}
-          ${heeftPanelen && bestaandePanelen ? dataRij('Bestaande panelen', `${bestaandePanelen} stuks`) : ''}
-          ${heeftPanelen && batterijInvestering > 0 ? dataRij('Batterij investering', `€${batterijInvestering.toLocaleString('nl-NL')}`) : ''}
-          ${heeftPanelen && batterijMeerBesparing > 0 ? dataRij('Extra besparing batterij', `<span style="color:#16a34a">+€${batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</span>`) : ''}
+          ${heeftPanelen && roi && batterijInvestering > 0 ? dataRij('Batterij investering', `€${batterijInvestering.toLocaleString('nl-NL')}`) : ''}
+          ${heeftPanelen && roi && batterijMeerBesparing > 0 ? dataRij('Extra besparing batterij', `<span style="color:#16a34a">+€${batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</span>`) : ''}
         </table>
       </div>
       ` : ''}
 
       <!-- CTA BUTTON -->
       <div style="text-align:center;margin-bottom:28px">
-        <a href="https://saldeerscan.nl/check?leadId=${lead.id}" style="display:inline-block;background:#f59e0b;color:#020617;font-size:14px;font-weight:700;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.2px">
+        <a href="${reportCheckUrl}" style="display:inline-block;background:#f59e0b;color:#020617;font-size:14px;font-weight:700;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.2px">
           Bekijk uw rapport op SaldeerScan.nl
         </a>
       </div>
@@ -248,7 +270,7 @@ export async function POST(request: Request) {
               <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">1</div>
             </td>
             <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#475569;line-height:1.5;vertical-align:top">
-              <strong style="color:#0f172a">Adviseur neemt contact op</strong> — een gecertificeerde energieadviseur uit uw regio neemt zo spoedig mogelijk contact met u op.
+              <strong style="color:#0f172a">Adviseur neemt contact op</strong> — een gecertificeerde energieadviseur uit uw regio neemt naar aanleiding van uw aanvraag contact met u op.
             </td>
           </tr>
           <tr>
@@ -297,5 +319,12 @@ export async function POST(request: Request) {
     }
   }
 
-  return Response.json({ leadId: lead.id, status: 'ingediend' }, { status: 201 })
+  return Response.json(
+    {
+      leadId: lead.id,
+      reportToken: reportAccessToken ?? null,
+      status: 'ingediend',
+    },
+    { status: 201 }
+  )
 }

@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import type { FunnelState } from './types'
+import { parseStoredRoi } from '@/lib/roi-result-guard'
 
 const S = StyleSheet.create({
   page: { backgroundColor: '#ffffff', fontFamily: 'Helvetica', padding: 0 },
@@ -71,27 +72,43 @@ const S = StyleSheet.create({
 })
 
 export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
-  const roi = state.roiResult
+  const roi = parseStoredRoi(state.roiResult ?? null)
   const health = state.healthScore
   const bag = state.bagData
   const net = state.netcongestie
-  const isde = roi?.isdeSchatting
+
+  if (!roi) {
+    return (
+      <Document title="SaldeerScan — Rapport" author="SaldeerScan.nl">
+        <Page size="A4" style={S.page}>
+          <View style={S.body}>
+            <Text style={S.sectionTitle}>Onvoldoende data</Text>
+            <Text style={{ fontSize: 10, color: '#64748b', marginTop: 8 }}>
+              Dit PDF-rapport kan niet worden opgebouwd omdat de ROI-berekening ontbreekt of ongeldig is. Open uw rapport opnieuw via de link in uw e-mail of start een nieuwe check op saldeerscan.nl/check
+            </Text>
+          </View>
+        </Page>
+      </Document>
+    )
+  }
+
+  const isde = roi.isdeSchatting
   const heeftPanelen = state.heeft_panelen === true
   const huidigePanelen = state.huidige_panelen_aantal
   const batterijInvestering = Math.max(
-    (roi?.scenarioMetBatterij.investeringEur ?? 0) - (roi?.scenarioNu.investeringEur ?? 0),
+    roi.scenarioMetBatterij.investeringEur - roi.scenarioNu.investeringEur,
     0
   )
   const batterijMeerBesparing = Math.max(
-    (roi?.scenarioMetBatterij.besparingJaarEur ?? 0) - (roi?.scenarioNu.besparingJaarEur ?? 0),
+    roi.scenarioMetBatterij.besparingJaarEur - roi.scenarioNu.besparingJaarEur,
     0
   )
   const besparingRapport = heeftPanelen
-    ? (roi?.scenarioMetBatterij.besparingJaarEur ?? roi?.scenarioNu.besparingJaarEur ?? 0)
-    : (roi?.scenarioNu.besparingJaarEur ?? 0)
+    ? roi.scenarioMetBatterij.besparingJaarEur
+    : roi.scenarioNu.besparingJaarEur
   const terugverdienRapport = heeftPanelen
     ? (batterijMeerBesparing > 0 ? Math.round((batterijInvestering / batterijMeerBesparing) * 10) / 10 : 99)
-    : (roi?.scenarioNu.terugverdientijdJaar ?? null)
+    : roi.scenarioNu.terugverdientijdJaar
 
   const datum = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -163,23 +180,23 @@ export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
                 <Text style={S.timelinePctRed}>0%</Text>
               </View>
             </View>
-            {roi?.shockEffect2027 && (
-              <View style={[S.tableRow, { marginTop: 8, borderBottom: 'none' }]}>
-                <Text style={S.tableLabel}>{heeftPanelen ? 'Verlies zonder thuisbatterij vanaf 2027' : 'Verwacht jaarlijks verlies vanaf 2027'}</Text>
-                <Text style={S.tableValueRed}>−€{roi.shockEffect2027.jaarlijksVerlies.toLocaleString('nl-NL')}/jaar</Text>
-              </View>
-            )}
+            <View style={[S.tableRow, { marginTop: 8, borderBottom: 'none' }]}>
+              <Text style={S.tableLabel}>{heeftPanelen ? 'Verschil zonder thuisbatterij vanaf 2027 (model)' : 'Verwacht jaarlijks verschil vanaf 2027 (model)'}</Text>
+              <Text style={S.tableValueRed}>−€{roi.shockEffect2027.jaarlijksVerlies.toLocaleString('nl-NL')}/jaar</Text>
+            </View>
           </View>
 
           <View style={S.divider} />
 
           {/* ROI details */}
-          {roi && (
-            <View style={S.section}>
+          <View style={S.section}>
               <Text style={S.sectionLabel}>ROI Analyse</Text>
               {[
                 { label: 'Geschat verbruik', value: `${roi.geschatVerbruikKwh.toLocaleString('nl-NL')} kWh/jaar` },
-                { label: heeftPanelen ? 'Bestaande panelen' : 'Aantal panelen (advies)', value: `${heeftPanelen ? (huidigePanelen ?? roi.aantalPanelen) : roi.aantalPanelen} panelen` },
+                {
+                  label: heeftPanelen ? 'Huidige panelen (stap 2)' : 'Adviesmodel (max. dak)',
+                  value: `${heeftPanelen ? (huidigePanelen ?? '—') : roi.aantalPanelen} panelen`,
+                },
                 { label: 'Geschatte productie', value: `${roi.productieKwh.toLocaleString('nl-NL')} kWh/jaar` },
                 { label: 'Eigen gebruik', value: `${roi.eigenGebruikPct}%` },
                 { label: heeftPanelen ? 'Batterij investering (schatting)' : 'Investering (schatting)', value: `€${(heeftPanelen ? batterijInvestering : roi.scenarioNu.investeringEur).toLocaleString('nl-NL')}` },
@@ -191,18 +208,19 @@ export function SaldeerRapportPDF({ state }: { state: FunnelState }) {
               ))}
               {heeftPanelen && (
                 <>
-                  <View style={S.tableRow}>
-                    <Text style={S.tableLabel}>Extra besparing door batterij</Text>
-                    <Text style={S.tableValueGreen}>+€{batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</Text>
-                  </View>
+                  {batterijMeerBesparing > 0 && (
+                    <View style={S.tableRow}>
+                      <Text style={S.tableLabel}>Extra besparing door batterij</Text>
+                      <Text style={S.tableValueGreen}>+€{batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</Text>
+                    </View>
+                  )}
                   <View style={[S.tableRow, { borderBottom: 'none' }]}>
                     <Text style={S.tableLabel}>Advies</Text>
-                    <Text style={S.tableValue}>Behoud panelen, investeer in thuisbatterij</Text>
+                    <Text style={S.tableValue}>Behoud panelen, laat thuisbatterij en slim verbruik beoordelen</Text>
                   </View>
                 </>
               )}
             </View>
-          )}
 
           {/* Netcongestie + ISDE naast elkaar */}
           <View style={[S.statsRow, { marginBottom: 0 }]}>
