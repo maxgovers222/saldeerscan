@@ -24,13 +24,22 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { provincie, stad, wijk } = await params
   const page = await getCachedWijkPage({ provincie, stad, wijk })
-  const title = page?.titel ?? `SaldeerScan ${wijk} ${stad} — 2027 check`
-  const description = page?.metaDescription ?? `Gratis 2027 saldeercheck voor woningen in ${wijk}, ${stad}. AI-scan, ROI en investeringsrapport.`
+  const wijkDisplay = toDisplay(wijk)
+
+  const score = wijkScore(page?.gemBouwjaar ?? null, page?.gemHealthScore ?? null)
+  const besparing = computeBesparing(page?.gemBouwjaar ?? null, score)
+  const verlies = Math.round(besparing * 0.40)
+
+  const title = page?.titel ?? `${wijkDisplay}: Voorkom €${verlies} verlies per 2027 — SaldeerScan`
+  const description = `Gratis 2027 saldeercheck: woningen in ${wijkDisplay} riskeren €${verlies}/jaar na 1 jan 2027. BAG-data, AI-analyse en persoonlijk investeringsrapport.`
+
   return {
     title, description,
     alternates: { canonical: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}` },
     openGraph: {
-      title, description, type: 'website', locale: 'nl_NL',
+      title: page?.titel ?? `${wijkDisplay}: Voorkom €${verlies} verlies per 2027`,
+      description,
+      type: 'website', locale: 'nl_NL',
       url: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}`,
       images: [{
         url: `https://saldeerscan.nl/api/og?titel=${encodeURIComponent(title)}&score=${page?.gemHealthScore ?? ''}&status=${page?.netcongestieStatus ?? ''}&type=wijk`,
@@ -92,6 +101,109 @@ function computeBesparing(bouwjaar: number | null, score: number): number {
   return Math.round(base * (score / 65))
 }
 
+function wijkTemplateIndex(wijk: string): 0 | 1 | 2 {
+  const sum = [...wijk].reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return (sum % 3) as 0 | 1 | 2
+}
+
+type RenovatieContent = { titel: string; tekst: string }
+
+function renovatieIntelligence(bouwjaar: number | null, wijkDisplay: string): RenovatieContent | null {
+  if (!bouwjaar) return null
+  const t = wijkTemplateIndex(wijkDisplay.toLowerCase())
+  const w = wijkDisplay
+  const yr = bouwjaar
+
+  if (yr < 1945) {
+    const items: RenovatieContent[] = [
+      {
+        titel: 'Historisch woningbezit — renovatiepotentieel',
+        tekst: `Hoewel de BAG-data uitgaat van bouwjaar ${yr}, zijn panden in ${w} in de loop der decennia vaak ingrijpend verbeterd. Nieuwe daken, muurisolatie en vervangen kozijnen zijn in deze periode gebruikelijk. Heeft u na de aankoop isolatie of dubbel glas geplaatst? Dan ligt uw werkelijke rendement in 2027 waarschijnlijk **15–20% hoger** dan de basis-analyse aangeeft.`,
+      },
+      {
+        titel: `Panden uit vóór 1945 in ${w}`,
+        tekst: `Gevels opnieuw gevoegd, daken vernieuwd, kozijnen vervangen — panden uit vóór 1945 in ${w} hebben een rijke renovatiehistorie. Waar spouwmuurisolatie of HR-glas al is geplaatst, stijgt het zonnepaneel-rendement in 2027 met **15–20%** boven de bouwjaar-analyse.`,
+      },
+      {
+        titel: 'Energetisch potentieel van historisch vastgoed',
+        tekst: `Het historisch karakter van ${w} staat los van de huidige thermische kwaliteit. Veel eigenaren hebben de afgelopen twintig jaar in isolatie en HR-glas geïnvesteerd. Heeft u dat ook gedaan? Reken dan op een rendement dat **15–20% hoger** uitvalt dan de BAG-bouwjaardata suggereert.`,
+      },
+    ]
+    return items[t]
+  }
+
+  if (yr < 1965) {
+    const items: RenovatieContent[] = [
+      {
+        titel: `Naoorlogse wederopbouw — isolatie bepaalt rendement`,
+        tekst: `De naoorlogse bouw in ${w} (bouwjaar ${yr}) is functioneel maar thermisch matig. Veel eigenaren hebben sindsdien geïnvesteerd in na-isolatie of HR++ beglazing. Is dat bij u ook het geval? Dan is uw werkelijke rendement in 2027 naar verwachting **15–20% hoger** dan de basis-analyse op grond van het bouwjaar aangeeft.`,
+      },
+      {
+        titel: `Wederopbouw-woningen in ${w}: spreiding is groot`,
+        tekst: `Woningen gebouwd ná 1945 werden snel neergezet voor een groeiende bevolking — thermische kwaliteit was bijzaak. Maar tientallen jaren verbeteringen later staat er in veel gevallen een goed geïsoleerde woning. Als dat voor uw huis geldt, verwacht dan **15–20% extra rendement** bovenop wat de bouwjaardata impliceert.`,
+      },
+      {
+        titel: 'Naoorlogse bouw en energiewinst',
+        tekst: `In naoorlogse wijken zoals ${w} is de spreiding in energiekwaliteit groot. Heeft u de afgelopen jaren isolatie aangebracht of HR-glas laten plaatsen? Dan is uw zonnepotentieel in 2027 waarschijnlijk **15–20% hoger** dan het bouwjaar ${yr} als startpunt suggereert.`,
+      },
+    ]
+    return items[t]
+  }
+
+  if (yr < 1985) {
+    const items: RenovatieContent[] = [
+      {
+        titel: 'Energiecrisis-generatie — isolatie als erfenis',
+        tekst: `De BAG-data registreert bouwjaar ${yr} voor ${w}, maar de energiecrisis van die periode heeft veel eigenaren aangezet tot isolatiemaatregelen. Heeft u na de aankoop dakisolatie, vloerisolatie of HR-glas geplaatst? Dan is uw werkelijke rendement in 2027 waarschijnlijk **15–20% hoger** dan de basis-analyse aangeeft.`,
+      },
+      {
+        titel: `Jaren '70–'80 in ${w}: thermisch wisselend`,
+        tekst: `Woningen uit de jaren '70–'80 in ${w} zijn thermisch wisselend van kwaliteit. De bouwstroom was groot maar energienormen minimaal — tóch zijn er sindsdien veel verbeteringen doorgevoerd. Als uw woning geïsoleerd is, kunt u rekenen op **15–20% hogere** zonnepanelopbrengst dan de bouwjaaranalyse suggereert.`,
+      },
+      {
+        titel: 'Renovatiegolf na de energiecrisis',
+        tekst: `Hoewel ${w} zijn hoofdbouwperiode rond ${yr} kent, heeft de renovatiegolf van de jaren '80–'90 de energetische kwaliteit van veel woningen sterk verbeterd. Heeft u zelf ook in isolatie of dubbel glas geïnvesteerd? Dan wijkt uw rendement in 2027 positief af — naar schatting **15–20% hoger**.`,
+      },
+    ]
+    return items[t]
+  }
+
+  if (yr < 2000) {
+    const items: RenovatieContent[] = [
+      {
+        titel: 'Overgangsgeneratie — energienormen in opkomst',
+        tekst: `Woningen uit de jaren '90 in ${w} werden gebouwd toen energienormen begonnen aan te trekken, maar HR-glas en dakisolatie waren nog geen standaard. Heeft u sindsdien isolatiemaatregelen genomen? Dan ligt uw actuele rendement voor 2027 waarschijnlijk **15–20% hoger** dan het bouwjaar ${yr} impliceert.`,
+      },
+      {
+        titel: `Energiepotentieel in ${w}: meer dan het bouwjaar`,
+        tekst: `De overgangsgeneratie in ${w} (rond bouwjaar ${yr}) kent woningen die energetisch sterk variëren. Goede na-isolatie kan een woning uit deze periode ver boven haar bouwjaarscore tillen. Heeft u dat gedaan? Verwacht dan **15–20% extra** op het geraamde zonne-rendement.`,
+      },
+      {
+        titel: `Bouwjaar ${yr} als startpunt, niet eindpunt`,
+        tekst: `In ${w} hebben veel eigenaren since ${yr} geïnvesteerd in CV-ketels, dakisolatie of zonneboilers. Als uw woning inmiddels energielabel B of beter heeft, is uw zonnepotentieel in 2027 naar verwachting **15–20% hoger** dan de basis-analyse.`,
+      },
+    ]
+    return items[t]
+  }
+
+  // Modern: 2000+
+  const items: RenovatieContent[] = [
+    {
+      titel: `Moderne nieuwbouw in ${w} — batterij als volgende stap`,
+      tekst: `Moderne woningen in ${w} (bouwjaar ${yr}) zijn energetisch al sterk, maar de afschaffing van saldering per 2027 maakt opslag cruciaal. Overweegt u een thuisbatterij naast uw panelen? Dan kunt u het wegvallen van de salderingsregeling grotendeels compenseren en een netto voordeel van **15–20%** op uw rendement realiseren.`,
+    },
+    {
+      titel: 'Energiezuinige basis, maximaal profiteren',
+      tekst: `Energiezuinige nieuwbouw uit ${yr} in ${w} heeft een solide basis voor zonne-energie. Uw verbruiksprofiel past vaak het best bij een combinatie van panelen én opslag. Met een thuisbatterij is uw netto-rendement ná 2027 naar verwachting **15–20% hoger** dan bij panelen zonder opslag.`,
+    },
+    {
+      titel: `${w} — optimaliseer uw zonne-installatie ná 2027`,
+      tekst: `Na ${yr} gebouwde woningen in ${w} profiteren maximaal van moderne energietechnologie. Als u al goed geïsoleerd bent, is een thuisbatterij de logische volgende stap. Uw netto-rendement na 2027 ligt dan **15–20% hoger** dan bij een installatie zonder opslag.`,
+    },
+  ]
+  return items[t]
+}
+
 function splitContent(tekst: string | null): { analyse: string[]; netwerk: string[] } {
   if (!tekst) return { analyse: [], netwerk: [] }
   const paras = tekst.split('\n\n').filter(Boolean)
@@ -134,6 +246,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   const verlies = Math.round(besparing * 0.40)
   const ranking = neighborhoodRanking(page.gemBouwjaar, score)
   const { analyse, netwerk } = splitContent(page.hoofdtekst)
+  const renovatieContent = renovatieIntelligence(page.gemBouwjaar, wijkDisplay)
 
   const netConfig = {
     ROOD:   { label: 'Vol stroomnet',  dot: '#ef4444', cls: 'bg-red-950/50 border-red-700 text-red-400' },
@@ -381,6 +494,35 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                     {netwerk.map((para, i) => (
                       <p key={i} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{renderBold(para)}</p>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Renovatie-Intelligence ──────────────────────── */}
+              {renovatieContent && (
+                <div className="rounded-2xl p-6 sm:p-7 border"
+                  style={{ background: 'rgba(28,18,8,0.55)', borderColor: 'rgba(245,158,11,0.25)' }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M9 1.5L4 9h5L6 14.5l7-8.5H8z" stroke="#f59e0b" strokeWidth="1.4" strokeLinejoin="round"/>
+                    </svg>
+                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: AMBER, fontFamily: 'var(--font-heading)' }}>
+                      Renovatie-Inzicht
+                    </p>
+                  </div>
+                  <h3 className="font-extrabold text-base mb-4 text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.01em' }}>
+                    {renovatieContent.titel}
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {renderBold(renovatieContent.tekst)}
+                  </p>
+                  <div className="mt-4 pt-4 border-t flex items-start gap-2" style={{ borderColor: 'rgba(245,158,11,0.15)' }}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0 mt-0.5">
+                      <path d="M8 1l1.5 4.5H14l-3.7 2.7 1.4 4.3L8 10l-3.7 2.5 1.4-4.3L2 5.5h4.5z" fill="rgba(245,158,11,0.4)" stroke="#f59e0b" strokeWidth="0.8"/>
+                    </svg>
+                    <p className="text-xs" style={{ color: 'rgba(245,158,11,0.7)' }}>
+                      Wilt u weten wat uw specifieke woning doet? Start de gratis analyse — inclusief renovatie-correctie op basis van uw feitelijke situatie.
+                    </p>
                   </div>
                 </div>
               )}
