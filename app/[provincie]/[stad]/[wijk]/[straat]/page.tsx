@@ -1,8 +1,10 @@
 import { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getPseoPage, getTopPseoPages, getStratenByWijk } from '@/lib/pseo'
+import { getPseoPage, getTopPseoPages, getStratenByWijk, getWijkPage } from '@/lib/pseo'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
+import { RenovatieInsightCard } from '@/components/pseo/RenovatieInsightCard'
+import { renovatieIntelligence, straatVsWijkDelta } from '@/lib/pseo-variation'
 
 // Deduplicate Supabase fetches: generateMetadata + page component share one request
 const getCachedPseoPage = cache(getPseoPage)
@@ -20,7 +22,7 @@ type Params = { provincie: string; stad: string; wijk: string; straat: string }
 
 export async function generateStaticParams() {
   try {
-    const pages = await getTopPseoPages(500)
+    const pages = await getTopPseoPages(1000)
     return pages.map(p => ({
       provincie: p.provincie,
       stad: p.stad,
@@ -62,6 +64,27 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
   const p = await params
   const page = await getCachedPseoPage(p)
   if (!page) notFound()
+
+  const wijkPage = await getWijkPage({ provincie: p.provincie, stad: p.stad, wijk: p.wijk })
+  const straatDelta = wijkPage
+    ? straatVsWijkDelta(
+        {
+          gemBouwjaar: page.gemBouwjaar,
+          gemHealthScore: page.gemHealthScore,
+          netcongestieStatus: page.netcongestieStatus,
+        },
+        {
+          gemBouwjaar: wijkPage.gemBouwjaar,
+          gemHealthScore: wijkPage.gemHealthScore,
+          netcongestieStatus: wijkPage.netcongestieStatus,
+        },
+      )
+    : null
+
+  const straatRenovatie = renovatieIntelligence(
+    page.gemBouwjaar,
+    `${toDisplay(p.straat)} — ${toDisplay(p.wijk)}`,
+  )
 
   const andereStraten = await getStratenByWijk(p.provincie, p.stad, p.wijk, p.straat, 6)
 
@@ -128,7 +151,14 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
           <span>/</span>
           <a href={`/${p.provincie}/${p.stad}`} className="hover:text-amber-400 transition-colors capitalize">{p.stad.replace(/-/g, ' ')}</a>
           <span>/</span>
-          <a href={`/${p.provincie}/${p.stad}/${p.wijk}`} className="hover:text-amber-400 transition-colors capitalize">{p.wijk.replace(/-/g, ' ')}</a>
+          <a
+            href={`/${p.provincie}/${p.stad}/${p.wijk}`}
+            data-analytics-event="pseo_second_click"
+            data-analytics-label={`straat-breadcrumb-wijk:${p.wijk}`}
+            className="hover:text-amber-400 transition-colors capitalize font-semibold text-amber-500/90"
+          >
+            {p.wijk.replace(/-/g, ' ')}
+          </a>
           <span>/</span>
           <span className="text-slate-400 capitalize">{p.straat.replace(/-/g, ' ')}</span>
         </nav>
@@ -167,11 +197,42 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
         {/* CTA */}
         <a
           href={`/check?adres=${encodeURIComponent(`${p.straat} ${p.stad}`)}`}
+          data-analytics-event="pseo_check_cta"
+          data-analytics-label={`straat:${p.wijk}:${p.straat}`}
           className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-6 py-3 rounded-lg transition-colors"
         >
           Check uw woning gratis →
         </a>
       </section>
+
+      {straatDelta && (
+        <section className="px-4 pb-8 max-w-4xl mx-auto">
+          <div className="rounded-2xl border border-amber-500/25 bg-amber-950/20 p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-2">Straat vs wijk</p>
+            <p className="text-sm text-slate-300 leading-relaxed mb-4">{straatDelta.samenvatting}</p>
+            <p className="text-xs font-mono text-slate-500">
+              Score {straatDelta.streetScore}/100 op straatniveau · wijkgemiddelde {straatDelta.parentWijkScore}/100
+              {straatDelta.deltaBouwjaar != null && (
+                <span> · bouwjaarverschil {straatDelta.deltaBouwjaar > 0 ? '+' : ''}{straatDelta.deltaBouwjaar} jaar t.o.v. wijk</span>
+              )}
+            </p>
+            <a
+              href={`/${p.provincie}/${p.stad}/${p.wijk}`}
+              data-analytics-event="pseo_second_click"
+              data-analytics-label={`straat-uplink:${p.wijk}`}
+              className="mt-4 inline-flex text-sm font-semibold text-amber-300 hover:text-amber-200"
+            >
+              Bekijk volledige wijkanalyse →
+            </a>
+          </div>
+        </section>
+      )}
+
+      {straatRenovatie && (
+        <section className="px-4 pb-10 max-w-4xl mx-auto">
+          <RenovatieInsightCard titel={straatRenovatie.titel} tekst={straatRenovatie.tekst} />
+        </section>
+      )}
 
       {/* Main content */}
       {page.hoofdtekst && (
@@ -210,6 +271,8 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
                 <a
                   key={s.straat}
                   href={`/${s.provincie}/${s.stad}/${s.wijk}/${s.straat}`}
+                  data-analytics-event="pseo_second_click"
+                  data-analytics-label={`straat-peer:${s.straat}`}
                   className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-4 transition-all hover:bg-slate-900/60 group"
                 >
                   <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors capitalize" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -223,6 +286,8 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
             </div>
             <a
               href={`/${p.provincie}/${p.stad}/${p.wijk}`}
+              data-analytics-event="pseo_second_click"
+              data-analytics-label={`straat-uplink-footer:${p.wijk}`}
               className="inline-flex items-center gap-2 mt-4 text-sm text-slate-400 hover:text-amber-300 transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

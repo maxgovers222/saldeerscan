@@ -1,3 +1,111 @@
+import type { HubBreadcrumbItem } from '@/lib/pseo-hubs'
+import {
+  buildBreadcrumbListLd as buildHubBreadcrumbListLd,
+  buildHubCollectionLd as buildHubCollectionLdCore,
+  absoluteUrl,
+} from '@/lib/pseo-hubs'
+
+/** Province / city hub CollectionPage + ItemList JSON-LD (delegates to hub schema helpers). */
+export function buildHubCollectionLd(params: Parameters<typeof buildHubCollectionLdCore>[0]): ReturnType<
+  typeof buildHubCollectionLdCore
+> {
+  return buildHubCollectionLdCore(params)
+}
+
+/** BreadcrumbList JSON-LD with absolute URLs (delegates to hub schema helpers). */
+export function buildBreadcrumbListLd(items: HubBreadcrumbItem[]): Record<string, unknown> {
+  return buildHubBreadcrumbListLd(items)
+}
+
+export function buildWijkWebPageGraph(params: {
+  url: string
+  name: string
+  description: string
+  breadcrumbItems?: HubBreadcrumbItem[]
+}): Record<string, unknown> {
+  const pageUrl = absoluteUrl(params.url)
+  const graph: unknown[] = [
+    {
+      '@type': 'WebPage',
+      '@id': pageUrl,
+      name: params.name,
+      description: params.description,
+      url: pageUrl,
+      inLanguage: 'nl-NL',
+    },
+  ]
+  if (params.breadcrumbItems?.length) {
+    graph.push({
+      '@type': 'BreadcrumbList',
+      itemListElement: params.breadcrumbItems.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.name,
+        item: absoluteUrl(item.href),
+      })),
+    })
+  }
+  return { '@context': 'https://schema.org', '@graph': graph }
+}
+
+/** Postcode-hub: CollectionPage + ItemList met alle gekoppelde wijk-URL's (geen FAQ). */
+export function buildPostcodeHubGraphLd(params: {
+  postcode: string
+  wijken: Array<{ wijk: string; stad: string; provincie: string }>
+}): Record<string, unknown> {
+  const path = `/postcode/${params.postcode}`
+  const pageUrl = absoluteUrl(path)
+  const itemListElement = params.wijken.map((w, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: `${w.wijk.replace(/-/g, ' ')} (${w.stad.replace(/-/g, ' ')})`,
+    url: absoluteUrl(`/${w.provincie}/${w.stad}/${w.wijk}`),
+  }))
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': pageUrl,
+        name: `Zonnepanelen postcode ${params.postcode}`,
+        description: `Wijkanalyses en netcongestie voor postcodegebied ${params.postcode}.`,
+        url: pageUrl,
+        inLanguage: 'nl-NL',
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: itemListElement.length,
+          itemListElement,
+        },
+      },
+    ],
+  }
+}
+
+export function buildWebApplicationSchema(): Record<string, unknown> {
+  const baseUrl = 'https://saldeerscan.nl'
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'SaldeerScan — 2027 Saldeercheck',
+    url: `${baseUrl}/check`,
+    applicationCategory: 'UtilityApplication',
+    browserRequirements: 'Requires JavaScript.',
+    operatingSystem: 'Any',
+    description:
+      'Gratis AI-gestuurde salderings- en ROI-check voor Nederlandse woningen vóór 1 januari 2027.',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'EUR',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'SaldeerScan',
+      url: baseUrl,
+    },
+  }
+}
+
 export function buildArticleSchema(params: {
   slug: string
   titel: string

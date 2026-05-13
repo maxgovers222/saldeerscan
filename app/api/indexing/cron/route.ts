@@ -1,25 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { buildPrioritizedIndexingUrls } from '@/lib/indexing-priority'
 
 const BATCH_SIZE = 200
-const BASE_URL = 'https://saldeerscan.nl'
-
-// Vaste extra URLs (kennisbank, nieuws, provincies) die altijd meegenomen worden
-const STATIC_URLS = [
-  `${BASE_URL}/kennisbank`,
-  `${BASE_URL}/nieuws`,
-  `${BASE_URL}/noord-holland`,
-  `${BASE_URL}/zuid-holland`,
-  `${BASE_URL}/utrecht`,
-  `${BASE_URL}/noord-brabant`,
-  `${BASE_URL}/gelderland`,
-  `${BASE_URL}/overijssel`,
-  `${BASE_URL}/friesland`,
-  `${BASE_URL}/groningen`,
-  `${BASE_URL}/drenthe`,
-  `${BASE_URL}/flevoland`,
-  `${BASE_URL}/zeeland`,
-  `${BASE_URL}/limburg`,
-]
 
 export async function GET(request: Request) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -29,10 +11,9 @@ export async function GET(request: Request) {
   const saJson = process.env.GOOGLE_INDEXING_SA_KEY
   if (!saJson) return Response.json({ error: 'GOOGLE_INDEXING_SA_KEY ontbreekt' }, { status: 500 })
 
-  // Haal alle gepubliceerde slugs op
   const { data: pages, error } = await supabaseAdmin
     .from('pseo_pages')
-    .select('slug')
+    .select('slug, straat, aantal_woningen, netcongestie_status, gem_bouwjaar, gem_health_score, generated_at')
     .eq('status', 'published')
     .order('aantal_woningen', { ascending: false, nullsFirst: false })
 
@@ -40,36 +21,31 @@ export async function GET(request: Request) {
     return Response.json({ error: 'DB query mislukt', detail: error?.message }, { status: 500 })
   }
 
-  const allSlugs = pages.map(p => `${BASE_URL}${p.slug}`)
-
-  // Gebruik dag van het jaar om te bepalen welke batch vandaag aan de beurt is
-  // Zo roteert het automatisch door alle URLs zonder dat er state bijgehouden hoeft te worden
   const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
   )
-  const effectiveBatch = BATCH_SIZE - STATIC_URLS.length // ~186 wijk/straat URLs per dag
-  const offset = (dayOfYear * effectiveBatch) % Math.max(allSlugs.length, 1)
-  const batchSlugs = allSlugs.slice(offset, offset + effectiveBatch)
+  const { urls: urlsToPin, offset, dynamicCount } = buildPrioritizedIndexingUrls(pages, {
+    batchSize: BATCH_SIZE,
+    dayOfYear,
+  })
 
-  // Combineer met statische URLs
-  const urlsToPin = [...STATIC_URLS, ...batchSlugs]
-
-  // Ping via Google Indexing API
   const sa = JSON.parse(saJson) as { client_email: string; private_key: string; token_uri: string }
   const token = await getAccessToken(sa)
 
-  let ok = 0, fail = 0
+  let ok = 0
+  let fail = 0
   for (const url of urlsToPin) {
     const success = await pingUrl(url, token)
-    if (success) ok++; else fail++
+    if (success) ok++
+    else fail++
     await new Promise(r => setTimeout(r, 100))
   }
 
   return Response.json({
     ok,
     fail,
-    batch: { offset, size: batchSlugs.length },
-    total: allSlugs.length,
+    batch: { offset, size: dynamicCount },
+    total: pages.length,
     day: dayOfYear,
   })
 }
@@ -102,5 +78,7 @@ async function pingUrl(url: string, token: string): Promise<boolean> {
       body: JSON.stringify({ url, type: 'URL_UPDATED' }),
     })
     return res.ok
-  } catch { return false }
+  } catch {
+    return false
+  }
 }

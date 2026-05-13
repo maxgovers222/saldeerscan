@@ -1,13 +1,14 @@
 /**
- * SaldeerScan.nl — Google Indexing API batch pinger voor wijk-URLs
+ * SaldeerScan.nl — Google Indexing API batch pinger voor pSEO-URL's
  *
- * Haalt alle gepubliceerde wijk-slugs op uit Supabase en pingt
- * de Google Indexing API voor elke URL.
+ * Haalt alle gepubliceerde wijk- én straat-slugs op uit Supabase en pingt
+ * de Google Indexing API. Volgorde: vaste hubs → INDEXING_PRIORITY_PATHS →
+ * wijken (urgentie) → straten (volume), zie lib/indexing-priority.ts.
  *
  * Gebruik:
- *   npx tsx scripts/ping-wijk-indexing.ts               # Alle gepubliceerde wijken
+ *   npx tsx scripts/ping-wijk-indexing.ts               # Dagelijkse batch (hubs + quota)
  *   npx tsx scripts/ping-wijk-indexing.ts --dry-run     # Log URLs, ping niet
- *   npx tsx scripts/ping-wijk-indexing.ts --batch=0,50  # Subset (index range)
+ *   npx tsx scripts/ping-wijk-indexing.ts --batch=0,50  # Subset op gesorteerde lijst (index range)
  *
  * Let op: Google Indexing API limiet is ~200 URL's per dag.
  */
@@ -21,6 +22,7 @@ const __dir = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dir, '..', '.env.local') })
 
 import { createClient } from '@supabase/supabase-js'
+import { buildPrioritizedIndexingUrls, orderedIndexingUrls } from '../lib/indexing-priority'
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -129,7 +131,6 @@ async function delay(ms: number): Promise<void> {
 async function main(): Promise<void> {
   if (dryRun) console.log('[DRY-RUN] Modus actief — geen echte API calls')
 
-  // Valideer SA-key vroeg (vóór DB-queries) zodat we snel falen bij ontbrekende config
   let token = ''
   if (!dryRun) {
     const saJson = process.env.GOOGLE_INDEXING_SA_KEY
@@ -147,13 +148,11 @@ async function main(): Promise<void> {
     token = await getAccessToken(sa)
   }
 
-  // Haal alle gepubliceerde wijk-slugs op (straat IS NULL + wijk IS NOT NULL = wijk-level)
   const { data, error } = await supabase
     .from('pseo_pages')
-    .select('slug')
+    .select('slug, straat, aantal_woningen, netcongestie_status, gem_bouwjaar, gem_health_score, generated_at')
     .eq('status', 'published')
-    .is('straat', null)
-    .not('wijk', 'is', null)
+    .order('aantal_woningen', { ascending: false, nullsFirst: false })
 
   if (error) {
     console.error('Supabase fout:', error.message)
@@ -161,26 +160,32 @@ async function main(): Promise<void> {
   }
 
   if (!data || data.length === 0) {
-    console.log('Geen gepubliceerde wijk-paginas gevonden.')
+    console.log('Geen gepubliceerde pSEO-paginas gevonden.')
     return
   }
 
-  // Bouw URL-lijst
-  let slugs: string[] = data.map((row: { slug: string }) => row.slug)
+  let urlsToPing: string[]
 
-  // Pas batch toe indien opgegeven
   if (batchStart !== null && batchEnd !== null) {
-    slugs = slugs.slice(batchStart, batchEnd)
-    console.log(`Batch ${batchStart}–${batchEnd - 1}: ${slugs.length} URLs`)
+    const ordered = orderedIndexingUrls(data)
+    urlsToPing = ordered.slice(batchStart, batchEnd)
+    console.log(`Batch ${batchStart}–${batchEnd - 1}: ${urlsToPing.length} URLs (gesorteerde volgorde)`)
   } else {
-    console.log(`Totaal: ${slugs.length} gepubliceerde wijk-URLs`)
+    const dayOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+    )
+    urlsToPing = buildPrioritizedIndexingUrls(data, { batchSize: 200, dayOfYear }).urls
+    console.log(`Totaal in deze run: ${urlsToPing.length} URLs (hubs + prioriteit + window)`)
   }
 
   let successCount = 0
-  const total = slugs.length
+  const total = urlsToPing.length
 
-  for (const slug of slugs) {
-    const url = `${BASE_URL}${slug}`
+  for (const url of urlsToPing) {
+    if (!url.startsWith(BASE_URL)) {
+      console.warn(`Sla over (verwacht ${BASE_URL}-prefix): ${url}`)
+      continue
+    }
 
     if (dryRun) {
       console.log(`[DRY-RUN] ✓ gepinged: ${url}`)

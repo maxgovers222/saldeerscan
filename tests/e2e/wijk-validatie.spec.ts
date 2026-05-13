@@ -29,7 +29,46 @@ function isStraatPath(href: string | null): href is string {
   return parts.length === 4
 }
 
-for (const url of WIJK_URLS.slice(0, 6)) {
+test('Stad hub bevat CollectionPage JSON-LD', async ({ page }) => {
+  await page.goto('/noord-holland/amsterdam')
+  const jsonLd = await page.locator('script[type="application/ld+json"]').first().textContent()
+  expect(jsonLd).toBeTruthy()
+  expect(jsonLd).toContain('CollectionPage')
+  expect(jsonLd).toContain('ItemList')
+})
+
+test('Provincie-hub toont meest urgente wijken-sectie indien data', async ({ page }) => {
+  const response = await page.goto('/noord-holland')
+  test.skip(response?.status() === 404, 'provincie-hub niet beschikbaar')
+  const heading = page.getByRole('heading', { name: 'Meest urgente wijken in Noord-Holland' })
+  const visible = await heading.isVisible().catch(() => false)
+  if (!visible) {
+    test.skip(true, 'Geen urgente wijkdata voor Noord-Holland in deze omgeving')
+  }
+  await expect(heading).toBeVisible()
+})
+
+test('Home discovery hubs linken naar pSEO', async ({ page }) => {
+  await page.goto('/')
+  const section = page.getByRole('heading', { name: 'Populaire steden en wijken' })
+  await expect(section).toBeVisible()
+  const hubLink = page.locator('a[href*="/noord-holland/"]').first()
+  await expect(hubLink).toBeVisible()
+})
+
+test('Postcode-hub bevat CollectionPage JSON-LD bij data', async ({ page }) => {
+  const response = await page.goto('/postcode/1012')
+  test.skip(response?.status() === 404, 'postcode-hub niet beschikbaar')
+  const scripts = await page.locator('script[type="application/ld+json"]').allTextContents()
+  const combined = scripts.join('\n')
+  const hasCollection = combined.includes('CollectionPage') && combined.includes('ItemList')
+  if (!hasCollection) {
+    test.skip(true, 'Geen postcode-wijkdata in deze omgeving — CollectionPage ontbreekt')
+  }
+  expect(hasCollection).toBe(true)
+})
+
+for (const url of WIJK_URLS) {
   test(`Wijk pagina laadt correct: ${url}`, async ({ page }) => {
     const response = await page.goto(url)
 

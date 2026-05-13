@@ -1,6 +1,7 @@
 import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { rankUrgentWijken, type WijkStadRow, type WijkStadRowWithStad } from '@/lib/pseo-variation'
 
 const PSEO_FETCH_REVALIDATE = 604800
 
@@ -313,22 +314,94 @@ export const getTopStratenByWijk = unstable_cache(
 
 export const getWijkenByPostcode = unstable_cache(
   async (postcodePrefix: string): Promise<Array<{
-    wijk: string; stad: string; provincie: string; netcongestie_status: string | null
+    wijk: string
+    stad: string
+    provincie: string
+    netcongestie_status: string | null
+    gem_health_score: number | null
+    gem_bouwjaar: number | null
+    aantal_woningen: number | null
   }>> => {
     const { data } = await supabaseAdmin
       .from('pseo_pages')
-      .select('wijk, stad, provincie, netcongestie_status')
+      .select('wijk, stad, provincie, netcongestie_status, gem_health_score, gem_bouwjaar, aantal_woningen')
       .is('straat', null)
       .not('wijk', 'is', null)
       .eq('status', 'published')
       .ilike('postcode_prefix', `${postcodePrefix}%`)
       .order('aantal_woningen', { ascending: false })
-      .limit(20)
-    return (data ?? []).filter((r): r is { wijk: string; stad: string; provincie: string; netcongestie_status: string | null } => r.wijk !== null)
+      .limit(24)
+    return (data ?? []).filter((r): r is {
+      wijk: string
+      stad: string
+      provincie: string
+      netcongestie_status: string | null
+      gem_health_score: number | null
+      gem_bouwjaar: number | null
+      aantal_woningen: number | null
+    } => r.wijk !== null)
   },
   ['pseo', 'wijkenByPostcode'],
   { revalidate: PSEO_FETCH_REVALIDATE }
 )
+
+export function getUrgentWijkenByProvincie(provincie: string, limit = 12) {
+  return unstable_cache(
+    async () => {
+      const prefix = `/${provincie}/`
+      const { data } = await supabaseAdmin
+        .from('pseo_pages')
+        .select('slug, gem_bouwjaar, gem_health_score, netcongestie_status, aantal_woningen')
+        .like('slug', `${prefix}%`)
+        .is('straat', null)
+        .not('wijk', 'is', null)
+        .eq('status', 'published')
+
+      const rows: WijkStadRowWithStad[] = (data ?? [])
+        .map((row) => {
+          const parts = row.slug.split('/').filter(Boolean)
+          if (parts.length !== 3 || parts[0] !== provincie) return null
+          return {
+            stad: parts[1] as string,
+            wijk: parts[2] as string,
+            gem_bouwjaar: row.gem_bouwjaar,
+            gem_health_score: row.gem_health_score,
+            netcongestie_status: row.netcongestie_status,
+            aantal_woningen: row.aantal_woningen,
+          } satisfies WijkStadRowWithStad
+        })
+        .filter((r): r is WijkStadRowWithStad => r !== null)
+
+      return rankUrgentWijken(rows, limit)
+    },
+    ['pseo', 'urgentWijkenProvincie', provincie, String(limit)],
+    { revalidate: PSEO_FETCH_REVALIDATE }
+  )()
+}
+
+export function getProvincieHubStats(provincie: string) {
+  return unstable_cache(
+    async () => {
+      const [stads, { data }] = await Promise.all([
+        getStaddenByProvincie(provincie),
+        supabaseAdmin
+          .from('pseo_pages')
+          .select('slug')
+          .like('slug', `/${provincie}/%`)
+          .is('straat', null)
+          .not('wijk', 'is', null)
+          .eq('status', 'published'),
+      ])
+      const wijkCount = (data ?? []).filter((row) => {
+        const parts = row.slug.split('/').filter(Boolean)
+        return parts.length === 3 && parts[0] === provincie
+      }).length
+      return { stadCount: stads.length, wijkCount }
+    },
+    ['pseo', 'provincieHubStats', provincie],
+    { revalidate: PSEO_FETCH_REVALIDATE }
+  )()
+}
 
 export const getTopStadden = unstable_cache(
   async (limit = 100) => {

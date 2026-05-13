@@ -46,7 +46,7 @@ app/
   page.tsx                          # Homepage: deep navy hero + CountdownTimer + adreszoek + USPs + stats
   layout.tsx                        # Fonts: Bricolage Grotesque (headings) + DM Sans (body)
   globals.css                       # Tailwind v4 + design tokens + .glass-card-navy + @media print
-  sitemap.ts                        # Gesplitste sitemaps per provincie (+ provincie/stad URLs)
+  sitemap.ts                        # Gesplitste sitemaps: core + provincies + kennisbank + nieuws + postcodes.xml
   privacy/page.tsx                  # AVG-compliant privacyverklaring (9 secties, volledig ingevuld)
   icon.tsx                          # Dynamische favicon 32x32 (edge runtime, navy cirkel + amber hexagon)
   apple-icon.tsx                    # Apple touch icon 180x180 (zelfde stijl)
@@ -101,8 +101,9 @@ lib/
   vision.ts                         # Two-tier: Gemini screen → Claude diepanalyse + withRetry
   webhooks.ts                       # HMAC-SHA256 signed B2B dispatcher (consent-gated)
   rate-limit.ts                     # Upstash Redis sliding window, namespace per route; in-memory fallback lokaal
-  pseo.ts                           # pSEO helpers: slug-lookup (getWijkPage/getPseoPage); lijsten/sitemaps aggregeren op `slug` (prefix / segmenten), niet op titelcase `provincie`-kolom
-  json-ld.ts                        # JSON-LD builder
+  pseo.ts                           # pSEO helpers: slug-lookup (getWijkPage/getPseoPage); lijsten/sitemaps aggregeren op `slug` (prefix / segmenten), niet op titelcase `provincie`-kolom; o.a. `getUrgentWijkenByProvincie`, `getProvincieHubStats`
+  indexing-priority.ts              # Indexing-API volgorde: hubs → INDEXING_PRIORITY_PATHS → wijken (urgentie) → straten (cron + ping-wijk-indexing)
+  json-ld.ts                        # JSON-LD builder (+ o.a. `buildPostcodeHubGraphLd`, `buildWebApplicationSchema`)
   nieuws.ts                         # Nieuws data adapter
   kennisbank.ts                     # Kennisbank data adapter
   google-indexing.ts                # Google Indexing API helper
@@ -290,6 +291,10 @@ UPSTASH_REDIS_REST_TOKEN=   # Upstash Redis token
 NEXT_PUBLIC_SENTRY_DSN=     # Sentry error tracking
 LEAD_REPORT_HMAC_SECRET=    # Optioneel: eigen geheim voor ?token= op rapportlinks (anders fallback service role)
 LEAD_REPORT_LEGACY_OPEN_READ=true  # Alleen rollback: GET /api/leads/[id] zonder token toestaan
+GOOGLE_INDEXING_SA_KEY=       # JSON service account (Indexing API) — cron + ping-wijk-indexing.ts
+CRON_SECRET=                  # Bearer token voor GET /api/indexing/cron (Vercel Cron)
+INDEXING_PRIORITY_PATHS=     # Optioneel: komma-gescheiden paden eerst in dynamische batch (GSC-prioriteit), bv. /utrecht/utrecht/leidsche-rijn
+INDEXING_EXTRA_INDEXING_URLS= # Optioneel: extra volledige URL's (komma) bij hub-ping elke run
 ```
 
 ## NPM scripts
@@ -321,7 +326,9 @@ Contact-/opvolgteksten gebruiken nu **neutrale** bewoording (“naar aanleiding 
 
 Limiet 200 URLs/dag. Voortgang (apr 2026): batch 0–600 gedaan → volgende: `--batch=600,800`
 
-GSC-prioriteit URLs (morgen pingen — dagquota was op):
+**Prioriteit:** vaste hubs (incl. twee postcode-URL's) → optioneel `INDEXING_PRIORITY_PATHS` → wijken (ROOD / verlies / volume) → straten. Dagelijkse cron roteert een venster over die gesorteerde lijst (`lib/indexing-priority.ts`).
+
+GSC-prioriteit URLs — zet in Vercel `INDEXING_PRIORITY_PATHS` (komma-gescheiden paden) of ping handmatig:
 ```
 npx tsx scripts/ping-wijk-indexing.ts --batch=600,800
 ```
@@ -355,9 +362,11 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 - Favicon zichtbaar in browsertabblad én als `<link rel="icon">` in page source (niet Vercel logo); Google crawl-update via GSC "Request Indexing" op homepage om favicon in zoekresultaten te versnellen
 - Homepage urgentie strip is amber (niet rood)
 - pSEO straat-route laadt met JSON-LD in `<head>`
-- pSEO wijk-route (`/utrecht/utrecht/leidsche-rijn`) laadt na seed, breadcrumb aanwezig
-- Provincie pagina (`/noord-holland`) → grid van alle steden
-- Stad pagina (`/noord-holland/amsterdam`) → grid van alle wijken
+- pSEO wijk-route (`/utrecht/utrecht/leidsche-rijn`) laadt na seed, breadcrumb aanwezig, `Place` schema in `<head>`
+- pSEO wijk-route: "Data Ribbon" toont Grid Status / Gem. Bouwjaar / Energy Score via `LocalStatsRibbon`
+- Provincie pagina (`/noord-holland`) → grid van alle steden + sectie urgente wijken; klik op stad → `pseo_second_click` GA4 event
+- Stad pagina (`/noord-holland/amsterdam`) → grid van alle wijken; CTA heeft geen `[CONVERSIE]` placeholder
+- Postcode pagina (`/postcode/1012`) → sticky nav met logo + "Gratis check" knop + `CollectionPage` JSON-LD bij aanwezige data
 - GDPR checkbox niet aangevinkt → submit geblokkeerd
 - 6e identiek request zelfde IP op zelfde route → 429 met `Retry-After: 3600`
 - Lead zonder `gdpr_consent` → webhook nooit verstuurd
@@ -367,3 +376,4 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 - `/postcode/1234` → postcode-pagina laadt met wijken in omgeving
 - Rapportlink: `GET /api/leads/{uuid}?token=…` met geldige token → JSON; zonder token (zonder legacy-env) → 401; te veel requests zelfde IP → 429 op report-read namespace
 - Na geslaagde lead-submit: browser-URL wordt `/check?leadId=…&token=…` (bookmark/herlaad); POST JSON bevat `reportToken`
+- Root layout: `<head>` bevat WebSite JSON-LD met `SearchAction` (target: `/check?adres={search_term_string}`) + Organization schema

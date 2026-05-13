@@ -42,14 +42,39 @@ export const metadata: Metadata = {
 
 const organizationSchema = {
   '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'SaldeerScan.nl',
-  url: 'https://saldeerscan.nl',
-  logo: 'https://saldeerscan.nl/logo.png',
-  description: 'Gratis AI-scan voor de 2027 salderingsafschaffing — ROI berekening en investeringsrapport voor Nederlandse woningeigenaren.',
-  areaServed: 'NL',
-  serviceType: 'Energie-advies',
-  contactPoint: { '@type': 'ContactPoint', email: 'info@saldeerscan.nl', contactType: 'customer support', availableLanguage: 'Dutch' },
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://saldeerscan.nl/#organization',
+      name: 'SaldeerScan.nl',
+      url: 'https://saldeerscan.nl',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://saldeerscan.nl/icon.png',
+        width: 32,
+        height: 32,
+      },
+      description: 'Gratis AI-scan voor de 2027 salderingsafschaffing — ROI berekening en investeringsrapport voor Nederlandse woningeigenaren.',
+      areaServed: 'NL',
+      contactPoint: { '@type': 'ContactPoint', email: 'info@saldeerscan.nl', contactType: 'customer support', availableLanguage: 'Dutch' },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://saldeerscan.nl/#website',
+      url: 'https://saldeerscan.nl',
+      name: 'SaldeerScan.nl',
+      inLanguage: 'nl-NL',
+      publisher: { '@id': 'https://saldeerscan.nl/#organization' },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: 'https://saldeerscan.nl/check?adres={search_term_string}',
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+  ],
 }
 
 export default function RootLayout({

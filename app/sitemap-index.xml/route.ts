@@ -1,8 +1,6 @@
 export const dynamic = 'force-static'
 
-// Indices match the order in generateSitemaps() in app/sitemap.ts:
-// 0-11: provincies (noord-holland … limburg), 12: kennisbank, 13: nieuws
-const SITEMAP_COUNT = 14
+const SITEMAP_COUNT = 16
 
 export async function GET() {
   const entries = Array.from({ length: SITEMAP_COUNT }, (_, i) =>

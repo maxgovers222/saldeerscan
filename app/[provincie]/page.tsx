@@ -1,56 +1,37 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getStaddenByProvincie } from '@/lib/pseo'
+import { getStaddenByProvincie, getProvincieHubStats, getUrgentWijkenByProvincie } from '@/lib/pseo'
+import {
+  buildBreadcrumbListLd,
+  buildHubCollectionLd,
+  hubBreadcrumbItems,
+  toDisplaySlug,
+} from '@/lib/pseo-hubs'
+import { ALL_PROVINCIE_SLUGS, buildHubMetadata, provincieDisplaySlug } from '@/lib/pseo-metadata'
 
 export const revalidate = 604800
 
 type Params = { provincie: string }
 
-const PROVINCIE_LABELS: Record<string, string> = {
-  'utrecht':        'Utrecht',
-  'noord-holland':  'Noord-Holland',
-  'zuid-holland':   'Zuid-Holland',
-  'noord-brabant':  'Noord-Brabant',
-  'gelderland':     'Gelderland',
-  'overijssel':     'Overijssel',
-  'flevoland':      'Flevoland',
-  'groningen':      'Groningen',
-  'friesland':      'Friesland',
-  'drenthe':        'Drenthe',
-  'limburg':        'Limburg',
-  'zeeland':        'Zeeland',
-}
-
-const ALL_PROVINCIES = Object.keys(PROVINCIE_LABELS)
-
-function toDisplay(slug: string) {
-  return PROVINCIE_LABELS[slug] ?? slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
-function toDisplayStad(slug: string) {
-  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
 export async function generateStaticParams() {
-  return ALL_PROVINCIES.map(p => ({ provincie: p }))
+  return ALL_PROVINCIE_SLUGS.map(provincie => ({ provincie }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { provincie } = await params
-  const label = toDisplay(provincie)
-  const title = `Zonnepanelen ${label} — 2027 Saldeercheck per stad`
-  const description = `Overzicht per stad en wijk in ${label}. Gratis AI-scan, netcongestie check en ROI-berekening voor uw woning vóór 2027.`
-  return {
-    title,
-    description,
-    alternates: { canonical: `https://saldeerscan.nl/${provincie}` },
-    openGraph: { title, description, type: 'website', locale: 'nl_NL', url: `https://saldeerscan.nl/${provincie}` },
-  }
+  const provincieSummary = await getProvincieHubStats(provincie)
+  return buildHubMetadata({ kind: 'provincie', provincie, provincieSummary })
 }
 
 const N1 = '#020617'
 const AMBER = '#f59e0b'
 const G = '#00aa65'
+
+const NET_CONFIG = {
+  ROOD:   { label: 'Vol',   dot: '#ef4444', cls: 'bg-red-950/50 border-red-700/60 text-red-400' },
+  ORANJE: { label: 'Druk',  dot: '#f59e0b', cls: 'bg-amber-950/50 border-amber-700/60 text-amber-400' },
+  GROEN:  { label: 'Vrij',  dot: '#10b981', cls: 'bg-emerald-950/50 border-emerald-700/60 text-emerald-400' },
+}
 
 const amberBtnCls = [
   'bg-amber-500 text-slate-950 font-bold rounded-full',
@@ -61,40 +42,29 @@ const amberBtnCls = [
 
 export default async function ProvincePage({ params }: { params: Promise<Params> }) {
   const { provincie } = await params
-  if (!ALL_PROVINCIES.includes(provincie)) notFound()
+  if (!ALL_PROVINCIE_SLUGS.includes(provincie)) notFound()
 
-  const stads = await getStaddenByProvincie(provincie)
+  const [stads, urgentWijken] = await Promise.all([
+    getStaddenByProvincie(provincie),
+    getUrgentWijkenByProvincie(provincie, 12),
+  ])
   if (stads.length === 0) notFound()
 
-  const provLabel = toDisplay(provincie)
+  const provLabel = provincieDisplaySlug(provincie)
   const totalWoningen = stads.reduce((s, c) => s + c.totalWoningen, 0)
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
+  const hubChildren = stads.map(s => ({
+    name: `Zonnepanelen ${toDisplaySlug(s.stad)} — 2027 Saldeercheck`,
+    url: `/${provincie}/${s.stad}`,
+  }))
+  const jsonLd = buildHubCollectionLd({
     name: `Zonnepanelen ${provLabel} — 2027 Saldeercheck`,
     description: `Overzicht per stad in ${provLabel} voor de 2027 salderingsimpact op zonnepanelen.`,
-    url: `https://saldeerscan.nl/${provincie}`,
-    about: {
-      '@type': 'AdministrativeArea',
-      name: provLabel,
-      addressCountry: 'NL',
-    },
-    hasPart: stads.slice(0, 10).map(s => ({
-      '@type': 'WebPage',
-      name: `Zonnepanelen ${toDisplayStad(s.stad)} — 2027 Saldeercheck`,
-      url: `https://saldeerscan.nl/${provincie}/${s.stad}`,
-    })),
-  }
+    url: `/${provincie}`,
+    children: hubChildren,
+  })
 
-  const breadcrumbLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://saldeerscan.nl' },
-      { '@type': 'ListItem', position: 2, name: provLabel, item: `https://saldeerscan.nl/${provincie}` },
-    ],
-  }
+  const breadcrumbLd = buildBreadcrumbListLd(hubBreadcrumbItems({ provincie }))
 
   return (
     <div className="min-h-screen pb-20" style={{ background: N1 }}>
@@ -173,7 +143,52 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
         </div>
       </section>
 
-      {/* Stad grid */}
+      {urgentWijken.length > 0 && (
+        <section className="max-w-5xl mx-auto px-6 pt-4 pb-8">
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-500/70 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>
+              Focus 2027
+            </p>
+            <h2 className="text-lg font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+              Meest urgente wijken in {provLabel}
+            </h2>
+            <p className="text-xs font-sans text-white/40 mt-1 max-w-2xl">
+              Wijken met de zwaarste netdruk en hoogst geschat verlies na afbouw saldering — spring direct naar de wijkanalyse.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {urgentWijken.map(w => {
+              const net = w.netcongestie_status ? NET_CONFIG[w.netcongestie_status as keyof typeof NET_CONFIG] : null
+              const stadSlug = (w as { stad: string }).stad
+              return (
+                <a
+                  key={`${provincie}-${stadSlug}-${w.wijk}`}
+                  href={`/${provincie}/${stadSlug}/${w.wijk}`}
+                  data-analytics-event="pseo_second_click"
+                  data-analytics-label={`prov-urgent:${stadSlug}:${w.wijk}`}
+                  className="group rounded-2xl border border-amber-500/25 bg-amber-950/15 px-4 py-4 hover:border-amber-500/45 hover:bg-amber-950/25 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="font-bold text-white text-sm group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
+                      {toDisplaySlug(w.wijk)}
+                    </span>
+                    {net && (
+                      <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border shrink-0 ${net.cls}`}>
+                        {w.netcongestie_status}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-mono text-white/35">
+                    {toDisplaySlug(stadSlug)} · score {w.gem_health_score ?? '—'}/100
+                    {w.gem_bouwjaar ? ` · bouwjaar ${w.gem_bouwjaar}` : ''}
+                  </p>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="max-w-5xl mx-auto px-6 py-10">
         <div className="mb-6">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>Steden</p>
@@ -187,11 +202,13 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
             <a
               key={s.stad}
               href={`/${provincie}/${s.stad}`}
+              data-analytics-event="pseo_second_click"
+              data-analytics-label={`prov-stad:${s.stad}`}
               className="group bg-slate-900/40 border border-white/10 rounded-2xl p-5 hover:border-amber-500/30 hover:bg-slate-900/60 transition-all duration-200"
             >
               <h3 className="font-bold text-white text-base mb-1 group-hover:text-amber-400 transition-colors"
                 style={{ fontFamily: 'var(--font-heading)' }}>
-                {toDisplayStad(s.stad)}
+                {toDisplaySlug(s.stad)}
               </h3>
               {s.totalWoningen > 0 && (
                 <p className="text-xs font-mono text-white/35">
@@ -207,18 +224,15 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
       </section>
 
       {/* Andere provincies */}
-      <section className="max-w-5xl mx-auto px-6 pb-10">
-        <div className="mb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>Andere provincies</p>
-          <h2 className="text-base font-bold text-white/60" style={{ fontFamily: 'var(--font-heading)' }}>
-            Andere provincies
-          </h2>
-        </div>
+      <section className="max-w-5xl mx-auto px-6 pb-6">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-3" style={{ fontFamily: 'var(--font-sans)' }}>Andere provincies</p>
         <div className="flex flex-wrap gap-2">
-          {ALL_PROVINCIES.filter(p => p !== provincie).map(p => (
+          {ALL_PROVINCIE_SLUGS.filter(p => p !== provincie).map(p => (
             <a key={p} href={`/${p}`}
+              data-analytics-event="pseo_second_click"
+              data-analytics-label={`prov-other:${p}`}
               className="text-xs font-mono px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all">
-              {toDisplay(p)}
+              {provincieDisplaySlug(p)}
             </a>
           ))}
         </div>
@@ -233,7 +247,10 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
           <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.45)' }}>
             Gratis AI-scan op basis van BAG-data. ROI-berekening en 2027 impact in 3 minuten.
           </p>
-          <a href="/check" className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.45)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all text-sm"
+          <a href="/check"
+            data-analytics-event="pseo_check_cta"
+            data-analytics-label={`prov-cta:${provincie}`}
+            className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.45)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all text-sm"
             style={{ fontFamily: 'var(--font-heading)' }}>
             Start gratis Saldeercheck
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

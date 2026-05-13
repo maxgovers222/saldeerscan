@@ -2,8 +2,20 @@ import { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getWijkPage, getTopWijken, getWijkenByStad, getTopStratenByWijk } from '@/lib/pseo'
+import { buildWijkMetadata } from '@/lib/pseo-metadata'
+import {
+  computeBesparing,
+  computeVerlies,
+  netcongestieNarrative,
+  renovatieIntelligence,
+  resolveWijkScore,
+  scoreLabel,
+} from '@/lib/pseo-variation'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
+import { LocalStatsRibbon } from '@/components/pseo/LocalStatsRibbon'
 import { WijkSaldeerChart } from '@/components/pseo/WijkSaldeerChart'
+import { RenovatieInsightCard } from '@/components/pseo/RenovatieInsightCard'
+import { WijkComparisonTable, buildWijkComparisonRows } from '@/components/pseo/WijkComparisonTable'
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { WijkCtaButton } from '@/components/pseo/WijkCtaButton'
@@ -16,7 +28,7 @@ type Params = { provincie: string; stad: string; wijk: string }
 
 export async function generateStaticParams() {
   try {
-    const wijken = await getTopWijken(500)
+    const wijken = await getTopWijken(2000)
     return wijken.map(w => ({ provincie: w.provincie, stad: w.stad, wijk: w.wijk }))
   } catch { return [] }
 }
@@ -24,54 +36,21 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { provincie, stad, wijk } = await params
   const page = await getCachedWijkPage({ provincie, stad, wijk })
-  const wijkDisplay = toDisplay(wijk)
-
-  const score = wijkScore(page?.gemBouwjaar ?? null, page?.gemHealthScore ?? null)
-  const besparing = computeBesparing(page?.gemBouwjaar ?? null, score)
-  const verlies = Math.round(besparing * 0.40)
-
-  const title = page?.titel ?? `${wijkDisplay}: Voorkom €${verlies} verlies per 2027 — SaldeerScan`
-  const description = `Gratis 2027 saldeercheck: woningen in ${wijkDisplay} riskeren €${verlies}/jaar na 1 jan 2027. BAG-data, AI-analyse en persoonlijk investeringsrapport.`
-
-  return {
-    title, description,
-    alternates: { canonical: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}` },
-    openGraph: {
-      title: page?.titel ?? `${wijkDisplay}: Voorkom €${verlies} verlies per 2027`,
-      description,
-      type: 'website', locale: 'nl_NL',
-      url: `https://saldeerscan.nl/${provincie}/${stad}/${wijk}`,
-      images: [{
-        url: `https://saldeerscan.nl/api/og?titel=${encodeURIComponent(title)}&score=${page?.gemHealthScore ?? ''}&status=${page?.netcongestieStatus ?? ''}&type=wijk`,
-        width: 1200,
-        height: 630,
-      }],
-    },
-  }
+  return buildWijkMetadata({
+    provincie,
+    stad,
+    wijk,
+    titel: page?.titel ?? null,
+    gemBouwjaar: page?.gemBouwjaar ?? null,
+    gemHealthScore: page?.gemHealthScore ?? null,
+    netcongestieStatus: page?.netcongestieStatus ?? null,
+  })
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function toDisplay(slug: string) {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
-function wijkScore(bouwjaar: number | null, healthScore: number | null): number {
-  if (healthScore !== null && healthScore > 0) return healthScore
-  if (!bouwjaar) return 52
-  if (bouwjaar < 1960) return 34
-  if (bouwjaar < 1975) return 44
-  if (bouwjaar < 1990) return 55
-  if (bouwjaar < 2005) return 66
-  if (bouwjaar < 2015) return 74
-  return 81
-}
-
-function scoreLabel(score: number): { label: string; color: string } {
-  if (score >= 75) return { label: 'Uitstekend', color: '#10b981' }
-  if (score >= 60) return { label: 'Goed', color: '#f59e0b' }
-  if (score >= 45) return { label: 'Matig', color: '#f97316' }
-  return { label: 'Laag', color: '#ef4444' }
 }
 
 function renderBold(text: string) {
@@ -89,119 +68,6 @@ function neighborhoodRanking(bouwjaar: number | null, score: number): { top: boo
   if (rendementScore >= 90) return { top: true, label: 'Top 10% meest rendabele wijken' }
   if (rendementScore >= 74) return { top: true, label: 'Top 25% meest rendabele wijken' }
   return null
-}
-
-function computeBesparing(bouwjaar: number | null, score: number): number {
-  const base = bouwjaar
-    ? bouwjaar < 1970 ? 720
-    : bouwjaar < 1990 ? 960
-    : bouwjaar < 2010 ? 840
-    : 660
-    : 780
-  return Math.round(base * (score / 65))
-}
-
-function wijkTemplateIndex(wijk: string): 0 | 1 | 2 {
-  const sum = [...wijk].reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return (sum % 3) as 0 | 1 | 2
-}
-
-type RenovatieContent = { titel: string; tekst: string }
-
-function renovatieIntelligence(bouwjaar: number | null, wijkDisplay: string): RenovatieContent | null {
-  if (!bouwjaar) return null
-  const t = wijkTemplateIndex(wijkDisplay.toLowerCase())
-  const w = wijkDisplay
-  const yr = bouwjaar
-
-  if (yr < 1945) {
-    const items: RenovatieContent[] = [
-      {
-        titel: 'Historisch woningbezit — renovatiepotentieel',
-        tekst: `Hoewel de BAG-data uitgaat van bouwjaar ${yr}, zijn panden in ${w} in de loop der decennia vaak ingrijpend verbeterd. Nieuwe daken, muurisolatie en vervangen kozijnen zijn in deze periode gebruikelijk. Heeft u na de aankoop isolatie of dubbel glas geplaatst? Dan ligt uw werkelijke rendement in 2027 waarschijnlijk **15–20% hoger** dan de basis-analyse aangeeft.`,
-      },
-      {
-        titel: `Panden uit vóór 1945 in ${w}`,
-        tekst: `Gevels opnieuw gevoegd, daken vernieuwd, kozijnen vervangen — panden uit vóór 1945 in ${w} hebben een rijke renovatiehistorie. Waar spouwmuurisolatie of HR-glas al is geplaatst, stijgt het zonnepaneel-rendement in 2027 met **15–20%** boven de bouwjaar-analyse.`,
-      },
-      {
-        titel: 'Energetisch potentieel van historisch vastgoed',
-        tekst: `Het historisch karakter van ${w} staat los van de huidige thermische kwaliteit. Veel eigenaren hebben de afgelopen twintig jaar in isolatie en HR-glas geïnvesteerd. Heeft u dat ook gedaan? Reken dan op een rendement dat **15–20% hoger** uitvalt dan de BAG-bouwjaardata suggereert.`,
-      },
-    ]
-    return items[t]
-  }
-
-  if (yr < 1965) {
-    const items: RenovatieContent[] = [
-      {
-        titel: `Naoorlogse wederopbouw — isolatie bepaalt rendement`,
-        tekst: `De naoorlogse bouw in ${w} (bouwjaar ${yr}) is functioneel maar thermisch matig. Veel eigenaren hebben sindsdien geïnvesteerd in na-isolatie of HR++ beglazing. Is dat bij u ook het geval? Dan is uw werkelijke rendement in 2027 naar verwachting **15–20% hoger** dan de basis-analyse op grond van het bouwjaar aangeeft.`,
-      },
-      {
-        titel: `Wederopbouw-woningen in ${w}: spreiding is groot`,
-        tekst: `Woningen gebouwd ná 1945 werden snel neergezet voor een groeiende bevolking — thermische kwaliteit was bijzaak. Maar tientallen jaren verbeteringen later staat er in veel gevallen een goed geïsoleerde woning. Als dat voor uw huis geldt, verwacht dan **15–20% extra rendement** bovenop wat de bouwjaardata impliceert.`,
-      },
-      {
-        titel: 'Naoorlogse bouw en energiewinst',
-        tekst: `In naoorlogse wijken zoals ${w} is de spreiding in energiekwaliteit groot. Heeft u de afgelopen jaren isolatie aangebracht of HR-glas laten plaatsen? Dan is uw zonnepotentieel in 2027 waarschijnlijk **15–20% hoger** dan het bouwjaar ${yr} als startpunt suggereert.`,
-      },
-    ]
-    return items[t]
-  }
-
-  if (yr < 1985) {
-    const items: RenovatieContent[] = [
-      {
-        titel: 'Energiecrisis-generatie — isolatie als erfenis',
-        tekst: `De BAG-data registreert bouwjaar ${yr} voor ${w}, maar de energiecrisis van die periode heeft veel eigenaren aangezet tot isolatiemaatregelen. Heeft u na de aankoop dakisolatie, vloerisolatie of HR-glas geplaatst? Dan is uw werkelijke rendement in 2027 waarschijnlijk **15–20% hoger** dan de basis-analyse aangeeft.`,
-      },
-      {
-        titel: `Jaren '70–'80 in ${w}: thermisch wisselend`,
-        tekst: `Woningen uit de jaren '70–'80 in ${w} zijn thermisch wisselend van kwaliteit. De bouwstroom was groot maar energienormen minimaal — tóch zijn er sindsdien veel verbeteringen doorgevoerd. Als uw woning geïsoleerd is, kunt u rekenen op **15–20% hogere** zonnepanelopbrengst dan de bouwjaaranalyse suggereert.`,
-      },
-      {
-        titel: 'Renovatiegolf na de energiecrisis',
-        tekst: `Hoewel ${w} zijn hoofdbouwperiode rond ${yr} kent, heeft de renovatiegolf van de jaren '80–'90 de energetische kwaliteit van veel woningen sterk verbeterd. Heeft u zelf ook in isolatie of dubbel glas geïnvesteerd? Dan wijkt uw rendement in 2027 positief af — naar schatting **15–20% hoger**.`,
-      },
-    ]
-    return items[t]
-  }
-
-  if (yr < 2000) {
-    const items: RenovatieContent[] = [
-      {
-        titel: 'Overgangsgeneratie — energienormen in opkomst',
-        tekst: `Woningen uit de jaren '90 in ${w} werden gebouwd toen energienormen begonnen aan te trekken, maar HR-glas en dakisolatie waren nog geen standaard. Heeft u sindsdien isolatiemaatregelen genomen? Dan ligt uw actuele rendement voor 2027 waarschijnlijk **15–20% hoger** dan het bouwjaar ${yr} impliceert.`,
-      },
-      {
-        titel: `Energiepotentieel in ${w}: meer dan het bouwjaar`,
-        tekst: `De overgangsgeneratie in ${w} (rond bouwjaar ${yr}) kent woningen die energetisch sterk variëren. Goede na-isolatie kan een woning uit deze periode ver boven haar bouwjaarscore tillen. Heeft u dat gedaan? Verwacht dan **15–20% extra** op het geraamde zonne-rendement.`,
-      },
-      {
-        titel: `Bouwjaar ${yr} als startpunt, niet eindpunt`,
-        tekst: `In ${w} hebben veel eigenaren since ${yr} geïnvesteerd in CV-ketels, dakisolatie of zonneboilers. Als uw woning inmiddels energielabel B of beter heeft, is uw zonnepotentieel in 2027 naar verwachting **15–20% hoger** dan de basis-analyse.`,
-      },
-    ]
-    return items[t]
-  }
-
-  // Modern: 2000+
-  const items: RenovatieContent[] = [
-    {
-      titel: `Moderne nieuwbouw in ${w} — batterij als volgende stap`,
-      tekst: `Moderne woningen in ${w} (bouwjaar ${yr}) zijn energetisch al sterk, maar de afschaffing van saldering per 2027 maakt opslag cruciaal. Overweegt u een thuisbatterij naast uw panelen? Dan kunt u het wegvallen van de salderingsregeling grotendeels compenseren en een netto voordeel van **15–20%** op uw rendement realiseren.`,
-    },
-    {
-      titel: 'Energiezuinige basis, maximaal profiteren',
-      tekst: `Energiezuinige nieuwbouw uit ${yr} in ${w} heeft een solide basis voor zonne-energie. Uw verbruiksprofiel past vaak het best bij een combinatie van panelen én opslag. Met een thuisbatterij is uw netto-rendement ná 2027 naar verwachting **15–20% hoger** dan bij panelen zonder opslag.`,
-    },
-    {
-      titel: `${w} — optimaliseer uw zonne-installatie ná 2027`,
-      tekst: `Na ${yr} gebouwde woningen in ${w} profiteren maximaal van moderne energietechnologie. Als u al goed geïsoleerd bent, is een thuisbatterij de logische volgende stap. Uw netto-rendement na 2027 ligt dan **15–20% hoger** dan bij een installatie zonder opslag.`,
-    },
-  ]
-  return items[t]
 }
 
 function splitContent(tekst: string | null): { analyse: string[]; netwerk: string[] } {
@@ -235,29 +101,48 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
     getTopStratenByWijk(provincie, stad, wijk, 8),
   ])
   if (!page) notFound()
-  const relatedWijken = wijkenInStad.filter(w => w.wijk !== wijk).slice(0, 6)
+  const relatedWijken = wijkenInStad.filter(w => w.wijk !== wijk).slice(0, 18)
 
   const wijkDisplay = toDisplay(wijk)
   const stadDisplay = toDisplay(stad)
-  const score = wijkScore(page.gemBouwjaar, page.gemHealthScore)
+  const score = resolveWijkScore(page.gemBouwjaar, page.gemHealthScore)
   const { label: scorelabel, color: scoreColor } = scoreLabel(score)
   const besparing = computeBesparing(page.gemBouwjaar, score)
   // Verlies = terugleveringsvoordeel dat wegvalt na 2027 (~40% van besparing)
-  const verlies = Math.round(besparing * 0.40)
+  const verlies = computeVerlies(page.gemBouwjaar, score)
   const ranking = neighborhoodRanking(page.gemBouwjaar, score)
   const { analyse, netwerk } = splitContent(page.hoofdtekst)
   const renovatieContent = renovatieIntelligence(page.gemBouwjaar, wijkDisplay)
+  const comparisonRows = buildWijkComparisonRows(
+    wijkenInStad.filter(w => w.wijk !== wijk).slice(0, 6),
+    (slug) => `/${provincie}/${stad}/${slug}`,
+    toDisplay,
+  )
 
+  const netNarrative = netcongestieNarrative(page.netcongestieStatus, wijkDisplay)
   const netConfig = {
-    ROOD:   { label: 'Vol stroomnet',  dot: '#ef4444', cls: 'bg-red-950/50 border-red-700 text-red-400' },
-    ORANJE: { label: 'Druk stroomnet', dot: '#f59e0b', cls: 'bg-amber-950/50 border-amber-700 text-amber-400' },
-    GROEN:  { label: 'Vrij stroomnet', dot: '#10b981', cls: 'bg-emerald-950/50 border-emerald-700 text-emerald-400' },
+    ROOD:   { cls: 'bg-red-950/50 border-red-700 text-red-400' },
+    ORANJE: { cls: 'bg-amber-950/50 border-amber-700 text-amber-400' },
+    GROEN:  { cls: 'bg-emerald-950/50 border-emerald-700 text-emerald-400' },
   }
   const net = page.netcongestieStatus ? netConfig[page.netcongestieStatus as keyof typeof netConfig] : null
+
+  const placeSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Place',
+    name: `${wijkDisplay}, ${stadDisplay}`,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: stadDisplay,
+      addressRegion: toDisplay(provincie),
+      addressCountry: 'NL',
+    },
+  }
 
   return (
     <div className="min-h-screen pb-24 sm:pb-0" style={{ background: N1 }}>
       {page.jsonLd && Object.keys(page.jsonLd).length > 0 && <LocalSchema jsonLd={page.jsonLd} />}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(placeSchema).replace(/<\/script>/g, '<\\/script>') }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
@@ -349,40 +234,15 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
           )}
 
           {/* Data Ribbon */}
-          <div className="grid grid-cols-3 gap-3 max-w-2xl mx-auto mb-10">
-            <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: G, fontFamily: 'var(--font-heading)' }}>Grid Status</p>
-              {net ? (
-                <>
-                  <div className="flex items-center justify-center gap-1.5 mb-1">
-                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: net.dot }} />
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${net.cls}`} style={{ fontFamily: 'var(--font-heading)' }}>
-                      {page.netcongestieStatus}
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/40">{net.label}</p>
-                </>
-              ) : (
-                <span className="text-sm text-white/20">—</span>
-              )}
-            </div>
-
-            <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: G, fontFamily: 'var(--font-heading)' }}>Gem. Bouwjaar</p>
-              <p className="text-2xl font-extrabold" style={{ fontFamily: 'var(--font-heading)', color: AMBER, letterSpacing: '-0.02em' }}>
-                {page.gemBouwjaar ?? '—'}
-              </p>
-              <p className="text-xs text-white/30 mt-1">BAG 2026</p>
-            </div>
-
-            <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: G, fontFamily: 'var(--font-heading)' }}>Energy Score</p>
-              <p className="text-2xl font-extrabold" style={{ fontFamily: 'var(--font-heading)', color: scoreColor, letterSpacing: '-0.02em' }}>
-                {score}<span className="text-sm font-normal text-white/30">/100</span>
-              </p>
-              <p className="text-xs mt-1" style={{ color: scoreColor }}>{scorelabel}</p>
-            </div>
-          </div>
+          <LocalStatsRibbon
+            net={netNarrative}
+            gemBouwjaar={page.gemBouwjaar}
+            score={score}
+            scoreLabelText={scorelabel}
+            scoreColor={scoreColor}
+            ariaLabel={`Kernstatistieken voor ${wijkDisplay}`}
+            className="mb-10"
+          />
 
           <WijkCtaButton wijk={wijk} stad={stad}
             className={`inline-flex items-center gap-2 text-base ${amberBtnCls}`}
@@ -500,31 +360,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
               {/* ── Renovatie-Intelligence ──────────────────────── */}
               {renovatieContent && (
-                <div className="rounded-2xl p-6 sm:p-7 border"
-                  style={{ background: 'rgba(28,18,8,0.55)', borderColor: 'rgba(245,158,11,0.25)' }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <path d="M9 1.5L4 9h5L6 14.5l7-8.5H8z" stroke="#f59e0b" strokeWidth="1.4" strokeLinejoin="round"/>
-                    </svg>
-                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: AMBER, fontFamily: 'var(--font-heading)' }}>
-                      Renovatie-Inzicht
-                    </p>
-                  </div>
-                  <h3 className="font-extrabold text-base mb-4 text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.01em' }}>
-                    {renovatieContent.titel}
-                  </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                    {renderBold(renovatieContent.tekst)}
-                  </p>
-                  <div className="mt-4 pt-4 border-t flex items-start gap-2" style={{ borderColor: 'rgba(245,158,11,0.15)' }}>
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0 mt-0.5">
-                      <path d="M8 1l1.5 4.5H14l-3.7 2.7 1.4 4.3L8 10l-3.7 2.5 1.4-4.3L2 5.5h4.5z" fill="rgba(245,158,11,0.4)" stroke="#f59e0b" strokeWidth="0.8"/>
-                    </svg>
-                    <p className="text-xs" style={{ color: 'rgba(245,158,11,0.7)' }}>
-                      Wilt u weten wat uw specifieke woning doet? Start de gratis analyse — inclusief renovatie-correctie op basis van uw feitelijke situatie.
-                    </p>
-                  </div>
-                </div>
+                <RenovatieInsightCard titel={renovatieContent.titel} tekst={renovatieContent.tekst} />
               )}
             </div>
 
@@ -541,7 +377,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                     { label: 'Energy Score', value: `${score}/100`, sub: scorelabel },
                     { label: 'Est. besparing', value: `€${besparing}/jr`, sub: 'zonder batterij, 2024' },
                     { label: 'Verlies 2027', value: `−€${verlies}/jr`, sub: 'bij 0% saldering', danger: true },
-                    { label: 'Netcongestie', value: page.netcongestieStatus ?? '—', sub: net?.label ?? '' },
+                    { label: 'Netcongestie', value: page.netcongestieStatus ?? '—', sub: netNarrative.label ?? '' },
                     ...(page.aantalWoningen ? [{ label: 'Woningen', value: `${page.aantalWoningen.toLocaleString('nl')}`, sub: 'in dit postcodegebied' }] : []),
                     ...(ranking ? [{ label: 'Wijk Ranking', value: ranking.top ? 'Top 10%' : 'Top 25%', sub: 'rendement in ' + stadDisplay }] : []),
                   ].map(({ label, value, sub, danger }) => (
@@ -640,6 +476,8 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                 <a
                   key={s.straat}
                   href={`/${provincie}/${stad}/${wijk}/${s.straat}`}
+                  data-analytics-event="pseo_second_click"
+                  data-analytics-label={`wijk-top-straat:${s.straat}`}
                   className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-3 transition-all hover:bg-slate-900/60 group"
                 >
                   <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors capitalize" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -648,6 +486,19 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                 </a>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+
+      {comparisonRows.length > 0 && (
+        <section className="py-16 px-6" style={{ background: N1 }}>
+          <div className="max-w-4xl mx-auto">
+            <WijkComparisonTable
+              rows={comparisonRows}
+              title="Vergelijk met buurwijken"
+              stadContextLabel={`Gemiddelde wijkscore in ${stadDisplay} versus uw wijk (${score}/100).`}
+            />
           </div>
         </section>
       )}
@@ -666,13 +517,23 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {relatedWijken.map((w) => {
-                const ws = wijkScore(w.gem_bouwjaar, w.gem_health_score)
+                const ws = resolveWijkScore(w.gem_bouwjaar, w.gem_health_score)
+                const net = w.netcongestie_status ? netConfig[w.netcongestie_status as keyof typeof netConfig] : null
                 return (
                   <a key={w.wijk} href={`/${provincie}/${stad}/${w.wijk}`}
+                    data-analytics-event="pseo_second_click"
+                    data-analytics-label={`wijk-related:${w.wijk}`}
                     className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-4 transition-all hover:bg-slate-900/60 group">
-                    <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
-                      {toDisplay(w.wijk)}
-                    </p>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
+                        {toDisplay(w.wijk)}
+                      </p>
+                      {w.netcongestie_status && netConfig[w.netcongestie_status as keyof typeof netConfig] && (
+                        <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border shrink-0 ${netConfig[w.netcongestie_status as keyof typeof netConfig].cls}`}>
+                          {w.netcongestie_status}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs font-mono mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
                       Score {ws}/100 {w.gem_bouwjaar ? `· ${w.gem_bouwjaar}` : ''}
                     </p>

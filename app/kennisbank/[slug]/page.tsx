@@ -77,6 +77,21 @@ const CATEGORY_LABELS: Record<string, string> = {
   algemeen: 'Algemeen',
 }
 
+function relatedWijkenHub(category: string): { provincie?: string; stad?: string } {
+  switch (category) {
+    case 'netcongestie':
+      return { provincie: 'zuid-holland', stad: 'rotterdam' }
+    case 'zonnepanelen':
+      return { provincie: 'noord-holland', stad: 'amsterdam' }
+    case 'saldering':
+      return { provincie: 'utrecht', stad: 'utrecht' }
+    case 'subsidie':
+      return { provincie: 'gelderland', stad: 'arnhem' }
+    default:
+      return {}
+  }
+}
+
 export default async function KennisbankArtikel({ params }: { params: Promise<Params> }) {
   const { slug } = await params
   const article = await getKennisbankArticle(slug)
@@ -156,7 +171,12 @@ export default async function KennisbankArtikel({ params }: { params: Promise<Pa
             )}
 
             {/* Wijk interne linking */}
-            <RelatedWijken limit={4} />
+            <RelatedWijken
+              limit={6}
+              {...relatedWijkenHub(article.category)}
+              title="Zonnepanelen en saldering per wijk"
+              description={`Verdiep dit onderwerp (${article.titel}) met concrete data uit Nederlandse wijken — netcongestie, scores en 2027-impact.`}
+            />
           </article>
 
           {/* Sidebar */}

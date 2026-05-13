@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getNieuwsArticle, getAllPublishedNieuws } from '@/lib/nieuws'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
+import { RelatedWijken } from '@/components/pseo/RelatedWijken'
 import { NavDark, FooterDark } from '@/components/NavDark'
 
 export const revalidate = 604800
@@ -163,6 +164,12 @@ export default async function NieuwsArtikel({ params }: { params: Promise<Params
             </svg>
           </Link>
         </div>
+
+        <RelatedWijken
+          limit={4}
+          title="Wijkdata bij dit nieuws"
+          description="Bekijk netcongestie, energiescores en 2027-impact in concrete wijken — vervolg na dit artikel."
+        />
 
         {/* More news */}
         {moreArticles.length > 0 && (

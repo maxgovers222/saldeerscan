@@ -1,14 +1,18 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getWijkenByStad, getTopStadden } from '@/lib/pseo'
+import { rankUrgentWijken, summarizeStad } from '@/lib/pseo-variation'
+import {
+  buildBreadcrumbListLd,
+  buildHubCollectionLd,
+  hubBreadcrumbItems,
+  toDisplaySlug,
+} from '@/lib/pseo-hubs'
+import { buildHubMetadata, provincieDisplaySlug } from '@/lib/pseo-metadata'
 
 export const revalidate = 604800
 
 type Params = { provincie: string; stad: string }
-
-function toDisplay(slug: string) {
-  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
 
 export async function generateStaticParams() {
   try {
@@ -19,16 +23,19 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { provincie, stad } = await params
-  const stadDisplay = toDisplay(stad)
-  const provDisplay = toDisplay(provincie)
-  const title = `Zonnepanelen ${stadDisplay} — 2027 Saldeercheck per wijk`
-  const description = `Bekijk de 2027 salderingsstatus per wijk in ${stadDisplay}. Gratis AI-scan, ROI-berekening en investeringsrapport voor uw woning.`
-  return {
-    title,
-    description,
-    alternates: { canonical: `https://saldeerscan.nl/${provincie}/${stad}` },
-    openGraph: { title, description, type: 'website', locale: 'nl_NL', url: `https://saldeerscan.nl/${provincie}/${stad}` },
-  }
+  const wijken = await getWijkenByStad(provincie, stad)
+  if (wijken.length === 0) return { title: 'Pagina niet gevonden' }
+  const summary = summarizeStad(wijken)
+  return buildHubMetadata({
+    kind: 'stad',
+    provincie,
+    stad,
+    stadSummary: {
+      wijkCount: summary.wijkCount,
+      roodCount: summary.netcongestie.ROOD,
+      gemScore: summary.gemiddeldeScore,
+    },
+  })
 }
 
 const NET_CONFIG = {
@@ -38,7 +45,6 @@ const NET_CONFIG = {
 }
 
 const N1 = '#020617'
-const N2 = '#0f172a'
 const AMBER = '#f59e0b'
 const G = '#00aa65'
 
@@ -54,8 +60,8 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
   const wijken = await getWijkenByStad(provincie, stad)
   if (wijken.length === 0) notFound()
 
-  const stadDisplay = toDisplay(stad)
-  const provDisplay = toDisplay(provincie)
+  const stadDisplay = toDisplaySlug(stad)
+  const provDisplay = provincieDisplaySlug(provincie)
 
   const totalWoningen = wijken.reduce((s, w) => s + (w.aantal_woningen ?? 0), 0)
   const avgScore = Math.round(
@@ -64,34 +70,19 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
   )
   const roodCount = wijken.filter(w => w.netcongestie_status === 'ROOD').length
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
+  const hubChildren = wijken.map(w => ({
+    name: `${toDisplaySlug(w.wijk)} ${stadDisplay} — 2027 Saldeercheck`,
+    url: `/${provincie}/${stad}/${w.wijk}`,
+  }))
+  const jsonLd = buildHubCollectionLd({
     name: `Zonnepanelen ${stadDisplay} — 2027 Saldeercheck`,
     description: `Overzicht van alle wijken in ${stadDisplay} met 2027 saldering impact, netcongestie en energiescore.`,
-    url: `https://saldeerscan.nl/${provincie}/${stad}`,
-    about: {
-      '@type': 'City',
-      name: stadDisplay,
-      addressRegion: provDisplay,
-      addressCountry: 'NL',
-    },
-    hasPart: wijken.slice(0, 10).map(w => ({
-      '@type': 'WebPage',
-      name: `${toDisplay(w.wijk)} ${stadDisplay} — 2027 Saldeercheck`,
-      url: `https://saldeerscan.nl/${provincie}/${stad}/${w.wijk}`,
-    })),
-  }
+    url: `/${provincie}/${stad}`,
+    children: hubChildren,
+  })
 
-  const breadcrumbLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://saldeerscan.nl' },
-      { '@type': 'ListItem', position: 2, name: provDisplay, item: `https://saldeerscan.nl/${provincie}` },
-      { '@type': 'ListItem', position: 3, name: stadDisplay, item: `https://saldeerscan.nl/${provincie}/${stad}` },
-    ],
-  }
+  const breadcrumbLd = buildBreadcrumbListLd(hubBreadcrumbItems({ provincie, stad }))
+  const urgentWijken = rankUrgentWijken(wijken, 9)
 
   return (
     <div className="min-h-screen pb-20" style={{ background: N1 }}>
@@ -189,6 +180,52 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
         </div>
       </div>
 
+      {/* Hoogste urgentie (druk net / lagere scores) */}
+      {urgentWijken.length > 0 && (
+        <section className="max-w-5xl mx-auto px-6 pt-8 pb-2">
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-500/70 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>
+              Focus 2027
+            </p>
+            <h2 className="text-lg font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+              Wijken met de hoogste urgentie
+            </h2>
+            <p className="text-xs font-sans text-white/40 mt-1 max-w-2xl">
+              Gesorteerd op netdruk (ROOD → ORANJE → GROEN) en lagere energiescore — waar saldering na 2027 het hardst voelt.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {urgentWijken.map(w => {
+              const net = w.netcongestie_status ? NET_CONFIG[w.netcongestie_status as keyof typeof NET_CONFIG] : null
+              return (
+                <a
+                  key={w.wijk}
+                  href={`/${provincie}/${stad}/${w.wijk}`}
+                  data-analytics-event="pseo_second_click"
+                  data-analytics-label={`stad-urgent:${w.wijk}`}
+                  className="group rounded-2xl border border-amber-500/25 bg-amber-950/15 px-4 py-4 hover:border-amber-500/45 hover:bg-amber-950/25 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="font-bold text-white text-sm group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
+                      {toDisplaySlug(w.wijk)}
+                    </span>
+                    {net && (
+                      <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border shrink-0 ${net.cls}`}>
+                        {w.netcongestie_status}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-mono text-white/35">
+                    Score {w.gem_health_score ?? '—'}/100
+                    {w.gem_bouwjaar ? ` · bouwjaar ${w.gem_bouwjaar}` : ''}
+                  </p>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Wijk grid */}
       <section className="max-w-5xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-6">
@@ -213,11 +250,13 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
               <a
                 key={w.wijk}
                 href={`/${provincie}/${stad}/${w.wijk}`}
+                data-analytics-event="pseo_second_click"
+                data-analytics-label={`stad-grid:${w.wijk}`}
                 className="group bg-slate-900/40 border border-white/10 rounded-2xl p-5 hover:border-amber-500/30 hover:bg-slate-900/60 transition-all duration-200"
               >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
-                    {toDisplay(w.wijk)}
+                    {toDisplaySlug(w.wijk)}
                   </h3>
                   {net && (
                     <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border ${net.cls} shrink-0 ml-2`}>
@@ -258,14 +297,16 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
       <section className="max-w-5xl mx-auto px-6 pb-10">
         <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-8 text-center"
           style={{ boxShadow: '0 0 40px rgba(245,158,11,0.04)' }}>
-          <p className="text-[9px] font-mono uppercase tracking-widest mb-3" style={{ color: AMBER }}>[CONVERSIE]</p>
           <h2 className="text-xl font-extrabold text-white mb-2" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
             Uw woning in {stadDisplay} analyseren?
           </h2>
           <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.45)' }}>
             Gratis AI-scan op basis van BAG-data. ROI-berekening en 2027 impact in 3 minuten.
           </p>
-          <a href="/check" className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.45)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all text-sm"
+          <a href="/check"
+            data-analytics-event="pseo_check_cta"
+            data-analytics-label={`stad-cta:${stad}`}
+            className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.45)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all text-sm"
             style={{ fontFamily: 'var(--font-heading)' }}>
             Start gratis Saldeercheck
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
