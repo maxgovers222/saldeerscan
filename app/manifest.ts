@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+const SITE = "https://saldeerscan.nl";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SaldeerScan.nl",
@@ -12,12 +14,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#022c22",
     icons: [
       {
-        src: "/icon",
+        src: `${SITE}/icon`,
         sizes: "32x32",
         type: "image/png",
       },
       {
-        src: "/apple-icon",
+        src: `${SITE}/apple-icon`,
         sizes: "180x180",
         type: "image/png",
       },

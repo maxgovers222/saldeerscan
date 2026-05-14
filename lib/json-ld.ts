@@ -139,7 +139,7 @@ export function buildArticleSchema(params: {
         url: baseUrl,
         logo: {
           '@type': 'ImageObject',
-          url: `${baseUrl}/icon.png`,
+          url: `${baseUrl}/icon`,
         },
       },
       about: {

@@ -15,16 +15,20 @@ const dmSans = DM_Sans({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+/** Eén canoniek domein voor metadata en favicon-URL’s (Google volgt absolute href’s betrouwbaarder dan relatief, esp. bij www/apex-mix in SERP). */
+const SITE_URL = "https://saldeerscan.nl" as const;
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://saldeerscan.nl"),
+  metadataBase: new URL(SITE_URL),
   title: "SaldeerScan.nl — Gratis 2027 saldeercheck voor uw woning",
   description: "Ontdek in 3 minuten wat de afschaffing van salderen op 1 januari 2027 voor uw woning betekent. Gratis AI-scan, BAG-data en persoonlijk investeringsrapport.",
   icons: {
     icon: [
-      { url: "/favicon.ico", type: "image/x-icon", sizes: "32x32" },
-      { url: "/icon", type: "image/png", sizes: "32x32" },
+      { url: `${SITE_URL}/favicon.ico`, sizes: "any" },
+      { url: `${SITE_URL}/icon`, type: "image/png", sizes: "32x32" },
     ],
-    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+    shortcut: `${SITE_URL}/favicon.ico`,
+    apple: [{ url: `${SITE_URL}/apple-icon`, type: "image/png", sizes: "180x180" }],
   },
   openGraph: {
     title: "SaldeerScan.nl — Gratis 2027 saldeercheck",
@@ -50,7 +54,7 @@ const organizationSchema = {
       url: 'https://saldeerscan.nl',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://saldeerscan.nl/icon.png',
+        url: `${SITE_URL}/icon`,
         width: 32,
         height: 32,
       },
@@ -63,6 +67,7 @@ const organizationSchema = {
       '@id': 'https://saldeerscan.nl/#website',
       url: 'https://saldeerscan.nl',
       name: 'SaldeerScan.nl',
+      image: [`${SITE_URL}/icon`, `${SITE_URL}/apple-icon`],
       inLanguage: 'nl-NL',
       publisher: { '@id': 'https://saldeerscan.nl/#organization' },
       potentialAction: {
