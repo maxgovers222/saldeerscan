@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   const { data: pages, error } = await supabaseAdmin
     .from('pseo_pages')
-    .select('slug, straat, aantal_woningen, netcongestie_status, gem_bouwjaar, gem_health_score, generated_at')
+    .select('slug, straat, aantal_woningen, netcongestie_status, gem_bouwjaar, gem_health_score, generated_at, last_pinged_at')
     .eq('status', 'published')
     .order('aantal_woningen', { ascending: false, nullsFirst: false })
 
@@ -32,12 +32,22 @@ export async function GET(request: Request) {
   const sa = JSON.parse(saJson) as { client_email: string; private_key: string; token_uri: string }
   const token = await getAccessToken(sa)
 
+  const nowIso = new Date().toISOString()
   let ok = 0
   let fail = 0
   for (const url of urlsToPin) {
     const success = await pingUrl(url, token)
-    if (success) ok++
-    else fail++
+    if (success) {
+      ok++
+      // Bijhouden wanneer deze URL voor het laatst gepingt is
+      const path = url.replace('https://saldeerscan.nl', '')
+      await supabaseAdmin
+        .from('pseo_pages')
+        .update({ last_pinged_at: nowIso })
+        .eq('slug', path)
+    } else {
+      fail++
+    }
     await new Promise(r => setTimeout(r, 100))
   }
 

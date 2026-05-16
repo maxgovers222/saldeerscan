@@ -36,6 +36,7 @@ export type IndexingPageRow = {
   gem_bouwjaar?: number | null
   gem_health_score?: number | null
   generated_at?: string | null
+  last_pinged_at?: string | null
 }
 
 function parseCommaPaths(raw: string | undefined): string[] {
@@ -71,25 +72,44 @@ function wijkUrgencySortKey(row: IndexingPageRow): number {
 }
 
 /**
- * Vaste volgorde voor indexatie: handmatige paden → wijken (urgentie) → straten (volume).
- * Geen day-of-year shuffle meer over een ongesorteerde lijst.
+ * Vaste volgorde voor indexatie:
+ * 1. Handmatige paden (INDEXING_PRIORITY_PATHS)
+ * 2. Nooit-gepingde wijken (last_pinged_at IS NULL), gesorteerd op urgentie
+ * 3. Al-gepingde wijken, gesorteerd op urgentie
+ * 4. Nooit-gepingde straten, gesorteerd op volume
+ * 5. Al-gepingde straten, gesorteerd op volume
+ *
+ * Nooit-gepingde pagina's gaan altijd voor zodat nieuwe pSEO-pages zo snel
+ * mogelijk een eerste ping krijgen in plaats van achteraan te roteren.
  */
 export function orderedIndexingUrls(pages: IndexingPageRow[]): string[] {
   const manual = priorityPathUrls()
   const wijkRows = pages.filter(page => !page.straat)
   const straatRows = pages.filter(page => page.straat)
 
-  const sortedWijken = [...wijkRows].sort((a, b) => wijkUrgencySortKey(b) - wijkUrgencySortKey(a))
-  const sortedStraten = [...straatRows].sort(
-    (a, b) => (b.aantal_woningen ?? 0) - (a.aantal_woningen ?? 0),
-  )
+  const neverWijken = wijkRows.filter(p => !p.last_pinged_at)
+  const seenWijken  = wijkRows.filter(p =>  p.last_pinged_at)
+  const neverStraten = straatRows.filter(p => !p.last_pinged_at)
+  const seenStraten  = straatRows.filter(p =>  p.last_pinged_at)
+
+  const sortByUrgency = (a: IndexingPageRow, b: IndexingPageRow) =>
+    wijkUrgencySortKey(b) - wijkUrgencySortKey(a)
+  const sortByVolume = (a: IndexingPageRow, b: IndexingPageRow) =>
+    (b.aantal_woningen ?? 0) - (a.aantal_woningen ?? 0)
+
+  const ordered = [
+    ...neverWijken.sort(sortByUrgency),
+    ...seenWijken.sort(sortByUrgency),
+    ...neverStraten.sort(sortByVolume),
+    ...seenStraten.sort(sortByVolume),
+  ]
 
   const seen = new Set(manual)
-  const wijkUrls = sortedWijken.map(p => `${INDEXING_BASE_URL}${p.slug}`).filter(u => !seen.has(u))
-  for (const u of wijkUrls) seen.add(u)
-  const straatUrls = sortedStraten.map(p => `${INDEXING_BASE_URL}${p.slug}`).filter(u => !seen.has(u))
+  const dynamicUrls = ordered
+    .map(p => `${INDEXING_BASE_URL}${p.slug}`)
+    .filter(u => !seen.has(u))
 
-  return [...manual, ...wijkUrls, ...straatUrls]
+  return [...manual, ...dynamicUrls]
 }
 
 export function buildPrioritizedIndexingUrls(
@@ -98,16 +118,33 @@ export function buildPrioritizedIndexingUrls(
 ): { urls: string[]; offset: number; dynamicCount: number } {
   const hubs = hubUrlList()
   const hubSet = new Set(hubs)
-  const ordered = orderedIndexingUrls(pages).filter(u => !hubSet.has(u))
+
+  // Splits in nooit-gepingt vs. al-gepingt (hubs uitgesloten)
+  const neverPinged = orderedIndexingUrls(
+    pages.filter(p => !p.last_pinged_at)
+  ).filter(u => !hubSet.has(u))
+
+  const alreadyPinged = orderedIndexingUrls(
+    pages.filter(p => p.last_pinged_at)
+  ).filter(u => !hubSet.has(u))
 
   const dynamicBudget = Math.max(0, options.batchSize - hubs.length)
-  const offset =
-    ordered.length === 0 ? 0 : (options.dayOfYear * Math.max(1, Math.floor(dynamicBudget / 3))) % ordered.length
 
-  const dynamicUrls: string[] = []
-  for (let i = 0; i < dynamicBudget && ordered.length > 0; i++) {
-    dynamicUrls.push(ordered[(offset + i) % ordered.length])
+  // Nooit-gepingde pagina's vullen de batch eerst (geen rotatie — altijd vooraan).
+  // De resterende plekken gaan naar al-gepingde pagina's met dayOfYear-rotatie.
+  const neverSlice = neverPinged.slice(0, dynamicBudget)
+  const remaining = dynamicBudget - neverSlice.length
+
+  let offset = 0
+  const seenSlice: string[] = []
+  if (remaining > 0 && alreadyPinged.length > 0) {
+    offset = (options.dayOfYear * Math.max(1, Math.floor(remaining / 3))) % alreadyPinged.length
+    for (let i = 0; i < remaining; i++) {
+      seenSlice.push(alreadyPinged[(offset + i) % alreadyPinged.length])
+    }
   }
+
+  const dynamicUrls = [...neverSlice, ...seenSlice]
 
   return {
     urls: [...hubs, ...dynamicUrls],
