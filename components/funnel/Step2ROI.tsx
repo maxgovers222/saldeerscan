@@ -216,7 +216,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
                 if (n && n > 0 && n <= 200) setPanelen(n)
               }}
               placeholder="Bijv. 10"
-              className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/80 font-mono text-sm focus:outline-none focus:border-amber-500/50"
+              className="w-full min-w-0 bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/80 font-mono text-base sm:text-sm focus:outline-none focus:border-amber-500/50"
             />
           </div>
         )}
@@ -250,7 +250,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
           <select
             value={kwhPerPaneel}
             onChange={(e) => setKwhPerPaneel(Number(e.target.value))}
-            className="w-full bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/70 font-mono text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
+            className="w-full min-w-0 bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/70 font-mono text-base sm:text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
           >
             {PANEEL_TYPES.map((t) => (
               <option key={t.kwhPerPaneel} value={t.kwhPerPaneel}>{t.label}</option>
@@ -263,14 +263,14 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
           <label className="text-xs font-mono text-white/40 uppercase tracking-widest">
             Dakrichting <span className="normal-case">(optioneel)</span>
           </label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {(['Zuid', 'Oost/West', 'Noord'] as const).map(richting => (
               <button
                 key={richting}
                 type="button"
                 onClick={() => dispatch({ type: 'SET_DAKRICHTING', dakrichting: state.dakrichting === richting ? null : richting })}
                 className={[
-                  'py-2 px-2 rounded-lg text-xs font-mono border transition-colors',
+                  'py-2.5 px-1.5 rounded-lg text-xs font-sans leading-tight text-center whitespace-nowrap border transition-colors min-w-0',
                   state.dakrichting === richting
                     ? 'bg-amber-500 text-slate-950 border-amber-500'
                     : 'bg-slate-800/50 text-white/50 border-white/10 hover:border-amber-500/40',
@@ -283,7 +283,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
               type="button"
               onClick={() => dispatch({ type: 'SET_DAKRICHTING', dakrichting: null })}
               className={[
-                'py-2 px-2 rounded-lg text-xs font-mono border transition-colors',
+                'py-2.5 px-1.5 rounded-lg text-xs font-sans leading-tight text-center whitespace-nowrap border transition-colors min-w-0',
                 state.dakrichting === null
                   ? 'bg-slate-700 text-white border-slate-500'
                   : 'bg-slate-800/50 text-white/30 border-white/10 hover:border-white/30',

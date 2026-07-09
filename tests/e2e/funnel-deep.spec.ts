@@ -1162,9 +1162,9 @@ test.describe('ResultsDashboard', () => {
     await expect(page.locator('text=Kopieer link').first()).toBeVisible()
   })
 
-  test('Afdrukken-knop aanwezig', async ({ page }) => {
+  test('PDF-downloadknop aanwezig', async ({ page }) => {
     await gotoResults(page)
-    await expect(page.locator('button:has-text("Afdrukken")')).toBeVisible({ timeout: 8000 })
+    await expect(page.locator('button:has-text("Download uw gratis PDF-rapport")')).toBeVisible({ timeout: 8000 })
   })
 
   test('huurder-waarschuwing bij is_eigenaar=false', async ({ page }) => {

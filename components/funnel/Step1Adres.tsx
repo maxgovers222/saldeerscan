@@ -137,7 +137,7 @@ function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }
           placeholder="Bijv. Prinsengracht 123, Amsterdam"
           disabled={disabled} autoComplete="off"
           className={[
-            'w-full bg-slate-950/60 border rounded-xl px-4 py-3.5 text-white placeholder:text-slate-500 font-mono text-sm transition-all focus:outline-none amber-glow',
+            'w-full min-w-0 bg-slate-950/60 border rounded-xl px-4 py-3.5 text-white placeholder:text-slate-500 font-mono text-base sm:text-sm transition-all focus:outline-none amber-glow',
             isSelected ? 'border-emerald-500/50' : 'border-white/10',
           ].join(' ')}
         />

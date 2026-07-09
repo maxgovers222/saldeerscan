@@ -142,12 +142,16 @@
     @apply font-sans;
     background-color: #020617;
     overscroll-behavior-y: none;
+    overflow-x: clip;
+    max-width: 100%;
   }
   body {
     background-color: var(--color-background);
     color: var(--color-text);
     font-family: var(--font-family-sans);
     min-height: 100dvh;
+    overflow-x: clip;
+    max-width: 100%;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-family-heading);
@@ -197,51 +201,9 @@
   outline: none;
 }
 
-/* ── PDF / Print styles ── */
-@media print {
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-
-  /* Hide non-report UI */
-  .no-print,
-  nav,
-  footer,
-  button:not(.print-keep),
-  [data-noprint] {
-    display: none !important;
-  }
-
-  body {
-    background: #020617 !important;
-    color: #ffffff !important;
-    font-size: 11pt;
-    margin: 0;
-  }
-
-  .print-page {
-    width: 100%;
-    max-width: 100%;
-    padding: 0;
-    margin: 0;
-  }
-
-  /* Keep glass cards visible */
-  .glass-card-navy,
-  [class*="bg-slate-900"] {
-    background: rgba(15, 23, 42, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  }
-
-  /* Page breaks */
-  .print-break-before { page-break-before: always; }
-  .print-break-avoid  { page-break-inside: avoid; }
-
-  @page {
-    size: A4;
-    margin: 12mm 14mm;
-    background: #020617;
-  }
-}
+/*
+ * Het rapport wordt gedownload als PDF (via @react-pdf/renderer) en meegestuurd per e-mail —
+ * niet meer via de browser-afdrukfunctie (window.print), die op mobiel onbetrouwbaar was en
+ * er niet representatief uitzag. Zie components/funnel/PDFDownloadButton*.tsx en
+ * components/funnel/SaldeerRapportPDF.tsx voor de PDF-opmaak.
+ */

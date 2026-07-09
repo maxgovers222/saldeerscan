@@ -140,11 +140,14 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
     if (!leadIdParam) return
     const leadId = leadIdParam
 
+    // Zonder token-param (bv. gehardcode ?leadId= zonder &token=) hoeft de token niet te
+    // matchen — anders herlaadt dit effect eindeloos: elke succesvolle fetch dispatcht een
+    // NIEUWE roiResult-referentie (dependency), waardoor alreadySynced anders altijd false
+    // bleef en de server-fetch bij elke render opnieuw afging.
     const alreadySynced =
       state.leadId === leadId
       && parseStoredRoi(state.roiResult) !== null
-      && !!leadReportTokenParam
-      && state.leadReportToken === leadReportTokenParam
+      && (leadReportTokenParam ? state.leadReportToken === leadReportTokenParam : true)
     if (alreadySynced) return
 
     let cancelled = false
@@ -343,10 +346,10 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
   const reportRoiReady = parseStoredRoi(state.roiResult) !== null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0 w-full">
       {showResumeBanner && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 px-4 py-3 flex items-center justify-between gap-3">
-          <div className="text-sm font-mono text-amber-300">
+        <div className="md:max-w-xl md:mx-auto rounded-xl border border-amber-500/30 bg-amber-950/30 px-4 py-3 flex flex-wrap items-center justify-between gap-3 min-w-0">
+          <div className="text-sm font-mono text-amber-300 min-w-0 break-words">
             <span className="font-bold">Vorige sessie gevonden</span> — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
           </div>
           <div className="flex gap-2 shrink-0">
@@ -361,9 +364,9 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
           </div>
         </div>
       )}
-      {/* ResultsDashboard — toon als lead ingediend is (ook via ?leadId= email-link) */}
+      {/* ResultsDashboard — toon als lead ingediend is (ook via ?leadId= email-link). Breder op desktop dan de funnel-stappen. */}
       {state.leadId ? (
-        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden">
+        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden min-w-0">
           {state.loading ? (
             <div className="p-10 flex flex-col items-center justify-center gap-4 text-center">
               <div className="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" aria-hidden />
@@ -386,9 +389,9 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
           )}
         </div>
       ) : (
-        <>
+        <div className="md:max-w-xl md:mx-auto min-w-0">
           <FunnelProgress currentStep={state.step} />
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden">
+          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden min-w-0">
             {state.step === 1 && <Step1Adres state={state} dispatch={trackingDispatch} />}
             {state.step === 2 && <Step2ROI state={state} dispatch={trackingDispatch} />}
             {state.step === 3 && <Step3Meterkast state={state} dispatch={trackingDispatch} />}
@@ -396,7 +399,7 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
             {state.step === 5 && <Step5Omvormer state={state} dispatch={trackingDispatch} />}
             {state.step === 6 && <Step6LeadCapture state={state} dispatch={trackingDispatch} />}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

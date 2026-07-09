@@ -80,13 +80,13 @@ components/
     FunnelContainer.tsx             # useReducer state machine (6 stappen), accepteert initialAdres/initialWijk/initialStad props + localStorage persistentie + ?leadId=&token= email-link hydration (server fetch → ResultsDashboard)
     Step1Adres.tsx                  # Auto-zoekt bij mount als initialAdres aanwezig; AnalysisLoading tijdens fetch
     Step2ROI.tsx … Step6LeadCapture.tsx
-    ResultsDashboard.tsx            # Volledig resultaten dashboard na lead submit: ShockChart + ROITijdlijn + GevalideerdStempel + PDF/print (geen nep-expert sectie)
+    ResultsDashboard.tsx            # Resultaten dashboard na lead submit: mobiel = compacte samenvatting + PDF-knop, desktop = volledig rapport (ShockChart + ROITijdlijn + GevalideerdStempel), donker thema, geen print
     Shock2027Banner.tsx             # 2027 saldering urgentie — amber design (bg-amber-950/20 border-amber-500/25), geen rode kleuren
     PhotoUpload.tsx                 # Dropzone + vision API (geen icon prop, vaste SVG upload icon)
     FunnelProgress.tsx
     AnalysisLoading.tsx             # Labor illusion loader met roterende berichten (BAG / netcapaciteit / ROI)
     StepHeader.tsx                  # Gedeelde stap-header component — clean design: geen grid/glow, stap-label 'Stap X — Naam' in DM Sans
-    PDFDownloadButton.tsx           # @react-pdf/renderer v4, dynamic import (ssr:false), window.print() fallback
+    PDFDownloadButton.tsx           # @react-pdf/renderer v4, dynamic import (ssr:false) — zie PDFDownloadButtonInner
     types.ts                        # Gedeelde funnel types (incl. wijk + stad in FunnelState)
   pseo/
     LocalSchema.tsx                 # JSON-LD LocalBusiness + FAQPage injectie (prop: jsonLd)
@@ -193,14 +193,16 @@ Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden
 ### CountdownTimer component
 `components/CountdownTimer.tsx` — `'use client'`, telt af naar `2027-01-01T00:00:00+01:00`. SSR-safe: rendert `--` placeholder, hydrates bij client mount. Geplaatst op: homepage (hero), `/check`, wijk pagina's. 4 glass cards: Dagen/Uren/Min/Sec.
 
-### ResultsDashboard — success state
-`components/funnel/ResultsDashboard.tsx` — volledig resultaten scherm na lead submit in Step 6:
-- `useCountUp(target, duration)` hook met ease-out cubic via requestAnimationFrame
-- `ShockChart` — horizontale animatiebalk 2024→2027 saldering crash
-- `ROITijdlijn` — 4 mijlpalen tijdlijn (installatie / halverwege / terugverdiend / 15jr)
-- `GevalideerdStempel` — geanimeerd groen "✓ Gevalideerd 2027" stamp
-- `ExpertSectie` — expert avatar + amber CTA naar expert consult
-- PDF download knop + `window.print()` met `.no-print` class op knoppen
+### ResultsDashboard — success state (responsive split, geen window.print meer)
+`components/funnel/ResultsDashboard.tsx` — volledig resultaten scherm na lead submit in Step 6 (én via `?leadId=` email-link). Rendert twee volledig gescheiden layouts op basis van Tailwind breakpoint (`md:hidden` / `hidden md:block`), niet enkel CSS-verkleining:
+- **Mobiel (`ReportMobileSummary`, < md)** — compacte samenvatting (verlies/besparing/score + korte toelichting) + prominente PDF-downloadknop. Volledige grafieken/tabellen staan alléén in de PDF en de bevestigingsmail — te druk voor een klein scherm.
+- **Desktop (`ReportDesktopFull`, ≥ md)** — volledig rapport, 2-koloms grid (Impact 2027 + Geadviseerde configuratie), donker thema (geen witte kaarten — `bg-slate-900/40` cards zoals de rest van de site), `/check` pagina is op dit punt breder (`md:max-w-4xl`, funnel-stappen blijven `md:max-w-xl` via wrapper in `FunnelContainer`).
+- Gedeelde helpers: `useCountUp`, `ShockChart`, `ROITijdlijn`, `GevalideerdStempel`, `useReportMetrics` (afgeleide cijfers), `ReportAlerts` (huurder/netcongestie), `WatGebeurtErNu`.
+- **Geen `window.print()` / afdrukknop meer** — onbetrouwbaar op mobiel en zag er niet uit. PDF-download (zie hieronder) is de enige export.
+- Root container mist voorheen horizontale padding (`py-2` zonder `px-`) — vandaar "geen marges" klacht. Nu altijd `px-4`/`px-6 sm:px-10` in beide varianten.
+
+### PDF-download — blob + nieuw tabblad (niet meer `PDFDownloadLink`)
+`components/funnel/PDFDownloadButtonInner.tsx` — `PDFDownloadLink` (anchor met `download`-attribuut) was onbetrouwbaar op mobiel/iOS Safari (respecteert `download` niet consistent, opent soms niets). Nieuwe aanpak: `window.open('', '_blank')` **synchroon** in de click-handler (voorkomt popup-blocker omdat `pdf().toBlob()` async is), dan `newTab.location.href = objectUrl` zodra de blob klaar is; fallback naar een `<a download>`-klik als de popup toch geblokkeerd wordt.
 
 ### Sitemaps
 `app/sitemap.ts` gebruikt `generateSitemaps()` om per provincie een apart XML-bestand te genereren (max 50k URL's per sitemap). Bevat nu ook provincie-URLs (priority 0.9) en stad-URLs (priority 0.85).
@@ -358,7 +360,8 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 - Homepage countdown timer telt af (niet `--`)
 - `/check?wijk=IJburg&stad=Amsterdam` → Step 1 AnalysisLoading toont "Netcapaciteit IJburg verifiëren..."
 - Step 6: naam vereist 2 woorden, telefoonnummer toont live groen preview na validatie
-- Step 6 submit → SuccessState toont ResultsDashboard met ShockChart + ROITijdlijn
+- Step 6 submit → SuccessState toont ResultsDashboard (mobiel: samenvatting + PDF-knop; desktop ≥768px: volledig rapport met ShockChart + ROITijdlijn)
+- PDF-downloadknop op mobiel én desktop → opent PDF in nieuw tabblad (geen afdrukknop meer)
 - Favicon zichtbaar in browsertabblad én als `<link rel="icon">` in page source (niet Vercel logo); Google crawl-update via GSC "Request Indexing" op homepage om favicon in zoekresultaten te versnellen
 - Homepage urgentie strip is amber (niet rood)
 - pSEO straat-route laadt met JSON-LD in `<head>`

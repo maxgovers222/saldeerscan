@@ -48,7 +48,7 @@ function CheckPageInner() {
   return (
     <main className="min-h-screen" style={{ background: '#020617' }}>
       <Header />
-      <div className="max-w-xl mx-auto px-4 py-6">
+      <div className="max-w-xl md:max-w-4xl mx-auto px-4 py-6 min-w-0 overflow-x-hidden">
         <div className="mb-4">
           <CountdownTimer compact />
         </div>
@@ -60,8 +60,8 @@ function CheckPageInner() {
 }
 
 const FallbackPage = (
-  <main className="min-h-screen" style={{ background: '#020617' }}>
-    <div className="max-w-xl mx-auto px-4 py-8">
+  <main className="min-h-screen overflow-x-hidden" style={{ background: '#020617' }}>
+    <div className="max-w-xl mx-auto px-4 py-8 min-w-0">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)' }}>
           Uw gratis 2027 Saldeercheck

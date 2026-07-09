@@ -96,25 +96,19 @@ function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: 
 
 function SuccessState({ state }: { state: FunnelState }) {
   return (
-    <div className="space-y-5 py-4">
-      {/* Bevestiging header */}
-      <div className="text-center pb-2">
-        <div className="w-14 h-14 bg-emerald-950/30 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-3">
-          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <path d="M6 16l6 6L26 8" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>Gegevens ontvangen!</h3>
-        <p className="text-sm text-white/50 mt-1.5 font-mono">Een bevestiging is verstuurd naar uw e-mail</p>
+    <div className="min-w-0 overflow-x-hidden">
+      <div className="flex items-center gap-2 px-4 sm:px-6 pt-4 text-emerald-400">
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true" className="shrink-0">
+          <path d="M6 16l6 6L26 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <p className="text-xs font-mono">Gegevens ontvangen — bevestiging verstuurd naar uw e-mail</p>
       </div>
-
-      {/* Full results dashboard */}
       <ResultsDashboard state={state} />
     </div>
   )
 }
 
-const inputBase = 'w-full bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-sans text-sm transition-colors focus:outline-none amber-glow'
+const inputBase = 'w-full min-w-0 bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-sans text-base sm:text-sm transition-colors focus:outline-none amber-glow'
 
 export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
   const router = useRouter()
@@ -243,7 +237,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
     }
   }
 
-  if (submitted) return <div className="p-6"><SuccessState state={state} /></div>
+  if (submitted) return <SuccessState state={state} />
 
   const isde = state.roiResult?.isdeSchatting
   const regio = state.wijk || (state.bagData ? state.adres.split(',').pop()?.trim() : null) || 'uw regio'
@@ -528,12 +522,12 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
         {/* Telefoon met landselector */}
         <div className="space-y-1.5">
           <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="lead-telefoon">Telefoonnummer *</label>
-          <div className={['flex rounded-lg border overflow-hidden transition-colors', errors.telefoon ? 'border-red-400' : 'border-white/10'].join(' ')}>
+          <div className={['flex rounded-lg border overflow-hidden transition-colors min-w-0', errors.telefoon ? 'border-red-400' : 'border-white/10'].join(' ')}>
             <select
               value={form.countryCode}
               onChange={(e) => { setForm(f => ({ ...f, countryCode: e.target.value as CountryCode, telefoon: '' })); setErrors(er => ({ ...er, telefoon: undefined })) }}
               disabled={loading}
-              className="bg-slate-800/80 text-white/70 text-sm font-sans px-3 py-3 border-r border-white/10 focus:outline-none focus:ring-0 shrink-0"
+              className="bg-slate-800/80 text-white/70 text-base sm:text-sm font-sans px-3 py-3 border-r border-white/10 focus:outline-none focus:ring-0 shrink-0"
               aria-label="Landcode"
             >
               {COUNTRIES.map(c => (
@@ -545,7 +539,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
               onChange={(e) => { setForm(f => ({ ...f, telefoon: e.target.value })); setErrors(er => ({ ...er, telefoon: undefined })) }}
               placeholder={form.countryCode === '+31' ? '06 12345678' : form.countryCode === '+32' ? '0478 123456' : '015 12345678'}
               disabled={loading}
-              className="flex-1 bg-slate-900/60 px-4 py-3 text-white placeholder:text-white/30 font-mono text-sm focus:outline-none"
+              className="flex-1 min-w-0 bg-slate-900/60 px-4 py-3 text-white placeholder:text-white/30 font-mono text-base sm:text-sm focus:outline-none"
             />
           </div>
           {errors.telefoon
