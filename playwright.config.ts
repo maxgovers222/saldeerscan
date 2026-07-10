@@ -3,11 +3,14 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30_000,
-  retries: 1,
+  retries: process.env.CI ? 2 : 1,
+  forbidOnly: Boolean(process.env.CI),
+  workers: process.env.CI ? 2 : undefined,
   use: {
     baseURL: 'http://localhost:3000',
     headless: true,
     screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
     video: 'off',
   },
   projects: [
@@ -20,11 +23,10 @@ export default defineConfig({
       use: { ...devices['iPhone 13'] },
     },
   ],
-  // Do not start dev server automatically — run `npm run dev` first
   webServer: {
     command: 'npm run dev',
     port: 3000,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },
 })

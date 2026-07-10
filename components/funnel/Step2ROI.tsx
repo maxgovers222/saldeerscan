@@ -130,22 +130,29 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
       setLoading(true)
       setRoiError(null)
       try {
+        const bag = state.bagData!
+        const roiInput = {
+          oppervlakte: bag.oppervlakte!,
+          bouwjaar: bag.bouwjaar!,
+          dakOppervlakte: dakOpp,
+          huidigVerbruikKwh: verbruik,
+          aantalPanelenOverride: panelen,
+          kwhPerPaneel,
+          dakrichting: state.dakrichting,
+          huishouden_grootte: state.huishouden_grootte,
+        } satisfies NonNullable<FunnelState['roiInput']>
+
         const res = await fetch('/api/roi', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            oppervlakte: state.bagData!.oppervlakte,
-            bouwjaar: state.bagData!.bouwjaar,
-            dakOppervlakte: dakOpp,
-            huidigVerbruikKwh: verbruik,
-            aantalPanelenOverride: panelen,
-            kwhPerPaneel,
+            ...roiInput,
             netcongestieStatus: state.netcongestie?.status,
-            dakrichting: state.dakrichting,
           }),
         })
         if (res.ok) {
           const data = await res.json()
           setLocalRoi(data.roi)
+          dispatch({ type: 'SET_ROI_INPUT', roiInput })
           dispatch({ type: 'SET_ROI', roiResult: data.roi })
           if (data.health) dispatch({ type: 'SET_HEALTH_SCORE', healthScore: data.health })
         } else {
@@ -157,7 +164,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
     }, delay)
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verbruik, dakOpp, panelen, kwhPerPaneel, state.dakrichting])
+  }, [verbruik, dakOpp, panelen, kwhPerPaneel, state.dakrichting, state.huishouden_grootte])
 
   const roi = localRoi
 

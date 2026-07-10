@@ -6,7 +6,7 @@ import { verifyLeadReportAccessToken } from '@/lib/lead-report-token'
 import { applyRateLimit } from '@/lib/rate-limit'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 function mapHealth(score: number | null) {
   if (score === null) return null
@@ -152,14 +152,16 @@ export async function DELETE(
     return NextResponse.json({ error: 'Verwijdering mislukt' }, { status: 500 })
   }
 
-  await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL!,
-    to: email,
-    subject: 'Uw gegevens zijn verwijderd — SaldeerScan',
-    html: `<p style="font-family:sans-serif">Beste ${lead.naam},</p>
+  if (resend) {
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL!,
+      to: email,
+      subject: 'Uw gegevens zijn verwijderd — SaldeerScan',
+      html: `<p style="font-family:sans-serif">Beste ${lead.naam},</p>
 <p style="font-family:sans-serif">Uw aanvraag en alle bijbehorende gegevens zijn permanent verwijderd uit ons systeem conform de AVG (Algemene Verordening Gegevensbescherming).</p>
 <p style="font-family:sans-serif">Met vriendelijke groet,<br>SaldeerScan.nl<br><a href="mailto:privacy@saldeerscan.nl">privacy@saldeerscan.nl</a></p>`,
-  }).catch(err => console.error('[GDPR delete] bevestigingsmail mislukt:', err))
+    }).catch(err => console.error('[GDPR delete] bevestigingsmail mislukt:', err))
+  }
 
   return NextResponse.json({ deleted: true })
 }

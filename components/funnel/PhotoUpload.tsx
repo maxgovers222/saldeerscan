@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import type { MeterkastAnalyse, PlaatsingsAnalyse, OmvormerAnalyse } from './types'
 import { trackEvent } from '@/lib/analytics'
+import { prepareVisionImage } from './prepare-vision-image'
 
 type VisionType = 'meterkast' | 'plaatsingslocatie' | 'omvormer'
 type VisionResult = MeterkastAnalyse | PlaatsingsAnalyse | OmvormerAnalyse
@@ -14,23 +15,23 @@ interface PhotoUploadProps {
   description: string
 }
 
-function ScanAnimation({ imageUrl }: { imageUrl: string }) {
+function ScanAnimation({ imageUrl, optimizing }: { imageUrl: string; optimizing?: boolean }) {
   return (
     <div className="relative w-full rounded-lg overflow-hidden border border-amber-300/50 bg-slate-900">
       <img src={imageUrl} alt="Preview" className="w-full max-h-48 object-cover opacity-80" />
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute left-0 right-0 h-0.5 bg-amber-400/80 shadow-[0_0_8px_2px_rgba(245,158,11,0.6)]"
-          style={{ animation: 'scan-line 1.5s linear infinite' }} />
+        {!optimizing && (
+          <div className="absolute left-0 right-0 h-0.5 bg-amber-400/80 shadow-[0_0_8px_2px_rgba(245,158,11,0.6)]"
+            style={{ animation: 'scan-line 1.5s linear infinite' }} />
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 via-transparent to-amber-500/5" />
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'linear-gradient(rgba(245,158,11,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.04) 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
-        }} />
       </div>
       <div className="absolute bottom-2 left-2 right-2">
         <div className="bg-slate-900/80 rounded px-2 py-1 flex items-center gap-1.5">
           <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-          <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">Analyseren...</span>
+          <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">
+            {optimizing ? 'Foto optimaliseren...' : 'Analyseren...'}
+          </span>
         </div>
       </div>
     </div>
@@ -41,56 +42,80 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
   const [isDragOver, setIsDragOver] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [optimizing, setOptimizing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [screeningError, setScreeningError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const processFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith('image/')) { setError('Alleen afbeeldingen zijn toegestaan (JPEG, PNG, WebP)'); return }
-    if (file.size > 10 * 1024 * 1024) { setError('Afbeelding is te groot (max 10 MB)'); return }
-    setError(null); setScreeningError(null)
-
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const dataUrl = e.target?.result as string
-      setImageUrl(dataUrl)
-      setLoading(true)
-      try {
-        const res = await fetch('/api/vision', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: visionType, imageBase64: dataUrl }),
-        })
-        if (res.status === 422) {
-          const errData = await res.json() as { tip?: string; detail?: string }
-          setScreeningError(errData.tip ?? errData.detail ?? `Upload een duidelijke foto van een ${visionType}`)
-          setLoading(false); return
-        }
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({})) as { error?: string }
-          throw new Error(errData.error ?? 'Vision analyse mislukt')
-        }
-        const data = await res.json() as { analyse: VisionResult }
-        trackEvent('photo_uploaded', { type: visionType })
-        onAnalysed(data.analyse)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Onbekende fout bij analyse')
-      } finally {
-        setLoading(false)
-      }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(file.type)) {
+      setError('Alleen afbeeldingen zijn toegestaan (JPEG, PNG, WebP)')
+      return
     }
-    reader.readAsDataURL(file)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Afbeelding is te groot (max 10 MB)')
+      return
+    }
+    setError(null)
+    setScreeningError(null)
+    setOptimizing(true)
+    setLoading(true)
+
+    try {
+      const dataUrl = await prepareVisionImage(file)
+      setImageUrl(dataUrl)
+      setOptimizing(false)
+
+      const res = await fetch('/api/vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: visionType, imageBase64: dataUrl }),
+      })
+      if (res.status === 422) {
+        const errData = await res.json() as { tip?: string; detail?: string }
+        setScreeningError(errData.tip ?? errData.detail ?? `Upload een duidelijke foto van een ${visionType}`)
+        return
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(errData.error ?? 'Vision analyse mislukt')
+      }
+      const data = await res.json() as { analyse: VisionResult }
+      trackEvent('photo_uploaded', { type: visionType })
+      onAnalysed(data.analyse)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Onbekende fout bij analyse')
+    } finally {
+      setLoading(false)
+      setOptimizing(false)
+    }
   }, [visionType, onAnalysed])
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation(); setIsDragOver(false)
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
     const file = e.dataTransfer.files[0]
     if (file) processFile(file)
   }
 
-  const handleReset = () => { setImageUrl(null); setError(null); setScreeningError(null); setLoading(false) }
+  const handleReset = () => {
+    setImageUrl(null)
+    setError(null)
+    setScreeningError(null)
+    setLoading(false)
+    setOptimizing(false)
+  }
 
-  if (loading && imageUrl) return <ScanAnimation imageUrl={imageUrl} />
+  if (loading && imageUrl) return <ScanAnimation imageUrl={imageUrl} optimizing={optimizing} />
+  if (loading && !imageUrl) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
+        <span className="text-sm font-mono text-amber-400">Foto optimaliseren...</span>
+      </div>
+    )
+  }
 
   if (!imageUrl) {
     return (
@@ -112,15 +137,16 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
             <p className="font-semibold text-white/80 text-sm" style={{ fontFamily: 'var(--font-sans)' }}>{title}</p>
             <p className="text-xs text-white/40 mt-1" style={{ fontFamily: 'var(--font-sans)' }}>{description}</p>
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="h-px w-12 bg-white/10" />
-            <span className="text-[10px] text-white/30" style={{ fontFamily: 'var(--font-sans)' }}>Sleep of klik</span>
-            <div className="h-px w-12 bg-white/10" />
-          </div>
           <div className="text-[10px] text-amber-600/70" style={{ fontFamily: 'var(--font-sans)' }}>JPEG · PNG · WebP — max 10 MB</div>
         </div>
 
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = '' }} className="hidden" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = '' }}
+          className="hidden"
+        />
 
         {error && (
           <div className="bg-red-950/40 border border-red-700 rounded-xl px-3 py-2">

@@ -71,7 +71,7 @@ app/
     leads/route.ts                  # Lead opslaan + webhook trigger + Resend bevestigingsmail
     leads/[id]/route.ts             # GDPR DELETE — verwijdert lead na email-token verificatie + bevestigingsmail
     webhooks/b2b/route.ts           # B2B partner webhook dispatcher
-    webhooks/retry/route.ts         # Webhook retry job — 3 pogingen (5m/30m/4h backoff), 1x/dag cron (Hobby limiet)
+    webhooks/retry/route.ts         # Webhook retry job — dagelijkse cron, backoff 24h/48h/96h, byte-identieke replay
     indexing/cron/route.ts          # Dagelijkse Google Indexing API cron (automatisch, max 200 URLs/dag)
 
 components/
@@ -155,6 +155,18 @@ supabase/migrations/
 ### GDPR consent gate
 De B2B webhook dispatcher in `lib/webhooks.ts` controleert altijd `gdpr_consent === true` vóór dispatch. Zonder consent: nul webhooks, log warning. De database heeft een CHECK constraint `b2b_requires_consent` als extra zekerheid.
 
+### Server-trust boundary (fase 0 — `feat/safe-foundation`, jul 2026)
+- **`lib/lead-submission.ts`** — enige parse/normalize-grens voor `POST /api/leads`. Client `healthScore` / `roiResult` zijn display-only; opgeslagen `health_score` / `roi_berekening` komen uit server `berekenROI()` + `berekenHealthScore()` op basis van **`roiInput`** (provenance in `FunnelState.roiInput`, gezet door `Step2ROI`).
+- **`emailStatus`** — API retourneert `sent` | `failed` | `not_configured` na Resend-poging.
+- **`lib/vision-input.ts`** — max 3 MiB decoded vóór AI; `PhotoUpload` comprimeert bron (max 10 MB) via `prepare-vision-image.ts`.
+- **CI** — `.github/workflows/ci.yml`: `npm run typecheck`, `npm run test:unit`, `npm run build`, `npm run test:e2e:core`.
+
+### B2B webhook delivery & retry
+- **`lib/webhook-delivery.ts`** — `buildPartnerPayload`, HMAC-signing, `deliverPartnerWebhook`, `nextDeliveryState`.
+- **`preparePartnerDeliveries`** schrijft elke partner-row met `payload_body` + `payload_signature` vóór HTTP; **`dispatchPreparedPartnerDeliveries`** draait in Next.js `after()` op de leads-route (`maxDuration = 60`).
+- **Retry** (`GET /api/webhooks/retry`, dagelijks 06:00 Vercel Hobby): herlaadt opgeslagen body + actieve partner, verstuurt opnieuw met verse HMAC. Backoff: **24h → 48h → 96h** (past bij dagelijkse cron). Migratie: `20260710143000_webhook_retry_payload.sql`.
+- Legacy deliveries zonder `payload_body` worden éénmalig herbouwd uit de lead-row.
+
 ### Saldering afbouw 2027
 `lib/roi.ts` heeft een `SALDERING_SCHEMA` map (2025: 64%, 2026: 28%, 2027: 0%). Het `shockEffect2027` object drijft urgentie in `Shock2027Banner.tsx` én op pSEO-pagina's.
 
@@ -172,7 +184,7 @@ Wordt afgehandeld door het **Vercel dashboard** (niet in `vercel.json`). Dubbele
 wijk-pSEO CTA linkt naar `/check?wijk=[wijk]&stad=[stad]` om de URL handshake te activeren.
 
 ### Funnel localStorage persistentie
-`FunnelContainer` slaat volledige `FunnelState` op in `localStorage` (key: `funnel_state`). Bij herladen verschijnt een "Doorgaan waar je was?" banner — ook als URL-params aanwezig zijn (initialAdres/Wijk/Stad). Opslaan is gedebounced met 500ms om I/O te beperken.
+`FunnelContainer` slaat volledige `FunnelState` op in `localStorage` (key: `wep_funnel_state`). Bij herladen verschijnt een "Doorgaan waar je was?" banner — ook als URL-params aanwezig zijn (initialAdres/Wijk/Stad). Opslaan is gedebounced met 500ms om I/O te beperken.
 
 ### Social proof teller
 Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden op tiental (bijv. 37 → "30+"). Logica in `app/page.tsx`.
@@ -304,10 +316,13 @@ INDEXING_EXTRA_INDEXING_URLS= # Optioneel: extra volledige URL's (komma) bij hub
 ```bash
 npm run dev               # Start dev server
 npm run build             # Production build
+npm run typecheck         # next typegen + tsc --noEmit
+npm run test:unit         # Playwright unit runner (tests/unit)
+npm run test:e2e:core     # Kern E2E: leadid-hydrate + step6-validatie (chromium)
 npm run seed:netcongestie # Seed netcongestie_cache tabel
 npm run seed:pseo         # Seed eerste batch pSEO adrespagina's
 npm run seed:wijken       # 2000-wijk seed via Gemini (gebruik --batch=0,50 per run)
-npx playwright test       # E2E tests draaien (dev server moet actief zijn)
+npx playwright test       # Volledige E2E suite
 npx tsx scripts/ping-wijk-indexing.ts --batch=START,END  # Google Indexing API, max 200/dag
 ```
 
@@ -380,3 +395,17 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 - Rapportlink: `GET /api/leads/{uuid}?token=…` met geldige token → JSON; zonder token (zonder legacy-env) → 401; te veel requests zelfde IP → 429 op report-read namespace
 - Na geslaagde lead-submit: browser-URL wordt `/check?leadId=…&token=…` (bookmark/herlaad); POST JSON bevat `reportToken`
 - Root layout: `<head>` bevat WebSite JSON-LD met `SearchAction` (target: `/check?adres={search_term_string}`) + Organization schema
+
+## Customer-first UI overhaul — voortgang
+
+| Fase | Status | Branch | Plan |
+|------|--------|--------|------|
+| 0 Veilige fundering | **Geïmplementeerd** (jul 2026) | `feat/safe-foundation` | `docs/superpowers/plans/2026-07-10-safe-foundation.md` |
+| 1 Design system + entry | Gepland | — | `2026-07-10-design-system-conversion-entry.md` |
+| 2 Funnel + analytics | Gepland | — | `2026-07-10-funnel-analytics.md` |
+| 3 Rapportketen | Gepland | — | `2026-07-10-report-chain.md` |
+| 4 Route-uitrol | Gepland | — | `2026-07-10-route-rollout-stabilization.md` |
+
+**Fase 0 deploy-checklist:** migratie `20260710143000_webhook_retry_payload.sql` in Supabase vóór deploy; geen productie-DB-wijzigingen in CI (placeholder env only).
+
+**Nog open uit fase 0 file map:** `lib/bag-attestation.ts` (HMAC op BAG-response) — bewust uitgesteld; niet blokkerend voor fase 1.
