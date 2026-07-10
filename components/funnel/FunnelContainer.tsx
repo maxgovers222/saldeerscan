@@ -22,7 +22,7 @@ function loadState(): FunnelState | null {
     const parsed = JSON.parse(raw) as FunnelState
     // Only restore if there's real progress (past step 1 or has data)
     if (parsed.step <= 1 && !parsed.bagData) return null
-    return { ...parsed, leadReportToken: parsed.leadReportToken ?? null }
+    return { ...parsed, leadReportToken: parsed.leadReportToken ?? null, roiInput: parsed.roiInput ?? null }
   } catch { return null }
 }
 import { FunnelProgress } from './FunnelProgress'
@@ -42,6 +42,7 @@ function funnelReducer(state: FunnelState, action: FunnelAction): FunnelState {
     case 'SET_NETCONGESTIE': return { ...state, netcongestie: action.netcongestie }
     case 'SET_HEALTH_SCORE': return { ...state, healthScore: action.healthScore }
     case 'SET_ROI': return { ...state, roiResult: action.roiResult }
+    case 'SET_ROI_INPUT': return { ...state, roiInput: action.roiInput }
     case 'SET_METERKAST': return { ...state, meterkastAnalyse: action.meterkastAnalyse }
     case 'SET_PLAATSING': return { ...state, plaatsingsAnalyse: action.plaatsingsAnalyse }
     case 'SET_OMVORMER': return { ...state, omvormerAnalyse: action.omvormerAnalyse }
@@ -71,6 +72,7 @@ function makeInitialState(initialAdres = '', initialWijk = '', initialStad = '')
     netcongestie: null,
     healthScore: null,
     roiResult: null,
+    roiInput: null,
     meterkastAnalyse: null,
     plaatsingsAnalyse: null,
     omvormerAnalyse: null,
@@ -320,6 +322,7 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
       netcongestie: savedState.netcongestie,
       healthScore: savedState.healthScore,
       roiResult: savedState.roiResult,
+      roiInput: savedState.roiInput,
       meterkastAnalyse: savedState.meterkastAnalyse,
       plaatsingsAnalyse: savedState.plaatsingsAnalyse,
       omvormerAnalyse: savedState.omvormerAnalyse,
@@ -330,7 +333,8 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
       if (value !== null && value !== undefined) {
         const actionMap: Record<string, FunnelAction['type']> = {
           adres: 'SET_ADRES', bagData: 'SET_BAG_DATA', netcongestie: 'SET_NETCONGESTIE',
-          healthScore: 'SET_HEALTH_SCORE', roiResult: 'SET_ROI', meterkastAnalyse: 'SET_METERKAST',
+          healthScore: 'SET_HEALTH_SCORE', roiResult: 'SET_ROI', roiInput: 'SET_ROI_INPUT',
+          meterkastAnalyse: 'SET_METERKAST',
           plaatsingsAnalyse: 'SET_PLAATSING', omvormerAnalyse: 'SET_OMVORMER',
           is_eigenaar: 'SET_IS_EIGENAAR', heeft_panelen: 'SET_HEEFT_PANELEN', huidige_panelen_aantal: 'SET_HUIDIGE_PANELEN_AANTAL',
         }

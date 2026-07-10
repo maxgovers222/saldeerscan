@@ -197,6 +197,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
               ? extractProvincie(state.bagData.postcode.substring(0, 4))
               : null,
           lat: state.bagData?.lat, lon: state.bagData?.lon, bagData: state.bagData,
+          roiInput: state.roiInput,
           healthScore: state.healthScore?.score, netcongestieStatus: state.netcongestie?.status,
           roiResult: state.roiResult, meterkastAnalyse: state.meterkastAnalyse,
           plaatsingsAnalyse: state.plaatsingsAnalyse, omvormerAnalyse: state.omvormerAnalyse,

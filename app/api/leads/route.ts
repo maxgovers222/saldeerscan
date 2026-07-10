@@ -1,94 +1,88 @@
+import { after } from 'next/server'
 import { applyRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { parseStoredRoi } from '@/lib/roi-result-guard'
 import { signLeadReportAccessToken } from '@/lib/lead-report-token'
-import { dispatchToPartners, dispatchToBulkBuyer } from '@/lib/webhooks'
+import {
+  dispatchPreparedPartnerDeliveries,
+  dispatchToBulkBuyer,
+  preparePartnerDeliveries,
+} from '@/lib/webhooks'
+import {
+  deriveLeadAnalysis,
+  LeadSubmissionError,
+  parseLeadSubmission,
+  readBoundedJson,
+} from '@/lib/lead-submission'
+import { getNetcongestie } from '@/lib/netcongestie'
 import { Resend } from 'resend'
+
+export const maxDuration = 60
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 if (!resend) console.warn('[api/leads] RESEND_API_KEY niet ingesteld — bevestigingsmail wordt overgeslagen')
 
 export async function POST(request: Request) {
-  const limitResult = await applyRateLimit(request, 10, 3_600_000) // 10 leads per IP per hour
+  const limitResult = await applyRateLimit(request, 10, 3_600_000)
   if (limitResult.response) return limitResult.response
 
-  let body: Record<string, unknown>
+  let submission
   try {
-    body = await request.json()
-  } catch {
-    return Response.json({ error: 'Ongeldig JSON body' }, { status: 400 })
+    submission = parseLeadSubmission(await readBoundedJson(request))
+  } catch (error) {
+    if (error instanceof LeadSubmissionError) {
+      return Response.json(
+        { error: error.message, field: error.field ?? null },
+        { status: error.status },
+      )
+    }
+    return Response.json({ error: 'Ongeldige aanvraag' }, { status: 400 })
   }
 
-  // Validate required fields
-  const { naam, email, telefoon, adres, gdprConsent } = body
-  if (!naam || !email || !telefoon || !adres) {
-    return Response.json({ error: 'naam, email, telefoon en adres zijn verplicht' }, { status: 400 })
-  }
-  if (gdprConsent !== true) {
-    return Response.json({ error: 'GDPR consent is vereist' }, { status: 400 })
-  }
+  const netcongestie = await getNetcongestie(submission.postcode)
+  const { roi, health } = deriveLeadAnalysis(submission, netcongestie.status)
 
-  // Get IP for consent logging
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? '127.0.0.1'
 
-  // Insert lead
   const { data: lead, error } = await supabaseAdmin
     .from('leads')
     .insert({
-      naam: String(naam),
-      email: String(email),
-      telefoon: String(telefoon),
-      adres: String(adres),
-      postcode: body.postcode ? String(body.postcode) : null,
-      huisnummer: body.huisnummer ? String(body.huisnummer) : null,
-      wijk: body.wijk ? String(body.wijk) : null,
-      stad: body.stad ? String(body.stad) : null,
-      provincie: body.provincie ? String(body.provincie) : null,
-      lat: body.lat ? Number(body.lat) : null,
-      lon: body.lon ? Number(body.lon) : null,
-
-      // BAG + scoring data
-      bag_data: body.bagData ?? {},
-      ep_data: body.epData ?? {},
-      energielabel: body.energielabel ? String(body.energielabel) : null,
-      health_score: body.healthScore ? Number(body.healthScore) : null,
-      netcongestie_status: body.netcongestieStatus ? String(body.netcongestieStatus) : null,
-      roi_berekening: body.roiResult ?? {},
-
-      // Vision analyses
-      meterkast_analyse: body.meterkastAnalyse ?? {},
-      plaatsing_analyse: body.plaatsingsAnalyse ?? {},
-      omvormer_analyse: body.omvormerAnalyse ?? {},
-
-      // ISDE subsidie pre-fill (from ROI result)
-      isde_pre_fill: body.isdeSchatting ?? {},
-
-      // GDPR consent (juridische shield)
+      naam: submission.naam,
+      email: submission.email,
+      telefoon: submission.telefoon,
+      adres: submission.adres,
+      postcode: submission.postcode,
+      huisnummer: submission.huisnummer,
+      wijk: submission.wijk,
+      stad: submission.stad,
+      provincie: submission.provincie,
+      lat: submission.bagData.lat,
+      lon: submission.bagData.lon,
+      bag_data: submission.bagData,
+      ep_data: {},
+      energielabel: submission.energielabel,
+      health_score: health.score,
+      netcongestie_status: netcongestie.status,
+      roi_berekening: roi,
+      meterkast_analyse: submission.meterkastAnalyse ?? {},
+      plaatsing_analyse: submission.plaatsingsAnalyse ?? {},
+      omvormer_analyse: submission.omvormerAnalyse ?? {},
+      isde_pre_fill: roi.isdeSchatting,
       gdpr_consent: true,
       consent_timestamp: new Date().toISOString(),
       consent_ip: ip,
       consent_tekst: 'Ja, ik ontvang graag mijn Persoonlijke 2027-Rapport. Ik geef toestemming om mijn scandata te laten valideren door een gecertificeerde energie-expert van SaldeerScan.nl in mijn regio voor een definitief configuratie-advies.',
-
-      // Kwalificatie
-      is_eigenaar: typeof body.isEigenaar === 'boolean' ? body.isEigenaar : null,
-      heeft_panelen: typeof body.heeftPanelen === 'boolean' ? body.heeftPanelen : null,
-      huidige_panelen_aantal:
-        typeof body.huidigePanelenAantal === 'number' && Number.isFinite(body.huidigePanelenAantal)
-          ? Math.min(200, Math.max(1, Math.round(body.huidigePanelenAantal)))
-          : null,
-      dakrichting: body.dakrichting ? String(body.dakrichting) : null,
-      verbruik_bron: body.verbruik_bron ? String(body.verbruik_bron) : 'schatting',
-      huishouden_grootte: body.huishouden_grootte ? Number(body.huishouden_grootte) : null,
-
-      // Funnel metadata
+      is_eigenaar: submission.isEigenaar,
+      heeft_panelen: submission.heeftPanelen,
+      huidige_panelen_aantal: submission.huidigePanelenAantal,
+      dakrichting: submission.dakrichting,
+      verbruik_bron: submission.verbruikBron,
+      huishouden_grootte: submission.huishoudenGrootte,
       funnel_step: 6,
       funnel_completed: true,
-
-      // UTM tracking
-      utm_source: body.utmSource ? String(body.utmSource) : null,
-      utm_medium: body.utmMedium ? String(body.utmMedium) : null,
-      utm_campaign: body.utmCampaign ? String(body.utmCampaign) : null,
-      landing_page: body.landingPage ? String(body.landingPage) : null,
+      utm_source: submission.utmSource,
+      utm_medium: submission.utmMedium,
+      utm_campaign: submission.utmCampaign,
+      landing_page: submission.landingPage,
     })
     .select('id')
     .single()
@@ -104,15 +98,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Lead kon niet worden opgeslagen' }, { status: 500 })
   }
 
-  // Dispatch to B2B partners asynchronously (fire and forget)
-  dispatchToPartners(lead.id).catch(err =>
-    console.error('[api/leads] webhook dispatch error:', err)
-  )
-
-  // Dispatch to bulk buyer if configured (fire and forget)
-  dispatchToBulkBuyer({ ...lead, gdpr_consent: body.gdprConsent }).catch(err =>
-    console.error('[api/leads] bulk buyer dispatch error:', err)
-  )
+  const preparedPartnerDeliveries = await preparePartnerDeliveries(lead.id)
 
   const reportAccessToken = signLeadReportAccessToken(lead.id)
   if (!reportAccessToken) {
@@ -121,33 +107,32 @@ export async function POST(request: Request) {
     )
   }
 
-  // Send confirmation email (awaited — fire-and-forget laat Promise vallen in serverless)
-  if (resend) {
-    const roi = parseStoredRoi(body.roiResult ?? null)
+  let emailStatus: 'sent' | 'failed' | 'not_configured' = resend
+    ? 'failed'
+    : 'not_configured'
 
-    const score          = body.healthScore ? Number(body.healthScore) : null
-    const energielabel   = body.energielabel ? String(body.energielabel) : null
-    const netStatus      = body.netcongestieStatus ? String(body.netcongestieStatus) : null
-    const heeftPanelen   = typeof body.heeftPanelen === 'boolean' ? body.heeftPanelen : null
-    const bestaandePanelen = body.huidigePanelenAantal ? Number(body.huidigePanelenAantal) : null
-    const batterijInvestering = roi
-      ? Math.max(roi.scenarioMetBatterij.investeringEur - roi.scenarioNu.investeringEur, 0)
-      : 0
-    const batterijMeerBesparing = roi
-      ? Math.max(roi.scenarioMetBatterij.besparingJaarEur - roi.scenarioNu.besparingJaarEur, 0)
-      : 0
-    const besparing      = !roi ? null : heeftPanelen
-      ? (roi.scenarioMetBatterij.besparingJaarEur ?? roi.scenarioNu.besparingJaarEur)
+  if (resend) {
+    const score = health.score
+    const energielabel = submission.energielabel
+    const netStatus = netcongestie.status
+    const heeftPanelen = submission.heeftPanelen
+    const bestaandePanelen = submission.huidigePanelenAantal
+    const batterijInvestering = Math.max(
+      roi.scenarioMetBatterij.investeringEur - roi.scenarioNu.investeringEur, 0)
+    const batterijMeerBesparing = Math.max(
+      roi.scenarioMetBatterij.besparingJaarEur - roi.scenarioNu.besparingJaarEur, 0)
+    const besparing = heeftPanelen
+      ? roi.scenarioMetBatterij.besparingJaarEur
       : roi.scenarioNu.besparingJaarEur
-    const terugverdien   = !roi ? null : heeftPanelen
+    const terugverdien = heeftPanelen
       ? (batterijMeerBesparing > 0 ? Math.round((batterijInvestering / batterijMeerBesparing) * 10) / 10 : null)
       : roi.scenarioNu.terugverdientijdJaar
-    const aantalPanelenAdvies = roi?.aantalPanelen ?? null
-    const verliesNa2027 = roi ? roi.shockEffect2027.jaarlijksVerlies : null
-    const isdeSubsidie   = roi?.isdeSchatting && roi.isdeSchatting.bedragEur > 0
+    const aantalPanelenAdvies = roi.aantalPanelen
+    const verliesNa2027 = roi.shockEffect2027.jaarlijksVerlies
+    const isdeSubsidie = roi.isdeSchatting && roi.isdeSchatting.bedragEur > 0
       ? roi.isdeSchatting.bedragEur : null
 
-    const voornaam = String(naam).split(' ')[0]
+    const voornaam = submission.naam.split(' ')[0]
     const reportCheckUrl = reportAccessToken
       ? `https://saldeerscan.nl/check?leadId=${encodeURIComponent(lead.id)}&token=${encodeURIComponent(reportAccessToken)}`
       : `https://saldeerscan.nl/check?leadId=${encodeURIComponent(lead.id)}`
@@ -166,29 +151,29 @@ export async function POST(request: Request) {
       </tr>`
 
     const dataRijen = [
-      score         !== null ? dataRij('Energie Score', `<span style="color:#f59e0b">${score}/100</span>`) : '',
-      energielabel              ? dataRij('Energielabel', energielabel) : '',
-      netStatus                 ? dataRij('Netcongestie', `${netDot}${netStatus}`) : '',
+      score !== null ? dataRij('Energie Score', `<span style="color:#f59e0b">${score}/100</span>`) : '',
+      energielabel ? dataRij('Energielabel', energielabel) : '',
+      netStatus ? dataRij('Netcongestie', `${netDot}${netStatus}`) : '',
       !heeftPanelen && aantalPanelenAdvies !== null
         ? dataRij('Adviesmodel (max. dak)', `${aantalPanelenAdvies} stuks`)
         : '',
       heeftPanelen === true && bestaandePanelen
         ? dataRij('Huidige installatie', `${bestaandePanelen} panelen`)
         : '',
-      besparing     !== null    ? dataRij(
+      besparing !== null ? dataRij(
         heeftPanelen ? 'Geschatte besparing (incl. batterij-scenario)' : 'Geschatte besparing',
         `<span style="color:#10b981">€${besparing.toLocaleString('nl-NL')}/jaar</span>`
       ) : '',
-      isdeSubsidie  !== null    ? dataRij('ISDE subsidie', `<span style="color:#10b981">€${isdeSubsidie.toLocaleString('nl-NL')}</span>`) : '',
-      terugverdien  !== null    ? dataRij('Terugverdientijd', `${terugverdien} jaar`) : '',
+      isdeSubsidie !== null ? dataRij('ISDE subsidie', `<span style="color:#10b981">€${isdeSubsidie.toLocaleString('nl-NL')}</span>`) : '',
+      terugverdien !== null ? dataRij('Terugverdientijd', `${terugverdien} jaar`) : '',
     ].filter(Boolean).join('')
 
     try {
-    const emailResult = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL!,
-      to: String(email),
-      subject: `Uw persoonlijk 2027-rapport is klaar, ${voornaam}`,
-      html: `
+      const emailResult = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL!,
+        to: submission.email,
+        subject: `Uw persoonlijk 2027-rapport is klaar, ${voornaam}`,
+        html: `
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -198,17 +183,10 @@ export async function POST(request: Request) {
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
   <div style="max-width:580px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
-
-    <!-- HEADER -->
     <div style="background:#ffffff;padding:24px 32px 18px;border-bottom:1px solid #e2e8f0">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td>
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:10px">
-              <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" fill="none" stroke="#00aa65" stroke-width="1.5"/>
-              <polygon points="14,7 21,11 21,17 14,21 7,17 7,11" fill="#00aa65" opacity="0.15"/>
-              <path d="M14 9 L17 14 L14 19 L11 14 Z" fill="#00aa65"/>
-            </svg>
             <span style="font-size:18px;font-weight:700;color:#0f172a;vertical-align:middle;letter-spacing:-0.3px">SaldeerScan.nl</span>
           </td>
           <td style="text-align:right;vertical-align:middle">
@@ -217,114 +195,76 @@ export async function POST(request: Request) {
         </tr>
       </table>
     </div>
-
-    <!-- URGENTIE BAR -->
     <div style="background:#fff7ed;border-top:1px solid #fdba74;border-bottom:1px solid #fed7aa;padding:9px 32px">
       <span style="font-size:11px;color:#9a3412;letter-spacing:0.3px">Salderingsregeling stopt volledig per 1 januari 2027</span>
     </div>
-
-    <!-- BODY -->
     <div style="padding:32px">
       <p style="margin:0 0 4px;font-size:16px;font-weight:600;color:#0f172a">Geachte ${voornaam},</p>
       <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.75">
-        Uw persoonlijk 2027-rapport voor <strong style="color:#0f172a">${String(body.adres)}</strong> is opgesteld.
+        Uw persoonlijk 2027-rapport voor <strong style="color:#0f172a">${submission.adres}</strong> is opgesteld.
         Een energieadviseur in uw regio neemt naar aanleiding van uw aanvraag contact met u op.
       </p>
-
-      ${roi ? `
-      <!-- SHOCK BOX -->
       <div style="background:#fff1f2;border-radius:10px;border-left:4px solid #dc2626;padding:18px 20px;margin-bottom:24px">
         <div style="font-size:10px;color:#b91c1c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600;opacity:0.8">Uw 2027-impact</div>
         <div style="font-size:28px;font-weight:800;color:#b91c1c;letter-spacing:-0.5px;margin-bottom:4px">
           &minus;€${(verliesNa2027 ?? 0).toLocaleString('nl-NL')}<span style="font-size:14px;font-weight:500">/jaar</span>
         </div>
-        <div style="font-size:12px;color:#7f1d1d;opacity:0.85">${heeftPanelen ? 'Verschil per jaar zonder thuisbatterij t.o.v. voor 2027 handelen (op basis van uw scan)' : 'Verschil per jaar als u nu géén actie onderneemt t.o.v. voor 2027 handelen'}</div>
       </div>
-      ` : ''}
-
       ${dataRijen ? `
-      <!-- SCAN DATA -->
       <div style="margin-bottom:24px">
         <div style="font-size:10px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;font-weight:600">Uw scanresultaten</div>
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
           ${dataRijen}
-          ${heeftPanelen && roi && batterijInvestering > 0 ? dataRij('Batterij investering', `€${batterijInvestering.toLocaleString('nl-NL')}`) : ''}
-          ${heeftPanelen && roi && batterijMeerBesparing > 0 ? dataRij('Extra besparing batterij', `<span style="color:#16a34a">+€${batterijMeerBesparing.toLocaleString('nl-NL')}/jaar</span>`) : ''}
         </table>
       </div>
       ` : ''}
-
-      <!-- CTA BUTTON -->
       <div style="text-align:center;margin-bottom:28px">
         <a href="${reportCheckUrl}" style="display:inline-block;background:#f59e0b;color:#020617;font-size:14px;font-weight:700;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.2px">
           Bekijk uw rapport op SaldeerScan.nl
         </a>
       </div>
-
-      <!-- WAT NU -->
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;margin-bottom:0">
-        <div style="font-size:10px;color:#64748b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;font-weight:600">Wat nu?</div>
-        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="width:28px;vertical-align:top;padding-bottom:10px">
-              <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">1</div>
-            </td>
-            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#475569;line-height:1.5;vertical-align:top">
-              <strong style="color:#0f172a">Adviseur neemt contact op</strong> — een gecertificeerde energieadviseur uit uw regio neemt naar aanleiding van uw aanvraag contact met u op.
-            </td>
-          </tr>
-          <tr>
-            <td style="width:28px;vertical-align:top;padding-bottom:10px">
-              <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">2</div>
-            </td>
-            <td style="padding-bottom:10px;padding-left:10px;font-size:13px;color:#475569;line-height:1.5;vertical-align:top">
-              <strong style="color:#0f172a">Gratis locatiecheck</strong> — uw dak, situatie en netaansluiting worden ter plaatse beoordeeld.
-            </td>
-          </tr>
-          <tr>
-            <td style="width:28px;vertical-align:top">
-              <div style="width:20px;height:20px;border-radius:50%;background:#020617;color:#f59e0b;font-size:11px;font-weight:700;text-align:center;line-height:20px">3</div>
-            </td>
-            <td style="padding-left:10px;font-size:13px;color:#475569;line-height:1.5;vertical-align:top">
-              <strong style="color:#0f172a">Definitief advies</strong> — u ontvangt een vrijblijvende offerte op maat, inclusief de actuele ISDE-subsidiemogelijkheden.
-            </td>
-          </tr>
-        </table>
-        ${heeftPanelen ? '<p style="margin:14px 0 0;font-size:12px;color:#166534;line-height:1.6"><strong>Advies voor uw situatie:</strong> u heeft al zonnepanelen, dus de belangrijkste vervolgstap is doorgaans een thuisbatterij om 2027-verlies te beperken.</p>' : ''}
-      </div>
     </div>
-
-    <!-- FOOTER -->
     <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px">
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="font-size:11px;color:#64748b;line-height:1.6">
-            © ${new Date().getFullYear()} SaldeerScan.nl &nbsp;·&nbsp; AVG-compliant<br>
-            <a href="mailto:info@saldeerscan.nl" style="color:#64748b;text-decoration:none">info@saldeerscan.nl</a><br>
-            <span style="font-size:10px">U ontvangt geen verdere e-mails van ons. Dit is een eenmalige bevestiging.</span>
-          </td>
-        </tr>
-      </table>
+      <span style="font-size:11px;color:#64748b">© ${new Date().getFullYear()} SaldeerScan.nl</span>
     </div>
-
   </div>
 </body>
 </html>`,
-    })
-    if ('error' in emailResult && emailResult.error) {
-      console.error('[api/leads] email error:', emailResult.error)
-    }
+      })
+      if ('error' in emailResult && emailResult.error) {
+        console.error('[api/leads] email error:', emailResult.error)
+      } else {
+        emailStatus = 'sent'
+      }
     } catch (err) {
       console.error('[api/leads] email exception:', err)
     }
   }
+
+  after(async () => {
+    const outcomes = await Promise.allSettled([
+      dispatchPreparedPartnerDeliveries(preparedPartnerDeliveries),
+      dispatchToBulkBuyer(lead.id),
+    ])
+    outcomes.forEach((outcome, index) => {
+      if (outcome.status === 'rejected') {
+        console.error(
+          index === 0
+            ? '[api/leads] partner dispatch error'
+            : '[api/leads] bulk buyer dispatch error',
+          outcome.reason,
+        )
+      }
+    })
+  })
 
   return Response.json(
     {
       leadId: lead.id,
       reportToken: reportAccessToken ?? null,
       status: 'ingediend',
+      emailStatus,
     },
-    { status: 201 }
+    { status: 201 },
   )
 }

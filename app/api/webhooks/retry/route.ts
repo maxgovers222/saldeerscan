@@ -1,57 +1,108 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import {
+  buildPartnerPayload,
+  deliverPartnerWebhook,
+  nextDeliveryState,
+  type PartnerEndpoint,
+  type StoredLeadForWebhook,
+} from '@/lib/webhook-delivery'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function GET(req: Request) {
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET ||
+      req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const { data: pending } = await supabaseAdmin
+  const { data: pending, error: pendingError } = await supabaseAdmin
     .from('webhook_deliveries')
-    .select('*')
+    .select('id, lead_id, partner_id, attempts, payload_body')
     .eq('status', 'pending_retry')
     .lte('next_retry_at', new Date().toISOString())
+    .order('next_retry_at', { ascending: true })
     .limit(50)
 
-  const RETRY_DELAYS_SECONDS = [5 * 60, 30 * 60, 4 * 3600]
-  let retried = 0
-
-  for (const delivery of pending ?? []) {
-    try {
-      const res = await fetch(delivery.webhook_url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(10_000),
-      })
-
-      if (res.ok) {
-        await supabaseAdmin.from('webhook_deliveries').update({
-          status: 'delivered',
-          attempts: delivery.attempts + 1,
-          delivered_at: new Date().toISOString(),
-          next_retry_at: null,
-        }).eq('id', delivery.id)
-        retried++
-      } else {
-        const attempts = delivery.attempts + 1
-        const delay = RETRY_DELAYS_SECONDS[attempts - 1] ?? null
-        await supabaseAdmin.from('webhook_deliveries').update({
-          status: delay ? 'pending_retry' : 'failed',
-          attempts,
-          last_error: `HTTP ${res.status}`,
-          next_retry_at: delay ? new Date(Date.now() + delay * 1000).toISOString() : null,
-        }).eq('id', delivery.id)
-      }
-    } catch (err) {
-      await supabaseAdmin.from('webhook_deliveries').update({
-        attempts: delivery.attempts + 1,
-        last_error: String(err),
-      }).eq('id', delivery.id)
-    }
+  if (pendingError) {
+    console.error('[webhooks/retry] query failed:', pendingError.message)
+    return NextResponse.json({ error: 'retry_query_failed' }, { status: 500 })
   }
 
-  return NextResponse.json({ retried, processed: pending?.length ?? 0 })
+  let delivered = 0
+  let rescheduled = 0
+  let failed = 0
+
+  for (const delivery of pending ?? []) {
+    const [{ data: lead }, { data: partner }] = await Promise.all([
+      supabaseAdmin.from('leads').select('*').eq('id', delivery.lead_id).maybeSingle(),
+      supabaseAdmin
+        .from('b2b_partners')
+        .select('id, naam, webhook_url, api_key_hash, actief')
+        .eq('id', delivery.partner_id)
+        .maybeSingle(),
+    ])
+
+    const attempts = delivery.attempts + 1
+    if (!lead || !partner || !partner.actief) {
+      await supabaseAdmin.from('webhook_deliveries').update({
+        status: 'failed',
+        attempts,
+        last_error: !lead ? 'lead_not_found' : 'partner_inactive_or_not_found',
+        next_retry_at: null,
+      }).eq('id', delivery.id)
+      failed++
+      continue
+    }
+
+    const payloadBody = delivery.payload_body
+      ?? buildPartnerPayload(lead as StoredLeadForWebhook)
+    const result = await deliverPartnerWebhook({
+      leadId: delivery.lead_id,
+      payloadBody,
+      partner: partner as PartnerEndpoint,
+    })
+
+    if (result.ok) {
+      await supabaseAdmin.from('webhook_deliveries').update({
+        status: 'delivered',
+        attempts,
+        last_error: null,
+        delivered_at: new Date().toISOString(),
+        next_retry_at: null,
+        payload_body: result.payloadBody,
+        payload_signature: result.signature,
+      }).eq('id', delivery.id)
+      delivered++
+      continue
+    }
+
+    const next = nextDeliveryState(
+      attempts,
+      result.error ?? 'Onbekende webhookfout',
+    )
+    await supabaseAdmin.from('webhook_deliveries')
+      .update({
+        ...next,
+        payload_body: result.payloadBody,
+        payload_signature: result.signature,
+      })
+      .eq('id', delivery.id)
+    if (next.status === 'failed') failed++
+    else rescheduled++
+  }
+
+  console.info('[webhooks/retry] completed', {
+    processed: pending?.length ?? 0,
+    delivered,
+    rescheduled,
+    failed,
+  })
+  return NextResponse.json({
+    processed: pending?.length ?? 0,
+    delivered,
+    rescheduled,
+    failed,
+  })
 }

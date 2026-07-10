@@ -73,6 +73,17 @@ export interface OmvormerAnalyse {
   opmerkingen: string[]
 }
 
+export interface RoiCalculationInput {
+  oppervlakte: number
+  bouwjaar: number
+  dakOppervlakte: number
+  huidigVerbruikKwh: number
+  aantalPanelenOverride: number
+  kwhPerPaneel: number
+  dakrichting: 'Zuid' | 'Oost/West' | 'Noord' | null
+  huishouden_grootte: 1 | 2 | 3 | null
+}
+
 export interface FunnelState {
   step: 1 | 2 | 3 | 4 | 5 | 6
   adres: string
@@ -97,6 +108,7 @@ export interface FunnelState {
   } | null
   healthScore: HealthScoreResult | null
   roiResult: ROIResult | null
+  roiInput: RoiCalculationInput | null
   meterkastAnalyse: MeterkastAnalyse | null
   plaatsingsAnalyse: PlaatsingsAnalyse | null
   omvormerAnalyse: OmvormerAnalyse | null
@@ -126,6 +138,7 @@ export type FunnelAction =
   | { type: 'SET_NETCONGESTIE'; netcongestie: FunnelState['netcongestie'] }
   | { type: 'SET_HEALTH_SCORE'; healthScore: HealthScoreResult }
   | { type: 'SET_ROI'; roiResult: ROIResult }
+  | { type: 'SET_ROI_INPUT'; roiInput: RoiCalculationInput }
   | { type: 'SET_METERKAST'; meterkastAnalyse: MeterkastAnalyse | null }
   | { type: 'SET_PLAATSING'; plaatsingsAnalyse: PlaatsingsAnalyse | null }
   | { type: 'SET_OMVORMER'; omvormerAnalyse: OmvormerAnalyse | null }

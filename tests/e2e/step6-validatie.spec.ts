@@ -40,6 +40,16 @@ const FUNNEL_STATE_STEP6 = {
     breakdown: { bouwjaar: 15, energielabel: 12, dakpotentieel: 20, netcongestie: 15 },
     aanbevelingen: ['Overweeg isolatie'],
   },
+  roiInput: {
+    oppervlakte: 120,
+    bouwjaar: 1880,
+    dakOppervlakte: 45,
+    huidigVerbruikKwh: 3500,
+    aantalPanelenOverride: 8,
+    kwhPerPaneel: 350,
+    dakrichting: null,
+    huishouden_grootte: null,
+  },
   roiResult: {
     geschatVerbruikKwh: 3500,
     aantalPanelen: 8,
@@ -200,6 +210,24 @@ test.describe('Step 6 — Lead formulier validatie', () => {
   })
 
   test('Volledig valid formulier leidt tot ResultsDashboard', async ({ page }) => {
+    let submittedBody: Record<string, unknown> | undefined
+
+    await page.route('**/api/leads', async (route) => {
+      if (route.request().method() === 'POST') {
+        submittedBody = route.request().postDataJSON() as Record<string, unknown>
+      }
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          leadId: 'test-lead-id-123',
+          reportToken: 'test-report-token',
+          status: 'ingediend',
+          emailStatus: 'sent',
+        }),
+      })
+    })
+
     const naamInput = page.locator('#lead-naam')
     if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       await naamInput.fill('Jan de Vries')
@@ -208,6 +236,15 @@ test.describe('Step 6 — Lead formulier validatie', () => {
       await page.locator('#lead-gdpr').click({ force: true })
       await page.locator('button[type="submit"]').click()
       await expect(page.locator('text=Uw SaldeerScan rapport').first()).toBeVisible({ timeout: 15000 })
+      if (!submittedBody) throw new Error('expected lead POST body')
+      expect(submittedBody.roiInput).toMatchObject({
+        oppervlakte: expect.any(Number),
+        bouwjaar: expect.any(Number),
+        dakOppervlakte: expect.any(Number),
+        huidigVerbruikKwh: expect.any(Number),
+        aantalPanelenOverride: expect.any(Number),
+        kwhPerPaneel: expect.any(Number),
+      })
     }
   })
 })
