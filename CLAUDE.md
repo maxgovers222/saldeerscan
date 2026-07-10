@@ -398,14 +398,23 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 
 ## Customer-first UI overhaul — voortgang
 
-| Fase | Status | Branch | Plan |
-|------|--------|--------|------|
-| 0 Veilige fundering | **Geïmplementeerd** (jul 2026) | `feat/safe-foundation` | `docs/superpowers/plans/2026-07-10-safe-foundation.md` |
-| 1 Design system + entry | Gepland | — | `2026-07-10-design-system-conversion-entry.md` |
-| 2 Funnel + analytics | Gepland | — | `2026-07-10-funnel-analytics.md` |
-| 3 Rapportketen | Gepland | — | `2026-07-10-report-chain.md` |
-| 4 Route-uitrol | Gepland | — | `2026-07-10-route-rollout-stabilization.md` |
+**Handoff (lees bij hervatten):** `docs/superpowers/HANDOFF-2026-07-10-customer-first-ui-overhaul.md`  
+**Design spec:** `docs/superpowers/specs/2026-07-10-customer-first-ui-overhaul-design.md`  
+**Vorige chat:** transcript `827f96be-974a-4a0c-9d2a-8e76dc979a14`  
+**Hervatten:** ~8 augustus 2026 · model **GPT 5.6 Sol** · **1 fase/sessie** · **niet** op Auto voor fasen 1–4
 
-**Fase 0 deploy-checklist:** migratie `20260710143000_webhook_retry_payload.sql` in Supabase vóór deploy; geen productie-DB-wijzigingen in CI (placeholder env only).
+| Fase | Status | Branch / merge | Plan |
+|------|--------|----------------|------|
+| 0 Veilige fundering | **LIVE** (jul 2026, PR #1 → `master` `527bc87`) | gemerged | `docs/superpowers/plans/2026-07-10-safe-foundation.md` |
+| 1 Design system + entry | Gepland | `feat/phase-1-design-system` (aan te maken) | `docs/superpowers/plans/2026-07-10-design-system-conversion-entry.md` |
+| 2 Funnel + analytics | Gepland | `feat/phase-2-funnel-analytics` | `docs/superpowers/plans/2026-07-10-funnel-analytics.md` |
+| 3 Rapportketen | Gepland | `feat/phase-3-report-chain` | `docs/superpowers/plans/2026-07-10-report-chain.md` |
+| 4 Route-uitrol | Gepland | `feat/phase-4-route-rollout` | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
+
+**Startprompt fase 1:** lees HANDOFF + voer plan fase 1 uit (`superpowers:executing-plans`).
+
+**Fase 0 productie:** migratie `20260710143000_webhook_retry_payload.sql` uitgevoerd in Supabase (jul 2026).
 
 **Nog open uit fase 0 file map:** `lib/bag-attestation.ts` (HMAC op BAG-response) — bewust uitgesteld; niet blokkerend voor fase 1.
+
+**Tokenschatting fasen 1–4:** ~1,6M–3,4M · **~€20–55** overage op Pro bij Sol; wachten op quota-reset is aanbevolen (kwaliteit + kosten). Zie HANDOFF §12.
