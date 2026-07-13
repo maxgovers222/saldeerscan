@@ -6,6 +6,7 @@ import type { FunnelState, FunnelAction } from './types'
 import { StepHeader } from './StepHeader'
 import { PDFDownloadButton } from './PDFDownloadButton'
 import { ResultsDashboard } from './ResultsDashboard'
+import type { NormalizedReport } from '@/lib/report-model'
 
 function extractStad(adres?: string): string {
   if (!adres) return 'Nederland'
@@ -95,13 +96,21 @@ function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: 
 }
 
 function SuccessState({ state }: { state: FunnelState }) {
+  const emailStatus = state.reportModel?.delivery.emailStatus ?? 'pending'
+  const statusText = emailStatus === 'sent'
+    ? 'Gegevens ontvangen — bevestiging verstuurd naar uw e-mail'
+    : emailStatus === 'failed'
+      ? 'Gegevens ontvangen — de e-mail kon niet worden verstuurd; uw rapport staat hieronder klaar'
+      : emailStatus === 'not_configured'
+        ? 'Gegevens ontvangen — uw rapport staat hieronder klaar'
+        : 'Gegevens ontvangen — de e-mailstatus wordt gecontroleerd'
   return (
     <div className="min-w-0 overflow-x-hidden">
       <div className="flex items-center gap-2 px-4 sm:px-6 pt-4 text-emerald-400">
         <svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true" className="shrink-0">
           <path d="M6 16l6 6L26 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <p className="text-xs font-mono">Gegevens ontvangen — bevestiging verstuurd naar uw e-mail</p>
+        <p className="text-xs font-mono">{statusText}</p>
       </div>
       <ResultsDashboard state={state} />
     </div>
@@ -207,10 +216,10 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
           dakrichting: state.dakrichting,
           verbruik_bron: state.verbruik_bron,
           huishouden_grootte: state.huishouden_grootte,
-          utmSource: state.utmParams?.source,
-          utmMedium: state.utmParams?.medium,
-          utmCampaign: state.utmParams?.campaign,
-          landingPage: state.utmParams?.landingPage,
+          utmSource: state.attribution.utmSource,
+          utmMedium: state.attribution.utmMedium,
+          utmCampaign: state.attribution.utmCampaign,
+          landingPage: state.attribution.landingPath,
         }),
       })
       if (!res.ok) {
@@ -218,7 +227,15 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
         setErrors({ submit: (err as { error?: string }).error ?? 'Er is een fout opgetreden. Probeer opnieuw.' })
         return
       }
-      const data = await res.json() as { leadId: string; reportToken?: string | null }
+      const data = await res.json() as {
+        leadId: string
+        reportToken?: string | null
+        report?: NormalizedReport
+      }
+      if (!data.report || data.report.version !== 1) {
+        throw new Error('Rapport kon niet betrouwbaar worden opgebouwd. Probeer het later opnieuw.')
+      }
+      dispatch({ type: 'SET_REPORT_MODEL', report: data.report })
       if (typeof data.reportToken === 'string' && data.reportToken.length > 0) {
         dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: data.reportToken })
       } else {

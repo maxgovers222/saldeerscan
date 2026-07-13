@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test'
+import { FUNNEL_STATE_STEP6 } from '../fixtures/funnel-state'
+import { expectedReportFixture } from '../fixtures/report'
+import { seedFunnelAtInternalStep } from './fixtures/funnel-state'
 
 /**
  * Step 6 validatie tests.
@@ -8,99 +11,6 @@ import { test, expect } from '@playwright/test'
  * Let op: localStorage key is 'wep_funnel_state', niet 'funnel_state'.
  * ROI structuur: besparingJaarEur, investeringEur, terugverdientijdJaar (niet jaarlijkseBesparing).
  */
-
-const LS_KEY = 'wep_funnel_state'
-
-const FUNNEL_STATE_STEP6 = {
-  step: 6,
-  adres: 'Prinsengracht 263, Amsterdam',
-  wijk: '',
-  stad: '',
-  bagData: {
-    bouwjaar: 1880,
-    oppervlakte: 120,
-    woningtype: 'Appartement',
-    postcode: '1016GV',
-    huisnummer: 263,
-    dakOppervlakte: 45,
-    lat: 52.3676,
-    lon: 4.8897,
-  },
-  netcongestie: {
-    status: 'GROEN',
-    netbeheerder: 'Liander',
-    uitleg: 'Net heeft voldoende capaciteit',
-    terugleveringBeperkt: false,
-    postcodePrefix: '1016',
-  },
-  healthScore: {
-    score: 62,
-    label: 'Goed',
-    kleur: 'geel',
-    breakdown: { bouwjaar: 15, energielabel: 12, dakpotentieel: 20, netcongestie: 15 },
-    aanbevelingen: ['Overweeg isolatie'],
-  },
-  roiInput: {
-    oppervlakte: 120,
-    bouwjaar: 1880,
-    dakOppervlakte: 45,
-    huidigVerbruikKwh: 3500,
-    aantalPanelenOverride: 8,
-    kwhPerPaneel: 350,
-    dakrichting: null,
-    huishouden_grootte: null,
-  },
-  roiResult: {
-    geschatVerbruikKwh: 3500,
-    aantalPanelen: 8,
-    productieKwh: 2800,
-    eigenGebruikPct: 65,
-    scenarioNu: {
-      naam: 'Alleen panelen',
-      beschrijving: 'Installeer alleen zonnepanelen',
-      besparingJaarEur: 650,
-      investeringEur: 6200,
-      terugverdientijdJaar: 9.5,
-    },
-    scenarioMetBatterij: {
-      naam: 'Panelen + Batterij',
-      beschrijving: 'Optimale combo',
-      besparingJaarEur: 820,
-      investeringEur: 10500,
-      terugverdientijdJaar: 12.8,
-    },
-    scenarioWachten: {
-      naam: 'Wachten',
-      beschrijving: 'Risico 2027',
-      besparingJaarEur: 0,
-      investeringEur: 0,
-      terugverdientijdJaar: 99,
-    },
-    shockEffect2027: {
-      jaarlijksVerlies: 580,
-      cumulatiefVerlies5Jaar: 2900,
-      maandelijksVerlies: 48,
-      boodschap: 'Saldering vervalt volledig op 1 januari 2027',
-    },
-    aanbeveling: 'beide',
-    aanbevelingTekst: 'Combinatie geeft hoogste ROI',
-    isdeSchatting: { bedragEur: 2400, apparaatType: 'Thuisbatterij', vermogenKwp: 3.2 },
-  },
-  meterkastAnalyse: null,
-  plaatsingsAnalyse: null,
-  omvormerAnalyse: null,
-  dakrichting: null,
-  verbruik_bron: 'schatting',
-  huishouden_grootte: null,
-  is_eigenaar: null,
-  heeft_panelen: false,
-  huidige_panelen_aantal: null,
-  leadId: null,
-  leadReportToken: null,
-  loading: false,
-  error: null,
-  utmParams: null,
-}
 
 const MOCK_LEAD_GET = {
   leadId: 'test-lead-id-123',
@@ -139,6 +49,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
             leadId: 'test-lead-id-123',
             reportToken: 'test-report-token',
             status: 'ingediend',
+            report: expectedReportFixture,
           }),
         })
       }
@@ -152,16 +63,8 @@ test.describe('Step 6 — Lead formulier validatie', () => {
       return route.continue()
     })
 
+    await seedFunnelAtInternalStep(page, 6)
     await page.goto('/check')
-    await page.waitForLoadState('domcontentloaded')
-
-    // Injecteer state met correcte localStorage key
-    await page.evaluate(
-      ([key, state]) => localStorage.setItem(key as string, JSON.stringify(state)),
-      [LS_KEY, FUNNEL_STATE_STEP6],
-    )
-
-    await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1000)
 
@@ -224,6 +127,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
           reportToken: 'test-report-token',
           status: 'ingediend',
           emailStatus: 'sent',
+          report: expectedReportFixture,
         }),
       })
     })

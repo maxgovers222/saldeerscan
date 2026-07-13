@@ -1078,8 +1078,9 @@ test.describe('localStorage persistentie & resume-banner', () => {
     const raw = await page.evaluate((k) => localStorage.getItem(k), LS_KEY)
     expect(raw).not.toBeNull()
     const parsed = JSON.parse(raw!)
-    expect(parsed.adres).toBeTruthy()
-    expect(parsed.bagData).toBeTruthy()
+    expect(parsed.version).toBe(2)
+    expect(parsed.state.adres).toBeTruthy()
+    expect(parsed.state.bagData).toBeTruthy()
   })
 
   test('stap ≤1 zonder bagData wordt niet hersteld', async ({ page }) => {

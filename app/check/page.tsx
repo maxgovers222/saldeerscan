@@ -43,9 +43,7 @@ function Header() {
 
 function CheckPageInner() {
   const searchParams = useSearchParams()
-  const initialAdres = searchParams.get('adres') ?? ''
-  const initialWijk = searchParams.get('wijk') ?? ''
-  const initialStad = searchParams.get('stad') ?? ''
+  const funnelUrlContext = Object.fromEntries(searchParams.entries())
   const context = parseConversionContext(searchParams)
 
   return (
@@ -57,7 +55,7 @@ function CheckPageInner() {
           <CountdownTimer compact />
         </div>
         <StatsLine />
-        <FunnelContainer initialAdres={initialAdres} initialWijk={initialWijk} initialStad={initialStad} />
+        <FunnelContainer urlParams={funnelUrlContext} />
       </div>
     </main>
   )
