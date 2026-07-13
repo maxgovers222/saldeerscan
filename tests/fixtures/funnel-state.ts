@@ -75,7 +75,6 @@ export const FUNNEL_STATE_STEP6: FunnelState = {
     aanbevelingTekst: 'Combinatie geeft hoogste ROI',
     isdeSchatting: { bedragEur: 2400, apparaatType: 'Thuisbatterij', vermogenKwp: 3.2 },
   },
-  reportModel: null,
   meterkastAnalyse: null,
   plaatsingsAnalyse: null,
   omvormerAnalyse: null,

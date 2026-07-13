@@ -1,7 +1,6 @@
 'use client'
 
 import type { PseoLevel } from '@/lib/conversion-context'
-import type { NormalizedReport } from '@/lib/report-model'
 
 // Local type mirrors — do NOT import from lib/roi or lib/health-score (server-only)
 
@@ -128,7 +127,6 @@ export interface FunnelState {
   healthScore: HealthScoreResult | null
   roiResult: ROIResult | null
   roiInput: RoiCalculationInput | null
-  reportModel: NormalizedReport | null
   meterkastAnalyse: MeterkastAnalyse | null
   plaatsingsAnalyse: PlaatsingsAnalyse | null
   omvormerAnalyse: OmvormerAnalyse | null
@@ -155,7 +153,6 @@ export type FunnelAction =
   | { type: 'SET_HEALTH_SCORE'; healthScore: HealthScoreResult }
   | { type: 'SET_ROI'; roiResult: ROIResult }
   | { type: 'SET_ROI_INPUT'; roiInput: RoiCalculationInput }
-  | { type: 'SET_REPORT_MODEL'; report: NormalizedReport }
   | { type: 'SET_METERKAST'; meterkastAnalyse: MeterkastAnalyse | null }
   | { type: 'SET_PLAATSING'; plaatsingsAnalyse: PlaatsingsAnalyse | null }
   | { type: 'SET_OMVORMER'; omvormerAnalyse: OmvormerAnalyse | null }

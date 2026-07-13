@@ -28,7 +28,6 @@ export function makeInitialState(input: {
     healthScore: null,
     roiResult: null,
     roiInput: null,
-    reportModel: null,
     meterkastAnalyse: null,
     plaatsingsAnalyse: null,
     omvormerAnalyse: null,
@@ -155,7 +154,6 @@ function clearAddressDerivedState(state: FunnelState): FunnelState {
     healthScore: null,
     roiResult: null,
     roiInput: null,
-    reportModel: null,
     meterkastAnalyse: null,
     plaatsingsAnalyse: null,
     omvormerAnalyse: null,
@@ -184,8 +182,6 @@ export function funnelReducer(
       return { ...state, roiResult: action.roiResult }
     case 'SET_ROI_INPUT':
       return { ...state, roiInput: action.roiInput }
-    case 'SET_REPORT_MODEL':
-      return { ...state, reportModel: action.report }
     case 'SET_METERKAST':
       return { ...state, meterkastAnalyse: action.meterkastAnalyse }
     case 'SET_PLAATSING':

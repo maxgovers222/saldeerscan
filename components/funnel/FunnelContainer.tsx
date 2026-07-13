@@ -20,10 +20,6 @@ import {
 } from './funnel-storage'
 import { trackEvent } from '@/lib/analytics'
 import { parseStoredRoi } from '@/lib/roi-result-guard'
-import {
-  REPORT_MODEL_VERSION,
-  type NormalizedReport,
-} from '@/lib/report-model'
 import { FunnelProgress } from './FunnelProgress'
 import { Step1Adres } from './Step1Adres'
 import { Step2ROI } from './Step2ROI'
@@ -32,73 +28,6 @@ import { Step4Plaatsing } from './Step4Plaatsing'
 import { Step5Omvormer } from './Step5Omvormer'
 import { Step6LeadCapture } from './Step6LeadCapture'
 import { ResultsDashboard } from './ResultsDashboard'
-
-function hydrateLegacyReportDisplay(
-  report: NormalizedReport,
-  dispatch: Dispatch<FunnelAction>,
-) {
-  const hasBattery = report.recommendation.batteryCapacityKwh !== null
-  const roiResult: ROIResult = {
-    geschatVerbruikKwh: report.recommendation.consumptionKwh,
-    aantalPanelen: report.recommendation.panelCount,
-    productieKwh: report.recommendation.productionKwh,
-    eigenGebruikPct: report.recommendation.ownUsePct,
-    scenarioNu: report.scenarios.panelsNow,
-    scenarioMetBatterij: report.scenarios.withBattery,
-    scenarioWachten: report.scenarios.waitUntil2027,
-    shockEffect2027: {
-      jaarlijksVerlies: report.impact.annualLossEur,
-      cumulatiefVerlies5Jaar: report.impact.fiveYearLossEur,
-      maandelijksVerlies: report.impact.monthlyLossEur,
-      boodschap: report.impact.explanation,
-    },
-    aanbeveling: hasBattery ? 'beide' : 'panelen',
-    aanbevelingTekst: report.recommendation.explanation,
-    isdeSchatting: {
-      bedragEur: report.recommendation.isdeAmountEur,
-      apparaatType: hasBattery ? 'Thuisbatterij' : 'Zonnepanelen',
-      vermogenKwp: Math.round(report.recommendation.panelCount * 4) / 10,
-    },
-  }
-  dispatch({ type: 'SET_ADRES', adres: report.home.address })
-  dispatch({
-    type: 'SET_WIJK',
-    wijk: report.home.wijk ?? '',
-    stad: report.home.stad ?? '',
-  })
-  dispatch({ type: 'SET_ROI', roiResult })
-  if (report.grid.status) {
-    dispatch({
-      type: 'SET_NETCONGESTIE',
-      netcongestie: {
-        status: report.grid.status,
-        netbeheerder: report.grid.operator ?? '',
-        uitleg: report.grid.explanation ?? '',
-        terugleveringBeperkt: report.grid.status !== 'GROEN',
-      },
-    })
-  }
-  if (report.summary.healthScore !== null) {
-    const score = report.summary.healthScore
-    const healthScore: HealthScoreResult = {
-      score,
-      label: score >= 75 ? 'Uitstekend' : score >= 55 ? 'Goed' : score >= 35 ? 'Matig' : 'Slecht',
-      kleur: score >= 75 ? 'groen' : score >= 55 ? 'geel' : score >= 35 ? 'oranje' : 'rood',
-      breakdown: { bouwjaar: 0, energielabel: 0, dakpotentieel: 0, netcongestie: 0 },
-      aanbevelingen: report.recommendations,
-    }
-    dispatch({ type: 'SET_HEALTH_SCORE', healthScore })
-  }
-  dispatch({ type: 'SET_METERKAST', meterkastAnalyse: report.technical.meterkast })
-  dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: report.technical.plaatsing })
-  dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: report.technical.omvormer })
-  dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: report.qualification.isEigenaar })
-  dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: report.qualification.heeftPanelen })
-  dispatch({
-    type: 'SET_HUIDIGE_PANELEN_AANTAL',
-    huidige_panelen_aantal: report.qualification.huidigePanelenAantal,
-  })
-}
 
 export function useFunnelState() {
   return useReducer(funnelReducer, makeInitialState())
@@ -148,10 +77,7 @@ export function FunnelContainer({ urlParams }: {
     // bleef en de server-fetch bij elke render opnieuw afging.
     const alreadySynced =
       state.leadId === leadId
-      && (
-        state.reportModel?.version === REPORT_MODEL_VERSION
-        || parseStoredRoi(state.roiResult) !== null
-      )
+      && parseStoredRoi(state.roiResult) !== null
       && (leadReportTokenParam ? state.leadReportToken === leadReportTokenParam : true)
     if (alreadySynced) return
 
@@ -201,21 +127,8 @@ export function FunnelContainer({ urlParams }: {
           dakrichting?: FunnelState['dakrichting']
           verbruik_bron?: FunnelState['verbruik_bron']
           huishouden_grootte?: FunnelState['huishouden_grootte']
-          report?: NormalizedReport
         }
         if (cancelled) return
-
-        const serverReport = data.report?.version === REPORT_MODEL_VERSION
-          ? data.report
-          : null
-        if (serverReport) {
-          dispatch({ type: 'SET_REPORT_MODEL', report: serverReport })
-          hydrateLegacyReportDisplay(serverReport, dispatch)
-          trackEvent('report_reopened', {
-            report_version: serverReport.version,
-            email_status: serverReport.delivery.emailStatus,
-          })
-        }
 
         if (data.adres) dispatch({ type: 'SET_ADRES', adres: data.adres })
         if (data.wijk || data.stad) dispatch({ type: 'SET_WIJK', wijk: data.wijk ?? '', stad: data.stad ?? '' })
@@ -251,7 +164,7 @@ export function FunnelContainer({ urlParams }: {
         if (roiParsed) {
           dispatch({ type: 'SET_ROI', roiResult: roiParsed as NonNullable<FunnelState['roiResult']> })
         }
-        if (serverReport || roiParsed) {
+        if (roiParsed) {
           dispatch({ type: 'SET_ERROR', error: null })
           if (leadReportTokenParam) {
             dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: leadReportTokenParam })
@@ -305,7 +218,6 @@ export function FunnelContainer({ urlParams }: {
     leadReportTokenParam,
     state.leadId,
     state.leadReportToken,
-    state.reportModel,
     state.roiResult,
   ])
 
