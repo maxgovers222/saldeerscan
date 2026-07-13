@@ -408,12 +408,19 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 | Fase | Status | Branch / merge | Plan |
 |------|--------|----------------|------|
 | 0 Veilige fundering | **LIVE** (jul 2026, PR #1 → `master` `527bc87`) | gemerged | `docs/superpowers/plans/2026-07-10-safe-foundation.md` |
-| 1 Design system + entry | Gepland | `feat/phase-1-design-system` (aan te maken) | `docs/superpowers/plans/2026-07-10-design-system-conversion-entry.md` |
+| 1 Design system + entry | **Uitgevoerd, lokaal geverifieerd** (jul 2026; nog niet gecommit) | `feat/phase-1-design-system` | `docs/superpowers/plans/2026-07-10-design-system-conversion-entry.md` |
 | 2 Funnel + analytics | Gepland | `feat/phase-2-funnel-analytics` | `docs/superpowers/plans/2026-07-10-funnel-analytics.md` |
 | 3 Rapportketen | Gepland | `feat/phase-3-report-chain` | `docs/superpowers/plans/2026-07-10-report-chain.md` |
 | 4 Route-uitrol | Gepland | `feat/phase-4-route-rollout` | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
 
-**Startprompt fase 1:** lees HANDOFF + voer plan fase 1 uit (`superpowers:executing-plans`).
+### Fase 1 design-systemcontract
+
+- **Semantische kleuren (`app/globals.css`)** — `evergreen-950 #06130f`, `evergreen-900 #0b211a`, `trust #00b875`, `trust-dark #008f5b`, `action #ffb020`, `action-hover #ffc04d`, `mist #f3f7f5`, `paper #fbfdfc`, `ink #10231d`, `ink-muted #5a6d66`, `success #00b875`, `warning #d97706`, `danger #dc2626`.
+- **Fonts** — `next/font` zet Bricolage Grotesque op `--font-bricolage` (koppen/kerngetallen) en DM Sans op `--font-dm-sans` (body/formulieren).
+- **Gedeelde Server Components** — `components/design-system/`: `BrandMark`, `Container`, `PageShell`, `DarkHeroShell`, `ContentSection`, `SiteHeader`, `SiteFooter`, `PrimaryAction`.
+- **Conversiecontext** — `lib/conversion-context.ts` bouwt en parseert `landing_path`, `pseo_level`, `provincie`, `stad`, `wijk`, `straat`, `postcode`. Primaire provincie-, stad-, wijk-, straat- en postcode-CTA's bewaren deze velden richting `/check`; de checkpagina toont de lokale context alleen ter presentatie.
+- **Homepagegrens** — `app/page.tsx` en `components/home/HomePage.tsx` zijn server-composed. Alleen `AddressAutocomplete` en `SocialProofTicker` zijn client islands; discoveryqueries blijven server-side.
+- **pSEO-invarianten** — metadata, canonicals, JSON-LD-structuren, ISR-waarden, routeslugs en interne hublinks zijn bewust behouden; alleen conversiehrefs en styling zijn aangepast.
 
 **Fase 0 productie:** migratie `20260710143000_webhook_retry_payload.sql` uitgevoerd in Supabase (jul 2026).
 

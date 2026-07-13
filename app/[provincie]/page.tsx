@@ -8,6 +8,7 @@ import {
   toDisplaySlug,
 } from '@/lib/pseo-hubs'
 import { ALL_PROVINCIE_SLUGS, buildHubMetadata, provincieDisplaySlug } from '@/lib/pseo-metadata'
+import { buildCheckHref } from '@/lib/conversion-context'
 
 export const revalidate = 604800
 
@@ -52,6 +53,11 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
 
   const provLabel = provincieDisplaySlug(provincie)
   const totalWoningen = stads.reduce((s, c) => s + c.totalWoningen, 0)
+  const checkHref = buildCheckHref({
+    landingPath: `/${provincie}`,
+    pseoLevel: 'provincie',
+    provincie,
+  })
 
   const hubChildren = stads.map(s => ({
     name: `Zonnepanelen ${toDisplaySlug(s.stad)} — 2027 Saldeercheck`,
@@ -85,7 +91,7 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
               SaldeerScan<span style={{ color: G }}>.nl</span>
             </span>
           </a>
-          <a href="/check" className="text-sm font-bold px-5 py-2.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:brightness-110 transition-all">
+          <a href={checkHref} className="text-sm font-bold px-5 py-2.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:brightness-110 transition-all">
             Gratis analyseren
           </a>
         </div>
@@ -247,7 +253,7 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
           <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.45)' }}>
             Gratis AI-scan op basis van BAG-data. ROI-berekening en 2027 impact in 3 minuten.
           </p>
-          <a href="/check"
+          <a href={checkHref}
             data-analytics-event="pseo_check_cta"
             data-analytics-label={`prov-cta:${provincie}`}
             className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.45)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all text-sm"
@@ -279,14 +285,14 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
                 Gratis energieanalyse voor Nederlandse woningeigenaren.
               </p>
             </div>
-            <a href="/check" className={`text-sm px-6 py-3 ${amberBtnCls}`}>
+            <a href={checkHref} className={`text-sm px-6 py-3 ${amberBtnCls}`}>
               Gratis analyseren
             </a>
           </div>
           <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
             <div className="flex gap-6 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
               <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
-              <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
+              <a href={checkHref} className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
             </div>
             <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
           </div>

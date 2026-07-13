@@ -31,10 +31,10 @@ function isStraatPath(href: string | null): href is string {
 
 test('Stad hub bevat CollectionPage JSON-LD', async ({ page }) => {
   await page.goto('/noord-holland/amsterdam')
-  const jsonLd = await page.locator('script[type="application/ld+json"]').first().textContent()
-  expect(jsonLd).toBeTruthy()
-  expect(jsonLd).toContain('CollectionPage')
-  expect(jsonLd).toContain('ItemList')
+  const scripts = await page.locator('script[type="application/ld+json"]').allTextContents()
+  const combined = scripts.join('\n')
+  expect(combined).toContain('CollectionPage')
+  expect(combined).toContain('ItemList')
 })
 
 test('Provincie-hub toont meest urgente wijken-sectie indien data', async ({ page }) => {

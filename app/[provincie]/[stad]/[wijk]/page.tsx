@@ -19,6 +19,9 @@ import { WijkComparisonTable, buildWijkComparisonRows } from '@/components/pseo/
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { WijkCtaButton } from '@/components/pseo/WijkCtaButton'
+import { Container } from '@/components/design-system/Container'
+import { SiteHeader } from '@/components/design-system/SiteHeader'
+import { buildCheckHref } from '@/lib/conversion-context'
 
 const getCachedWijkPage = cache(getWijkPage)
 
@@ -84,13 +87,6 @@ const AMBER = '#f59e0b'
 const N1    = '#020617'
 const N2    = '#0f172a'
 
-const amberBtnCls = [
-  'bg-amber-500 text-slate-950 font-bold rounded-full',
-  'transition-all duration-300',
-  'shadow-[0_0_25px_rgba(245,158,11,0.4)]',
-  'hover:opacity-90 active:scale-105',
-].join(' ')
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function WijkPage({ params }: { params: Promise<Params> }) {
@@ -105,6 +101,13 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
   const wijkDisplay = toDisplay(wijk)
   const stadDisplay = toDisplay(stad)
+  const checkHref = buildCheckHref({
+    landingPath: `/${provincie}/${stad}/${wijk}`,
+    pseoLevel: 'wijk',
+    provincie,
+    stad,
+    wijk,
+  })
   const score = resolveWijkScore(page.gemBouwjaar, page.gemHealthScore)
   const { label: scorelabel, color: scoreColor } = scoreLabel(score)
   const besparing = computeBesparing(page.gemBouwjaar, score)
@@ -140,7 +143,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   }
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-0" style={{ background: N1 }}>
+    <div className="min-h-screen" style={{ background: N1 }}>
       {page.jsonLd && Object.keys(page.jsonLd).length > 0 && <LocalSchema jsonLd={page.jsonLd} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(placeSchema).replace(/<\/script>/g, '<\\/script>') }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -155,29 +158,11 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
       }).replace(/<\/script>/g, '<\\/script>') }} />
 
       {/* ── Nav ─────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: G }}>
-              <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                <path d="M9 2L15.5 6V13L9 17L2.5 13V6L9 2Z" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="1.3" strokeLinejoin="round" />
-                <path d="M9 6.5L12 8.5V12L9 14L6 12V8.5L9 6.5Z" fill="white" />
-              </svg>
-            </div>
-            <span className="font-bold text-[#0e352e] tracking-tight text-lg" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-              SaldeerScan<span style={{ color: G }}>.nl</span>
-            </span>
-          </a>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-sm text-slate-500 font-medium">
-              {wijkDisplay}, {stadDisplay}
-            </span>
-            <WijkCtaButton wijk={wijk} stad={stad} className={`text-sm px-5 py-2.5 ${amberBtnCls}`}>
-              Gratis analyseren
-            </WijkCtaButton>
-          </div>
-        </div>
-      </nav>
+      <SiteHeader
+        tone="dark"
+        contextLabel={`${wijkDisplay}, ${stadDisplay}`}
+        ctaHref={checkHref}
+      />
 
       {/* ── Hero ────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ background: N1 }}>
@@ -244,13 +229,13 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
             className="mb-10"
           />
 
-          <WijkCtaButton wijk={wijk} stad={stad}
-            className={`inline-flex items-center gap-2 text-base ${amberBtnCls}`}
-            style={{ fontFamily: 'var(--font-heading)' }}>
-            Gratis mijn woning analyseren
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <WijkCtaButton
+            provincie={provincie}
+            wijk={wijk}
+            stad={stad}
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-white/65 underline decoration-white/25 underline-offset-4 transition hover:text-white"
+          >
+            Bekijk de persoonlijke check
           </WijkCtaButton>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/45 mt-6">
@@ -265,6 +250,35 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
       </section>
 
       {/* ── Urgentie Chart ──────────────────────────────────────── */}
+      <section className="bg-mist py-10 sm:py-14">
+        <Container>
+          <div className="grid gap-6 rounded-3xl border border-ink/10 bg-paper p-5 shadow-sm sm:p-8 lg:grid-cols-[1fr_.9fr] lg:items-center">
+            <div>
+              <p className="text-sm font-semibold text-trust-dark">
+                Persoonlijke check voor {wijkDisplay}
+              </p>
+              <h2 className="mt-2 text-3xl font-bold text-ink">
+                Wat betekent 2027 voor uw adres?
+              </h2>
+              <p className="mt-3 max-w-xl leading-7 text-ink-muted">
+                De wijkcijfers zijn een gemiddelde. Vul uw adres in voor uw
+                woningkenmerken, verwachte impact en beste vervolgstap.
+              </p>
+            </div>
+            <AddressAutocomplete
+              context={{
+                landingPath: `/${provincie}/${stad}/${wijk}`,
+                pseoLevel: 'wijk',
+                provincie,
+                stad,
+                wijk,
+              }}
+              placeholder={`Uw adres in ${wijkDisplay}`}
+            />
+          </div>
+        </Container>
+      </section>
+
       <section className="py-20 px-6" style={{ background: N2 }}>
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
@@ -394,9 +408,8 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                   ))}
                 </div>
 
-                <WijkCtaButton wijk={wijk} stad={stad}
-                  className={`mt-5 w-full flex items-center justify-center gap-2 text-sm py-3 ${amberBtnCls}`}
-                  style={{ fontFamily: 'var(--font-heading)' }}>
+                <WijkCtaButton provincie={provincie} wijk={wijk} stad={stad}
+                  className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-white/60 underline decoration-white/20 underline-offset-4 transition hover:text-white">
                   Mijn adres scannen →
                 </WijkCtaButton>
               </div>
@@ -439,10 +452,14 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
           <p className="mb-6 text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
             Voer uw adres in voor een analyse op maat — BAG-data, ROI-berekening en ISDE subsidie check in 3 minuten.
           </p>
-          <AddressAutocomplete
-            extraParams={{ wijk, stad }}
-            placeholder={`Uw adres in ${wijkDisplay}, bijv. Hoofdstraat 1`}
-          />
+          <WijkCtaButton
+            provincie={provincie}
+            stad={stad}
+            wijk={wijk}
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-white/65 underline decoration-white/25 underline-offset-4 transition hover:text-white"
+          >
+            Ga naar de persoonlijke adrescheck →
+          </WijkCtaButton>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-5 text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
             <span className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -597,32 +614,19 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                 Gratis energieanalyse voor Nederlandse woningeigenaren.
               </p>
             </div>
-            <a href="/check" className={`text-sm px-6 py-3 ${amberBtnCls}`}>
+            <WijkCtaButton provincie={provincie} stad={stad} wijk={wijk} className="text-sm font-semibold text-white/50 underline decoration-white/20 underline-offset-4 transition hover:text-white">
               Gratis analyseren
-            </a>
+            </WijkCtaButton>
           </div>
           <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
             <div className="flex gap-6 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
               <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
-              <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
+              <WijkCtaButton provincie={provincie} stad={stad} wijk={wijk} className="hover:text-white/50 transition-colors">Analyseer uw woning</WijkCtaButton>
             </div>
             <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
           </div>
         </div>
       </footer>
-
-      {/* ── Sticky Mobile CTA ───────────────────────────────────── */}
-      <div className="fixed bottom-0 left-0 right-0 sm:hidden z-50 px-4 pb-4 pt-3"
-        style={{ background: 'linear-gradient(to top, rgba(2,6,23,0.98) 60%, transparent)' }}>
-        <WijkCtaButton wijk={wijk} stad={stad}
-          className={`flex items-center justify-center gap-2 w-full py-4 text-base ${amberBtnCls}`}
-          style={{ fontFamily: 'var(--font-heading)' }}>
-          Start gratis Saldeercheck
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </WijkCtaButton>
-      </div>
     </div>
   )
 }

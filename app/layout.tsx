@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, DM_Sans } from "next/font/google";
+import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-heading",
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 const dmSans = DM_Sans({
-  variable: "--font-sans",
+  variable: "--font-dm-sans",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 /** Eén canoniek domein voor metadata en favicon-URL’s (Google volgt absolute href’s betrouwbaarder dan relatief, esp. bij www/apex-mix in SERP). */
@@ -90,7 +91,7 @@ export default function RootLayout({
   return (
     <html
       lang="nl"
-      className={`${jakarta.variable} ${dmSans.variable} h-full antialiased`}
+      className={`${bricolage.variable} ${dmSans.variable} h-full antialiased`}
     >
       <head>
         <script
