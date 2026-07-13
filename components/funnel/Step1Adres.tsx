@@ -133,6 +133,10 @@ function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }
       <div className="relative">
         <input
           type="text" value={value} onChange={handleChange}
+          role="combobox"
+          aria-label="Uw adres"
+          aria-autocomplete="list"
+          aria-expanded={open}
           onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder="Bijv. Prinsengracht 123, Amsterdam"
           disabled={disabled} autoComplete="off"

@@ -1,6 +1,24 @@
 'use client'
 
+import type { PseoLevel } from '@/lib/conversion-context'
+
 // Local type mirrors — do NOT import from lib/roi or lib/health-score (server-only)
+
+export type FunnelStep = 1 | 2 | 3 | 4 | 5 | 6
+export type VisualFunnelStage = 1 | 2 | 3 | 4
+
+export interface FunnelAttribution {
+  landingPath: string
+  pseoLevel: PseoLevel
+  provincie: string | null
+  stad: string | null
+  wijk: string | null
+  straat: string | null
+  postcode: string | null
+  utmSource: string | null
+  utmMedium: string | null
+  utmCampaign: string | null
+}
 
 export interface ShockEffect2027 {
   jaarlijksVerlies: number
@@ -85,7 +103,7 @@ export interface RoiCalculationInput {
 }
 
 export interface FunnelState {
-  step: 1 | 2 | 3 | 4 | 5 | 6
+  step: FunnelStep
   adres: string
   wijk: string
   stad: string
@@ -123,16 +141,12 @@ export interface FunnelState {
   leadReportToken: string | null
   loading: boolean
   error: string | null
-  utmParams: {
-    source: string | null
-    medium: string | null
-    campaign: string | null
-    landingPage: string | null
-  } | null
+  funnelSessionId: string | null
+  attribution: FunnelAttribution
 }
 
 export type FunnelAction =
-  | { type: 'SET_STEP'; step: FunnelState['step'] }
+  | { type: 'SET_STEP'; step: FunnelStep }
   | { type: 'SET_WIJK'; wijk: string; stad: string }
   | { type: 'SET_BAG_DATA'; bagData: FunnelState['bagData'] }
   | { type: 'SET_NETCONGESTIE'; netcongestie: FunnelState['netcongestie'] }
@@ -147,10 +161,13 @@ export type FunnelAction =
   | { type: 'SET_ADRES'; adres: string }
   | { type: 'SET_LOADING'; loading: boolean }
   | { type: 'SET_ERROR'; error: string | null }
-  | { type: 'SET_UTM_PARAMS'; utmParams: FunnelState['utmParams'] }
   | { type: 'SET_DAKRICHTING'; dakrichting: FunnelState['dakrichting'] }
   | { type: 'SET_VERBRUIK_BRON'; bron: FunnelState['verbruik_bron'] }
   | { type: 'SET_HUISHOUDEN'; grootte: FunnelState['huishouden_grootte'] }
   | { type: 'SET_IS_EIGENAAR'; is_eigenaar: boolean | null }
   | { type: 'SET_HEEFT_PANELEN'; heeft_panelen: boolean | null }
   | { type: 'SET_HUIDIGE_PANELEN_AANTAL'; huidige_panelen_aantal: number | null }
+  | { type: 'SET_FUNNEL_SESSION'; id: string }
+  | { type: 'SET_ATTRIBUTION'; attribution: FunnelAttribution }
+  | { type: 'START_NEW_ADDRESS'; adres: string }
+  | { type: 'RESTORE_STATE'; state: FunnelState }

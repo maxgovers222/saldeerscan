@@ -1,30 +1,25 @@
 'use client'
 
-import { useReducer, useEffect, useState, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
-import type { FunnelState, FunnelAction, HealthScoreResult, ROIResult, MeterkastAnalyse, PlaatsingsAnalyse, OmvormerAnalyse } from './types'
+import { useReducer, useEffect, useMemo, useState, useRef, type Dispatch } from 'react'
+import type {
+  FunnelState,
+  FunnelAction,
+  HealthScoreResult,
+  ROIResult,
+} from './types'
+import {
+  funnelReducer,
+  makeInitialState,
+  mergeSavedState,
+  parseFunnelUrlContext,
+} from './funnel-state'
+import {
+  clearStoredFunnel,
+  loadStoredFunnel,
+  saveStoredFunnel,
+} from './funnel-storage'
 import { trackEvent } from '@/lib/analytics'
 import { parseStoredRoi } from '@/lib/roi-result-guard'
-
-const STORAGE_KEY = 'wep_funnel_state'
-
-function saveState(state: FunnelState) {
-  try {
-    // Exclude nothing serializable — no File objects in state
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch { /* quota exceeded or SSR */ }
-}
-
-function loadState(): FunnelState | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as FunnelState
-    // Only restore if there's real progress (past step 1 or has data)
-    if (parsed.step <= 1 && !parsed.bagData) return null
-    return { ...parsed, leadReportToken: parsed.leadReportToken ?? null, roiInput: parsed.roiInput ?? null }
-  } catch { return null }
-}
 import { FunnelProgress } from './FunnelProgress'
 import { Step1Adres } from './Step1Adres'
 import { Step2ROI } from './Step2ROI'
@@ -34,77 +29,28 @@ import { Step5Omvormer } from './Step5Omvormer'
 import { Step6LeadCapture } from './Step6LeadCapture'
 import { ResultsDashboard } from './ResultsDashboard'
 
-function funnelReducer(state: FunnelState, action: FunnelAction): FunnelState {
-  switch (action.type) {
-    case 'SET_STEP': return { ...state, step: action.step, error: null }
-    case 'SET_WIJK': return { ...state, wijk: action.wijk, stad: action.stad }
-    case 'SET_BAG_DATA': return { ...state, bagData: action.bagData }
-    case 'SET_NETCONGESTIE': return { ...state, netcongestie: action.netcongestie }
-    case 'SET_HEALTH_SCORE': return { ...state, healthScore: action.healthScore }
-    case 'SET_ROI': return { ...state, roiResult: action.roiResult }
-    case 'SET_ROI_INPUT': return { ...state, roiInput: action.roiInput }
-    case 'SET_METERKAST': return { ...state, meterkastAnalyse: action.meterkastAnalyse }
-    case 'SET_PLAATSING': return { ...state, plaatsingsAnalyse: action.plaatsingsAnalyse }
-    case 'SET_OMVORMER': return { ...state, omvormerAnalyse: action.omvormerAnalyse }
-    case 'SET_LEAD_ID': return { ...state, leadId: action.leadId }
-    case 'SET_LEAD_REPORT_TOKEN': return { ...state, leadReportToken: action.token }
-    case 'SET_ADRES': return { ...state, adres: action.adres }
-    case 'SET_LOADING': return { ...state, loading: action.loading }
-    case 'SET_ERROR': return { ...state, error: action.error }
-    case 'SET_UTM_PARAMS': return { ...state, utmParams: action.utmParams }
-    case 'SET_DAKRICHTING': return { ...state, dakrichting: action.dakrichting }
-    case 'SET_VERBRUIK_BRON': return { ...state, verbruik_bron: action.bron }
-    case 'SET_HUISHOUDEN': return { ...state, huishouden_grootte: action.grootte }
-    case 'SET_IS_EIGENAAR': return { ...state, is_eigenaar: action.is_eigenaar }
-    case 'SET_HEEFT_PANELEN': return { ...state, heeft_panelen: action.heeft_panelen }
-    case 'SET_HUIDIGE_PANELEN_AANTAL': return { ...state, huidige_panelen_aantal: action.huidige_panelen_aantal }
-    default: return state
-  }
-}
-
-function makeInitialState(initialAdres = '', initialWijk = '', initialStad = ''): FunnelState {
-  return {
-    step: 1,
-    adres: initialAdres,
-    wijk: initialWijk,
-    stad: initialStad,
-    bagData: null,
-    netcongestie: null,
-    healthScore: null,
-    roiResult: null,
-    roiInput: null,
-    meterkastAnalyse: null,
-    plaatsingsAnalyse: null,
-    omvormerAnalyse: null,
-    dakrichting: null,
-    verbruik_bron: 'schatting',
-    huishouden_grootte: null,
-    is_eigenaar: null,
-    heeft_panelen: null,
-    huidige_panelen_aantal: null,
-    leadId: null,
-    leadReportToken: null,
-    loading: false,
-    error: null,
-    utmParams: null,
-  }
-}
-
 export function useFunnelState() {
   return useReducer(funnelReducer, makeInitialState())
 }
 
-export function FunnelContainer({ initialAdres = '', initialWijk = '', initialStad = '' }: {
-  initialAdres?: string
-  initialWijk?: string
-  initialStad?: string
+export function FunnelContainer({ urlParams }: {
+  urlParams: Record<string, string>
 }) {
-  const [state, dispatch] = useReducer(funnelReducer, makeInitialState(initialAdres, initialWijk, initialStad))
+  const urlContext = useMemo(
+    () => parseFunnelUrlContext(new URLSearchParams(urlParams)),
+    [urlParams],
+  )
+  const [state, dispatch] = useReducer(funnelReducer, urlContext, context =>
+    makeInitialState({
+      adres: context.adres,
+      wijk: context.attribution.wijk ?? '',
+      stad: context.attribution.stad ?? '',
+      attribution: context.attribution,
+    }))
   const [savedState, setSavedState] = useState<FunnelState | null>(null)
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false)
-  const searchParams = useSearchParams()
-  const leadIdParam = searchParams.get('leadId')
-  const leadReportTokenParam = searchParams.get('token')
+  const leadIdParam = urlContext.leadId
+  const leadReportTokenParam = urlContext.token
 
   function trackingDispatch(action: FunnelAction) {
     // Only track forward navigation — backward steps are not completions
@@ -114,28 +60,11 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
     dispatch(action)
   }
 
-  // Capture UTM params at mount — eenmalig. landingPage zonder UTM query zodat grouping in GA4 klopt.
-  useEffect(() => {
-    const source = searchParams.get('utm_source')
-    const medium = searchParams.get('utm_medium')
-    const campaign = searchParams.get('utm_campaign')
-    const landingPage = typeof window !== 'undefined'
-      ? window.location.origin + window.location.pathname
-      : null
-
-    if (source || medium || campaign) {
-      dispatch({ type: 'SET_UTM_PARAMS', utmParams: { source, medium, campaign, landingPage } })
-    }
-  // searchParams is stable per Next.js App Router — intentioneel lege deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // Load saved state on mount (client only) — always, even with URL params
   useEffect(() => {
-    const loaded = loadState()
-    if (loaded) setSavedState(loaded)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    const loaded = loadStoredFunnel()
+    if (loaded && urlContext.allowResume) setSavedState(loaded)
+  }, [urlContext.allowResume])
 
   // Detect ?leadId= URL param — direct link vanuit bevestigingsmail naar ResultsDashboard
   useEffect(() => {
@@ -209,19 +138,33 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
         if (data.meterkastAnalyse) dispatch({ type: 'SET_METERKAST', meterkastAnalyse: data.meterkastAnalyse })
         if (data.plaatsingsAnalyse) dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: data.plaatsingsAnalyse })
         if (data.omvormerAnalyse) dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: data.omvormerAnalyse })
-        dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: data.isEigenaar ?? null })
-        dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: data.heeftPanelen ?? null })
-        dispatch({
-          type: 'SET_HUIDIGE_PANELEN_AANTAL',
-          huidige_panelen_aantal: typeof data.huidigePanelenAantal === 'number' ? data.huidigePanelenAantal : null,
-        })
-        dispatch({ type: 'SET_DAKRICHTING', dakrichting: data.dakrichting ?? null })
-        dispatch({ type: 'SET_VERBRUIK_BRON', bron: data.verbruik_bron ?? 'schatting' })
-        dispatch({ type: 'SET_HUISHOUDEN', grootte: data.huishouden_grootte ?? null })
+        if ('isEigenaar' in data) {
+          dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: data.isEigenaar ?? null })
+        }
+        if ('heeftPanelen' in data) {
+          dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: data.heeftPanelen ?? null })
+        }
+        if ('huidigePanelenAantal' in data) {
+          dispatch({
+            type: 'SET_HUIDIGE_PANELEN_AANTAL',
+            huidige_panelen_aantal: typeof data.huidigePanelenAantal === 'number' ? data.huidigePanelenAantal : null,
+          })
+        }
+        if ('dakrichting' in data) {
+          dispatch({ type: 'SET_DAKRICHTING', dakrichting: data.dakrichting ?? null })
+        }
+        if ('verbruik_bron' in data) {
+          dispatch({ type: 'SET_VERBRUIK_BRON', bron: data.verbruik_bron ?? 'schatting' })
+        }
+        if ('huishouden_grootte' in data) {
+          dispatch({ type: 'SET_HUISHOUDEN', grootte: data.huishouden_grootte ?? null })
+        }
 
         const roiParsed = parseStoredRoi(data.roiResult)
         if (roiParsed) {
           dispatch({ type: 'SET_ROI', roiResult: roiParsed as NonNullable<FunnelState['roiResult']> })
+        }
+        if (roiParsed) {
           dispatch({ type: 'SET_ERROR', error: null })
           if (leadReportTokenParam) {
             dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: leadReportTokenParam })
@@ -233,7 +176,7 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
           })
         }
       } catch {
-        const loaded = loadState()
+        const loaded = loadStoredFunnel()
         if (cancelled || !loaded) {
           if (!cancelled) {
             dispatch({
@@ -270,13 +213,20 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
 
     hydrateFromServer()
     return () => { cancelled = true }
-  }, [leadIdParam, leadReportTokenParam, state.leadId, state.leadReportToken, state.roiResult])
+  }, [
+    leadIdParam,
+    leadReportTokenParam,
+    state.leadId,
+    state.leadReportToken,
+    state.roiResult,
+  ])
 
   // Save state on every change — debounced to avoid excessive I/O
   useEffect(() => {
-    const t = setTimeout(() => saveState(state), 500)
+    if (savedState && !resumeBannerDismissed) return
+    const t = setTimeout(() => saveStoredFunnel(state), 500)
     return () => clearTimeout(t)
-  }, [state])
+  }, [state, savedState, resumeBannerDismissed])
 
   // Track funnel abandonment on page unload (only if no lead submitted yet)
   useEffect(() => {
@@ -308,45 +258,34 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
 
   function resumeSavedState() {
     if (!savedState) return
-    if (savedState.wijk || savedState.stad) {
-      dispatch({ type: 'SET_WIJK', wijk: savedState.wijk, stad: savedState.stad })
-    }
-    if (savedState.leadId) {
-      dispatch({ type: 'SET_LEAD_ID', leadId: savedState.leadId })
-    }
-    dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: savedState.leadReportToken ?? null })
-
-    Object.entries({
-      adres: savedState.adres,
-      bagData: savedState.bagData,
-      netcongestie: savedState.netcongestie,
-      healthScore: savedState.healthScore,
-      roiResult: savedState.roiResult,
-      roiInput: savedState.roiInput,
-      meterkastAnalyse: savedState.meterkastAnalyse,
-      plaatsingsAnalyse: savedState.plaatsingsAnalyse,
-      omvormerAnalyse: savedState.omvormerAnalyse,
-      is_eigenaar: savedState.is_eigenaar,
-      heeft_panelen: savedState.heeft_panelen,
-      huidige_panelen_aantal: savedState.huidige_panelen_aantal,
-    }).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        const actionMap: Record<string, FunnelAction['type']> = {
-          adres: 'SET_ADRES', bagData: 'SET_BAG_DATA', netcongestie: 'SET_NETCONGESTIE',
-          healthScore: 'SET_HEALTH_SCORE', roiResult: 'SET_ROI', roiInput: 'SET_ROI_INPUT',
-          meterkastAnalyse: 'SET_METERKAST',
-          plaatsingsAnalyse: 'SET_PLAATSING', omvormerAnalyse: 'SET_OMVORMER',
-          is_eigenaar: 'SET_IS_EIGENAAR', heeft_panelen: 'SET_HEEFT_PANELEN', huidige_panelen_aantal: 'SET_HUIDIGE_PANELEN_AANTAL',
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        dispatch({ type: actionMap[key]!, [key]: value } as any)
-      }
+    dispatch({
+      type: 'RESTORE_STATE',
+      state: mergeSavedState(state, savedState, urlContext, 'resume-saved'),
     })
-    dispatch({ type: 'SET_STEP', step: savedState.step })
     setSavedState(null)
   }
 
-  const showResumeBanner = !leadIdParam && !state.leadId && savedState && !resumeBannerDismissed
+  function keepCurrentUrlState() {
+    if (!savedState) return
+    dispatch({
+      type: 'RESTORE_STATE',
+      state: mergeSavedState(state, savedState, urlContext, 'keep-current'),
+    })
+    clearStoredFunnel()
+    setSavedState(null)
+    setResumeBannerDismissed(true)
+  }
+
+  function startOver() {
+    clearStoredFunnel()
+    setSavedState(null)
+    setResumeBannerDismissed(true)
+  }
+
+  const showResumeBanner = urlContext.allowResume
+    && !state.leadId
+    && savedState
+    && !resumeBannerDismissed
   const reportRoiReady = parseStoredRoi(state.roiResult) !== null
 
   return (
@@ -357,14 +296,29 @@ export function FunnelContainer({ initialAdres = '', initialWijk = '', initialSt
             <span className="font-bold">Vorige sessie gevonden</span> — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
           </div>
           <div className="flex gap-2 shrink-0">
-            <button onClick={resumeSavedState}
-              className="text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:opacity-90">
-              Doorgaan
-            </button>
-            <button onClick={() => { setResumeBannerDismissed(true); localStorage.removeItem(STORAGE_KEY) }}
-              className="text-xs font-mono text-amber-400/70 hover:text-amber-300 px-2 py-1.5 transition-colors">
-              Opnieuw
-            </button>
+            {urlContext.mode === 'address' ? (
+              <>
+                <button onClick={keepCurrentUrlState}
+                  className="text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:opacity-90">
+                  Deze link gebruiken
+                </button>
+                <button onClick={resumeSavedState}
+                  className="text-xs font-mono text-amber-400/70 hover:text-amber-300 px-2 py-1.5 transition-colors">
+                  Doorgaan met vorige sessie
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={resumeSavedState}
+                  className="text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:opacity-90">
+                  Doorgaan
+                </button>
+                <button onClick={startOver}
+                  className="text-xs font-mono text-amber-400/70 hover:text-amber-300 px-2 py-1.5 transition-colors">
+                  Opnieuw
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
