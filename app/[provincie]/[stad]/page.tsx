@@ -9,6 +9,7 @@ import {
   toDisplaySlug,
 } from '@/lib/pseo-hubs'
 import { buildHubMetadata, provincieDisplaySlug } from '@/lib/pseo-metadata'
+import { buildCheckHref } from '@/lib/conversion-context'
 
 export const revalidate = 604800
 
@@ -62,6 +63,12 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
 
   const stadDisplay = toDisplaySlug(stad)
   const provDisplay = provincieDisplaySlug(provincie)
+  const checkHref = buildCheckHref({
+    landingPath: `/${provincie}/${stad}`,
+    pseoLevel: 'stad',
+    provincie,
+    stad,
+  })
 
   const totalWoningen = wijken.reduce((s, w) => s + (w.aantal_woningen ?? 0), 0)
   const avgScore = Math.round(
@@ -107,7 +114,7 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
             <a href={`/${provincie}`} className="hidden sm:block text-sm text-slate-500 hover:text-slate-800 transition-colors">
               {provDisplay}
             </a>
-            <a href="/check" className="text-sm font-bold px-5 py-2.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:brightness-110 transition-all">
+            <a href={checkHref} className="text-sm font-bold px-5 py-2.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:brightness-110 transition-all">
               Gratis analyseren
             </a>
           </div>
@@ -235,7 +242,7 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
               Alle wijken in {stadDisplay}
             </h2>
           </div>
-          <a href="/check" className="hidden sm:inline-flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:brightness-110 transition-all">
+          <a href={checkHref} className="hidden min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/60 transition hover:border-white/30 hover:text-white sm:inline-flex">
             Mijn adres scannen →
           </a>
         </div>
@@ -303,7 +310,7 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
           <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.45)' }}>
             Gratis AI-scan op basis van BAG-data. ROI-berekening en 2027 impact in 3 minuten.
           </p>
-          <a href="/check"
+          <a href={checkHref}
             data-analytics-event="pseo_check_cta"
             data-analytics-label={`stad-cta:${stad}`}
             className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.45)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all text-sm"
@@ -353,14 +360,14 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
                 Gratis energieanalyse voor Nederlandse woningeigenaren.
               </p>
             </div>
-            <a href="/check" className={`text-sm px-6 py-3 ${amberBtnCls}`}>
+            <a href={checkHref} className={`text-sm px-6 py-3 ${amberBtnCls}`}>
               Gratis analyseren
             </a>
           </div>
           <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
             <div className="flex gap-6 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
               <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
-              <a href="/check" className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
+              <a href={checkHref} className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
             </div>
             <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
           </div>

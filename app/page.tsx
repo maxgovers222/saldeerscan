@@ -1,10 +1,6 @@
+import { HomePage } from '@/components/home/HomePage'
 import { HomeDiscovery } from '@/components/pseo/HomeDiscovery'
-import HomePageClient from '@/components/HomePageClient'
 
 export default function Home() {
-  return (
-    <HomePageClient>
-      <HomeDiscovery />
-    </HomePageClient>
-  )
+  return <HomePage discovery={<HomeDiscovery />} />
 }

@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FunnelContainer } from '@/components/funnel/FunnelContainer'
 import { CountdownTimer } from '@/components/CountdownTimer'
+import { LandingContextBanner } from '@/components/funnel/LandingContextBanner'
+import { parseConversionContext } from '@/lib/conversion-context'
 
 function StatsLine() {
   const [count, setCount] = useState<number | null>(null)
@@ -44,11 +46,13 @@ function CheckPageInner() {
   const initialAdres = searchParams.get('adres') ?? ''
   const initialWijk = searchParams.get('wijk') ?? ''
   const initialStad = searchParams.get('stad') ?? ''
+  const context = parseConversionContext(searchParams)
 
   return (
     <main className="min-h-screen" style={{ background: '#020617' }}>
       <Header />
       <div className="max-w-xl md:max-w-4xl mx-auto px-4 py-6 min-w-0 overflow-x-hidden">
+        <LandingContextBanner context={context} />
         <div className="mb-4">
           <CountdownTimer compact />
         </div>

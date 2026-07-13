@@ -2,10 +2,11 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getWijkenByPostcode } from '@/lib/pseo'
-import { buildBreadcrumbListLd, hubBreadcrumbItems, toDisplaySlug } from '@/lib/pseo-hubs'
+import { buildBreadcrumbListLd, hubBreadcrumbItems } from '@/lib/pseo-hubs'
 import { buildPostcodeHubGraphLd } from '@/lib/json-ld'
 import { buildPostcodeMetadata } from '@/lib/pseo-metadata'
 import { postcodeClusterSummary, resolveWijkScore } from '@/lib/pseo-variation'
+import { buildCheckHref } from '@/lib/conversion-context'
 
 interface Props { params: Promise<{ code: string }> }
 
@@ -35,6 +36,21 @@ export default async function PostcodePage({ params }: Props) {
   const first = wijken[0]
   const topProv = first?.provincie
   const topStad = first?.stad
+  const checkHref = buildCheckHref({
+    landingPath: `/postcode/${prefix}`,
+    pseoLevel: 'postcode',
+    postcode: prefix,
+  })
+  const regionalCheckHref = first
+    ? buildCheckHref({
+        landingPath: `/postcode/${prefix}`,
+        pseoLevel: 'postcode',
+        postcode: prefix,
+        provincie: first.provincie,
+        stad: first.stad,
+        wijk: first.wijk,
+      })
+    : checkHref
 
   const G = '#00aa65'
 
@@ -79,7 +95,7 @@ export default async function PostcodePage({ params }: Props) {
             </span>
           </a>
           <a
-            href="/check"
+            href={checkHref}
             data-analytics-event="pseo_check_cta"
             data-analytics-label={`postcode-nav:${prefix}`}
             className="text-xs font-bold px-4 py-2 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:brightness-110 transition-all"
@@ -139,10 +155,10 @@ export default async function PostcodePage({ params }: Props) {
             <p className="text-slate-400 font-sans mb-6">
               Nog geen data beschikbaar voor postcode {prefix}.
             </p>
-            <Link href="/check"
+            <Link href={checkHref}
               data-analytics-event="pseo_check_cta"
               data-analytics-label={`postcode-empty:${prefix}`}
-              className="inline-block bg-amber-500 text-slate-950 px-6 py-3 rounded-xl font-sans font-medium shadow-[0_0_25px_rgba(245,158,11,0.4)]">
+              className="inline-flex min-h-11 items-center rounded-xl border border-white/15 px-5 py-3 font-sans text-sm font-semibold text-slate-300 transition hover:border-white/30 hover:text-white">
               Bereken uw persoonlijke potentie →
             </Link>
           </div>
@@ -185,10 +201,10 @@ export default async function PostcodePage({ params }: Props) {
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
               <Link
-                href={first ? `/check?wijk=${encodeURIComponent(toDisplaySlug(first.wijk))}&stad=${encodeURIComponent(toDisplaySlug(first.stad))}` : '/check'}
+                href={regionalCheckHref}
                 data-analytics-event="pseo_check_cta"
                 data-analytics-label={`postcode-prefill:${prefix}`}
-                className="bg-amber-500 text-slate-950 px-8 py-3 rounded-xl font-sans font-medium shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:opacity-90 transition-opacity text-center w-full sm:w-auto"
+                className="w-full rounded-xl border border-white/15 px-6 py-3 text-center font-sans text-sm font-semibold text-slate-300 transition hover:border-white/30 hover:text-white sm:w-auto"
               >
                 Start check in deze regio →
               </Link>

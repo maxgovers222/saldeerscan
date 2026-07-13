@@ -1,17 +1,22 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
 import { useRouter } from 'next/navigation'
-
-const G = '#00aa65'
-
-const amberBtnCls = [
-  'bg-amber-500 text-slate-950 font-bold rounded-full',
-  'transition-all duration-300',
-  'shadow-[0_0_25px_rgba(245,158,11,0.4)]',
-  'hover:opacity-90 active:scale-105',
-  'disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100',
-].join(' ')
+import { trackEvent } from '@/lib/analytics'
+import {
+  conversionParams,
+  type ConversionContext,
+} from '@/lib/conversion-context'
+import { cn } from '@/lib/utils'
 
 interface Suggestion {
   label: string
@@ -19,12 +24,24 @@ interface Suggestion {
 }
 
 interface Props {
+  context?: ConversionContext
   extraParams?: Record<string, string>
   placeholder?: string
+  buttonLabel?: string
+  className?: string
 }
 
-export function AddressAutocomplete({ extraParams, placeholder }: Props = {}) {
+export function AddressAutocomplete({
+  context,
+  extraParams,
+  placeholder,
+  buttonLabel,
+  className,
+}: Props = {}) {
   const router = useRouter()
+  const id = useId()
+  const inputId = `${id}-input`
+  const listboxId = `${id}-listbox`
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [selected, setSelected] = useState<Suggestion | null>(null)
@@ -32,56 +49,111 @@ export function AddressAutocomplete({ extraParams, placeholder }: Props = {}) {
   const [activeIdx, setActiveIdx] = useState(-1)
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requestRef = useRef<AbortController | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const startedRef = useRef(false)
 
   const fetchSuggestions = useCallback(async (q: string) => {
-    if (q.length < 3) { setSuggestions([]); setOpen(false); return }
+    requestRef.current?.abort()
+    if (q.trim().length < 3) {
+      setSuggestions([])
+      setOpen(false)
+      setLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    requestRef.current = controller
     setLoading(true)
     try {
-      const res = await fetch(`/api/bag/suggest?q=${encodeURIComponent(q)}`)
-      const data: Suggestion[] = await res.json()
+      const response = await fetch(
+        `/api/bag/suggest?q=${encodeURIComponent(q.trim())}`,
+        { signal: controller.signal },
+      )
+      if (!response.ok) throw new Error('suggest_failed')
+      const data = await response.json() as Suggestion[]
       setSuggestions(data)
       setOpen(data.length > 0)
       setActiveIdx(-1)
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        setSuggestions([])
+        setOpen(false)
+      }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
     }
   }, [])
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value
-    setQuery(val)
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value
+    requestRef.current?.abort()
+    setLoading(false)
+    setQuery(value)
     setSelected(null)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => fetchSuggestions(val), 280)
-  }
-
-  function handleSelect(s: Suggestion) {
-    setQuery(s.label)
-    setSelected(s)
     setSuggestions([])
     setOpen(false)
+    setActiveIdx(-1)
+    if (value.trim() && !startedRef.current) {
+      startedRef.current = true
+      trackEvent('address_entry_start', {
+        landing_path: context?.landingPath ?? '/',
+        pseo_level: context?.pseoLevel ?? 'home',
+      })
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => fetchSuggestions(value), 280)
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function handleSelect(suggestion: Suggestion) {
+    setQuery(suggestion.label)
+    setSelected(suggestion)
+    setSuggestions([])
+    setOpen(false)
+    setActiveIdx(-1)
+    trackEvent('address_suggestion_selected', {
+      landing_path: context?.landingPath ?? '/',
+      pseo_level: context?.pseoLevel ?? 'home',
+    })
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault()
     if (!selected) return
-    const params = new URLSearchParams({ adres: selected.label, ...extraParams })
+    const params = new URLSearchParams({
+      adres: selected.label,
+      ...(context ? conversionParams(context) : {}),
+      ...extraParams,
+    })
+    trackEvent('address_entry_submit', {
+      landing_path: context?.landingPath ?? '/',
+      pseo_level: context?.pseoLevel ?? 'home',
+    })
     router.push(`/check?${params.toString()}`)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!open) return
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, suggestions.length - 1)) }
-    if (e.key === 'ArrowUp')   { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)) }
-    if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); handleSelect(suggestions[activeIdx]) }
-    if (e.key === 'Escape') { setOpen(false) }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveIdx(index => Math.min(index + 1, suggestions.length - 1))
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveIdx(index => Math.max(index - 1, 0))
+    }
+    if (event.key === 'Enter' && activeIdx >= 0) {
+      event.preventDefault()
+      handleSelect(suggestions[activeIdx])
+    }
+    if (event.key === 'Escape') {
+      setOpen(false)
+      setActiveIdx(-1)
+    }
   }
 
-  // Close on outside click
   useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+    function onClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false)
       }
     }
@@ -89,55 +161,89 @@ export function AddressAutocomplete({ extraParams, placeholder }: Props = {}) {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    requestRef.current?.abort()
+  }, [])
+
+  const status = loading
+    ? 'Adressen laden'
+    : suggestions.length > 0
+      ? `${suggestions.length} adressen gevonden`
+      : query.trim().length >= 3
+        ? 'Geen adressen gevonden'
+        : ''
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto mb-8">
-      <div className="relative flex-1" ref={containerRef}>
+    <form
+      onSubmit={handleSubmit}
+      className={cn('mx-auto grid w-full max-w-lg gap-3 sm:grid-cols-[1fr_auto]', className)}
+    >
+      <div className="relative min-w-0" ref={containerRef}>
+        <label htmlFor={inputId} className="sr-only">Uw adres</label>
         <input
+          id={inputId}
           type="text"
+          role="combobox"
+          aria-label="Uw adres"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-activedescendant={
+            activeIdx >= 0 ? `${listboxId}-option-${activeIdx}` : undefined
+          }
           value={query}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder={placeholder ?? 'Uw adres, bijv. Keizersgracht 1, Amsterdam'}
-          className="w-full rounded-full px-6 py-4 text-slate-800 placeholder:text-slate-400 text-sm focus:outline-none shadow-xl"
-          style={{ background: 'rgba(255,255,255,0.95)' }}
+          className="min-h-14 w-full rounded-xl border border-white/15 bg-white px-4 pr-11 text-base text-ink shadow-sm placeholder:text-ink-muted/70 focus:border-trust focus:outline-none"
           autoComplete="off"
         />
         {loading && (
-          <div className="absolute right-5 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-          </div>
+          <span
+            aria-hidden="true"
+            className="absolute right-4 top-1/2 size-4 -translate-y-1/2 animate-spin rounded-full border-2 border-ink/20 border-t-ink/70"
+          />
         )}
 
         {open && suggestions.length > 0 && (
-          <ul className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
-            role="listbox">
-            {suggestions.map((s, i) => (
+          <ul
+            id={listboxId}
+            role="listbox"
+            className="absolute inset-x-0 z-50 mt-2 max-h-72 overflow-y-auto rounded-xl border border-ink/10 bg-white py-1 shadow-2xl"
+          >
+            {suggestions.map((suggestion, index) => (
               <li
-                key={s.id}
+                id={`${listboxId}-option-${index}`}
                 role="option"
-                aria-selected={i === activeIdx}
-                onMouseDown={() => handleSelect(s)}
-                onMouseEnter={() => setActiveIdx(i)}
-                className={`px-5 py-3 text-sm cursor-pointer flex items-center gap-3 transition-colors ${
-                  i === activeIdx ? 'bg-slate-50 text-slate-900' : 'text-slate-700 hover:bg-slate-50'
-                }`}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0" style={{ color: G }}>
-                  <circle cx="7" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M7 13C7 13 2 9 2 5.5a5 5 0 0110 0C12 9 7 13 7 13z" stroke="currentColor" strokeWidth="1.5"/>
-                </svg>
-                <span className="truncate">{s.label}</span>
+                aria-selected={index === activeIdx}
+                key={suggestion.id}
+                onMouseDown={event => {
+                  event.preventDefault()
+                  handleSelect(suggestion)
+                }}
+                onClick={() => handleSelect(suggestion)}
+                onMouseEnter={() => setActiveIdx(index)}
+                className={cn(
+                  'cursor-pointer px-4 py-3 text-sm text-ink transition-colors',
+                  index === activeIdx ? 'bg-mist' : 'hover:bg-mist',
+                )}
+              >
+                {suggestion.label}
               </li>
             ))}
           </ul>
         )}
+        <span className="sr-only" aria-live="polite">{status}</span>
       </div>
 
       <button
         type="submit"
         disabled={!selected}
-        className={`py-4 px-7 text-sm whitespace-nowrap ${amberBtnCls}`}>
-        Start gratis analyse
+        className="inline-flex min-h-14 items-center justify-center whitespace-nowrap rounded-xl bg-action px-6 py-3 font-heading text-sm font-bold text-evergreen-950 shadow-[0_12px_32px_rgba(255,176,32,.22)] transition hover:bg-action-hover disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none"
+      >
+        {buttonLabel ?? 'Bekijk mijn inzicht'}
       </button>
     </form>
   )

@@ -5,6 +5,7 @@ import { getPseoPage, getTopPseoPages, getStratenByWijk, getWijkPage } from '@/l
 import { LocalSchema } from '@/components/pseo/LocalSchema'
 import { RenovatieInsightCard } from '@/components/pseo/RenovatieInsightCard'
 import { renovatieIntelligence, straatVsWijkDelta } from '@/lib/pseo-variation'
+import { buildCheckHref } from '@/lib/conversion-context'
 
 // Deduplicate Supabase fetches: generateMetadata + page component share one request
 const getCachedPseoPage = cache(getPseoPage)
@@ -64,6 +65,14 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
   const p = await params
   const page = await getCachedPseoPage(p)
   if (!page) notFound()
+  const checkHref = `${buildCheckHref({
+    landingPath: `/${p.provincie}/${p.stad}/${p.wijk}/${p.straat}`,
+    pseoLevel: 'straat',
+    provincie: p.provincie,
+    stad: p.stad,
+    wijk: p.wijk,
+    straat: p.straat,
+  })}&adres=${encodeURIComponent(`${p.straat} ${p.stad}`)}`
 
   const wijkPage = await getWijkPage({ provincie: p.provincie, stad: p.stad, wijk: p.wijk })
   const straatDelta = wijkPage
@@ -196,7 +205,7 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
 
         {/* CTA */}
         <a
-          href={`/check?adres=${encodeURIComponent(`${p.straat} ${p.stad}`)}`}
+          href={checkHref}
           data-analytics-event="pseo_check_cta"
           data-analytics-label={`straat:${p.wijk}:${p.straat}`}
           className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-6 py-3 rounded-lg transition-colors"

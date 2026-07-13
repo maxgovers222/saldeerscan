@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getTopStadden, getTopWijken } from '@/lib/pseo'
 import { toDisplaySlug } from '@/lib/pseo-hubs'
+import { Container } from '@/components/design-system/Container'
 
 export async function HomeDiscovery() {
   const [steden, wijken] = await Promise.all([
@@ -11,15 +12,15 @@ export async function HomeDiscovery() {
   if (steden.length === 0 && wijken.length === 0) return null
 
   return (
-    <section className="py-10 px-6 border-b border-white/10" style={{ background: '#0f172a' }}>
-      <div className="max-w-5xl mx-auto">
+    <section className="border-y border-white/10 bg-evergreen-900 py-12 text-white sm:py-16">
+      <Container>
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
           {motionGridHeader()}
           <Link
             href="/postcode/1012"
             data-analytics-event="pseo_second_click"
             data-analytics-label="home:postcode-hub"
-            className="inline-flex items-center justify-center rounded-full border border-amber-500/30 px-5 py-2.5 text-sm font-semibold text-amber-300 hover:bg-amber-500/10 transition-colors"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/65 transition-colors hover:border-white/30 hover:text-white"
           >
             Zoek op postcode →
           </Link>
@@ -35,7 +36,7 @@ export async function HomeDiscovery() {
                   href={`/${provincie}/${stad}`}
                   data-analytics-event="pseo_second_click"
                   data-analytics-label={`home:stad:${stad}`}
-                  className="rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3 text-sm font-semibold text-white hover:border-amber-500/30 hover:text-amber-300 transition-colors"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-colors hover:border-trust/40 hover:text-trust"
                 >
                   {toDisplaySlug(stad)}
                 </Link>
@@ -50,7 +51,7 @@ export async function HomeDiscovery() {
             {motionGridWijken(wijken)}
           </div>
         )}
-      </div>
+      </Container>
     </section>
   )
 }
@@ -58,10 +59,10 @@ export async function HomeDiscovery() {
 function motionGridHeader() {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-2">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-trust">
         Regionale hubs
       </p>
-      <h2 className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)' }}>
+      <h2 className="font-heading text-2xl font-bold text-white">
         Populaire steden en wijken
       </h2>
       <p className="text-sm text-white/50 mt-2 max-w-2xl">
@@ -80,9 +81,9 @@ function motionGridWijken(wijken: Awaited<ReturnType<typeof getTopWijken>>) {
           href={`/${provincie}/${stad}/${wijk}`}
           data-analytics-event="pseo_second_click"
           data-analytics-label={`home:wijk:${wijk}`}
-          className="rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3 hover:border-amber-500/30 transition-colors"
+          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition-colors hover:border-trust/40"
         >
-          <p className="text-sm font-semibold text-white hover:text-amber-300 transition-colors">
+          <p className="text-sm font-semibold text-white transition-colors hover:text-trust">
             {toDisplaySlug(wijk)}
           </p>
           <p className="text-xs text-white/40 mt-1">{toDisplaySlug(stad)}</p>
