@@ -400,6 +400,7 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 
 **Handoff (lees bij hervatten):** `docs/superpowers/HANDOFF-2026-07-10-customer-first-ui-overhaul.md`  
 **Codex uitvoering (nu):** `docs/superpowers/CODEX-EXECUTION-PLAN.md`  
+**Codex prompts (copy-paste):** `docs/superpowers/CODEX-PROMPTS.md`  
 **Design spec:** `docs/superpowers/specs/2026-07-10-customer-first-ui-overhaul-design.md`  
 **Vorige chat:** transcript `827f96be-974a-4a0c-9d2a-8e76dc979a14`  
 **Hervatten:** ~8 augustus 2026 · model **GPT 5.6 Sol** · **1 fase/sessie** · **niet** op Auto voor fasen 1–4

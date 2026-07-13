@@ -19,7 +19,7 @@ Dit project is een **conversion-first UI-overhaul** van Saldeerscan.nl: meer ver
 - Fase 1 → 4, **één fase per sessie**, model **GPT 5.6 Sol** (Max Mode alleen waar nodig)
 - **Niet** op Auto/Cursor Composer voor de zware UI-werkzaamheden
 
-**Codex (nu, Cursor API leeg):** volg `docs/superpowers/CODEX-EXECUTION-PLAN.md` — weekplan, modellen, prompts per fase.
+**Codex (nu, Cursor API leeg):** `CODEX-EXECUTION-PLAN.md` (weekplan) + **`CODEX-PROMPTS.md`** (alle copy-paste prompts per sessie + model).
 
 **Startprompt voor nieuwe sessie (augustus / Cursor):**
 ```
