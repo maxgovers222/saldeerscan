@@ -100,6 +100,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col overflow-x-hidden max-w-full">
+        <a
+          href="#main-content"
+          className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-xl bg-action px-4 py-3 font-bold text-evergreen-950 shadow-lg transition-transform focus:translate-y-0"
+        >
+          Naar hoofdinhoud
+        </a>
         <Analytics />
         {children}
       </body>

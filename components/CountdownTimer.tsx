@@ -35,7 +35,7 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
   if (compact) {
     const days = mounted && time ? time.d : '--'
     return (
-      <p className="text-center text-xs font-mono text-white/40">
+      <p className="text-center text-xs font-mono text-white/65">
         Nog{' '}
         <span className="text-amber-400 font-bold">
           {typeof days === 'number' ? days : days}
@@ -47,7 +47,7 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="text-center">
-      <p className="text-xs font-mono text-white/40 uppercase tracking-widest mb-3">
+      <p className="text-xs font-mono text-white/65 uppercase tracking-widest mb-3">
         Salderingsregeling eindigt over
       </p>
       <div className="flex items-center justify-center gap-2 sm:gap-3">
@@ -62,14 +62,14 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
               <span className="font-mono text-2xl sm:text-3xl font-black text-amber-400 tabular-nums leading-none">
                 {display}
               </span>
-              <span className="text-[10px] text-white/40 tracking-widest uppercase mt-1.5 font-mono">
+              <span className="text-[10px] text-white/65 tracking-widest uppercase mt-1.5 font-mono">
                 {label}
               </span>
             </div>
           )
         })}
       </div>
-      <p className="text-xs text-white/30 mt-3 font-mono">
+      <p className="text-xs text-white/65 mt-3 font-mono">
         Per 1 januari 2027 daalt uw opbrengst van 28% naar 0%
       </p>
     </div>

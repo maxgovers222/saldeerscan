@@ -48,7 +48,7 @@ export function FunnelProgress({ currentStep }: FunnelProgressProps) {
                 ) : <span>{num}</span>}
               </div>
               <span className="text-[10px] hidden sm:block transition-colors duration-300"
-                style={{ fontFamily: 'var(--font-sans)', color: isActive ? AMBER : isCompleted ? AMBER : 'rgba(255,255,255,0.25)', fontWeight: isActive ? 600 : 400 }}>
+                style={{ fontFamily: 'var(--font-sans)', color: isActive ? AMBER : isCompleted ? AMBER : 'rgba(255,255,255,0.65)', fontWeight: isActive ? 600 : 400 }}>
                 {label}
               </span>
             </div>

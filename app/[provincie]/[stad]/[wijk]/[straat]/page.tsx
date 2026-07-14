@@ -273,7 +273,7 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
       {andereStraten.length > 0 && (
         <section className="px-4 pb-16 max-w-4xl mx-auto">
           <div className="border-t border-slate-800 pt-10">
-            <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">
+            <p className="text-slate-400 text-xs uppercase tracking-wider mb-4">
               Andere straten in {p.wijk.replace(/-/g, ' ')}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -311,7 +311,7 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
       {/* Kennisbank interne links — identiek patroon als wijk-pagina */}
       <section className="py-10 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="max-w-4xl mx-auto">
-          <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">Lees ook in de Kennisbank</p>
+          <p className="text-slate-400 text-xs uppercase tracking-wider mb-4">Lees ook in de Kennisbank</p>
           <div className="flex flex-wrap gap-3">
             {(page.netcongestieStatus === 'ROOD'
               ? [

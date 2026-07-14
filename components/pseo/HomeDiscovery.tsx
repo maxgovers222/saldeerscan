@@ -28,7 +28,7 @@ export async function HomeDiscovery() {
 
         {steden.length > 0 && (
           <div className="mb-8">
-            <p className="text-[10px] uppercase tracking-widest text-white/35 mb-3">Steden</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/65 mb-3">Steden</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {steden.map(({ provincie, stad }) => (
                 <Link
@@ -47,7 +47,7 @@ export async function HomeDiscovery() {
 
         {wijken.length > 0 && (
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-white/35 mb-3">Wijken</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/65 mb-3">Wijken</p>
             {motionGridWijken(wijken)}
           </div>
         )}
@@ -86,7 +86,7 @@ function motionGridWijken(wijken: Awaited<ReturnType<typeof getTopWijken>>) {
           <p className="text-sm font-semibold text-white transition-colors hover:text-trust">
             {toDisplaySlug(wijk)}
           </p>
-          <p className="text-xs text-white/40 mt-1">{toDisplaySlug(stad)}</p>
+          <p className="text-xs text-white/65 mt-1">{toDisplaySlug(stad)}</p>
         </Link>
       ))}
     </div>

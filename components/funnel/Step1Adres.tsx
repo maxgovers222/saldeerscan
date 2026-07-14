@@ -274,7 +274,7 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
         )}
 
         {localError && (
-          <div className="flex items-start gap-2 bg-red-950/40 border border-red-700 rounded-lg px-3 py-2">
+          <div className="flex items-start gap-2 bg-red-950/40 border border-red-700 rounded-lg px-3 py-2" role="alert">
             <span className="text-red-400 text-xs mt-0.5">!</span>
             <p className="text-red-400 text-xs font-mono">{localError}</p>
           </div>

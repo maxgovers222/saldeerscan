@@ -197,7 +197,7 @@ export function AddressAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder={placeholder ?? 'Uw adres, bijv. Keizersgracht 1, Amsterdam'}
-          className="min-h-14 w-full rounded-xl border border-white/15 bg-white px-4 pr-11 text-base text-ink shadow-sm placeholder:text-ink-muted/70 focus:border-trust focus:outline-none"
+          className="min-h-14 w-full rounded-xl border border-white/15 bg-white px-4 pr-11 text-base text-ink shadow-sm placeholder:text-ink-muted/70 focus:border-trust focus:outline-none focus-visible:ring-3 focus-visible:ring-trust/50"
           autoComplete="off"
         />
         {loading && (

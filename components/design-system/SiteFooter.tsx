@@ -29,7 +29,7 @@ export function SiteFooter() {
             <Link href="/privacy" className="transition hover:text-white">Privacyverklaring</Link>
             <Link href="/check" className="transition hover:text-white">Analyseer uw woning</Link>
           </nav>
-          <p className="mt-5 text-xs text-white/30">© {new Date().getFullYear()} SaldeerScan.nl</p>
+          <p className="mt-5 text-xs text-white/60">© {new Date().getFullYear()} SaldeerScan.nl</p>
         </div>
       </Container>
     </footer>

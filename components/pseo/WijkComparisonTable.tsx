@@ -83,7 +83,7 @@ export function WijkComparisonTable({
       <div className="overflow-x-auto rounded-2xl border border-white/10 bg-evergreen-900/70">
         <table className="w-full min-w-[320px] border-collapse text-left text-base sm:text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-white/40">
+            <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-white/65">
               <th className="px-4 py-3 font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
                 Wijk
               </th>
@@ -108,7 +108,7 @@ export function WijkComparisonTable({
                 </td>
                 <td className="px-4 py-3 font-mono text-action">
                   {row.score}
-                  <span className="text-white/30">/100</span>
+                  <span className="text-white/65">/100</span>
                 </td>
                 <td className="px-4 py-3 font-mono text-white/70">{row.gemBouwjaar ?? '—'}</td>
                 <td className="px-4 py-3 font-mono text-red-400">−€{row.verlies}</td>

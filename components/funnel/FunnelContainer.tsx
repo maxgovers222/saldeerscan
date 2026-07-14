@@ -415,12 +415,12 @@ export function FunnelContainer({ urlParams }: {
       {state.leadId || reportReady ? (
         <div className="overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-[0_8px_32px_rgba(0,0,0,0.18)] min-w-0">
           {state.loading ? (
-            <div className="p-10 flex flex-col items-center justify-center gap-4 text-center">
+            <div className="p-10 flex flex-col items-center justify-center gap-4 text-center" role="status" aria-live="polite">
               <div className="w-10 h-10 border-2 border-action border-t-transparent rounded-full animate-spin" aria-hidden />
               <p className="text-sm font-mono text-ink-muted">Rapport laden…</p>
             </div>
           ) : !reportReady ? (
-            <div className="p-8 space-y-4 text-center">
+            <div className="p-8 space-y-4 text-center" role="alert">
               <p className="text-sm font-sans text-ink-muted leading-relaxed">
                 {state.error ?? 'Onvoldoende data om het rapport te tonen. Het opgeslagen rapport ontbreekt of is ongeldig.'}
               </p>

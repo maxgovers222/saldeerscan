@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useId } from 'react'
 import type { MeterkastAnalyse, PlaatsingsAnalyse, OmvormerAnalyse } from './types'
 import { trackEvent } from '@/lib/analytics'
 import { prepareVisionImage } from './prepare-vision-image'
@@ -17,7 +17,7 @@ interface PhotoUploadProps {
 
 function ScanAnimation({ imageUrl, optimizing }: { imageUrl: string; optimizing?: boolean }) {
   return (
-    <div className="relative w-full rounded-lg overflow-hidden border border-amber-300/50 bg-slate-900">
+    <div className="relative w-full rounded-lg overflow-hidden border border-amber-300/50 bg-slate-900" role="status" aria-live="polite">
       <img src={imageUrl} alt="Preview" className="w-full max-h-48 object-cover opacity-80" />
       <div className="absolute inset-0 pointer-events-none">
         {!optimizing && (
@@ -39,6 +39,7 @@ function ScanAnimation({ imageUrl, optimizing }: { imageUrl: string; optimizing?
 }
 
 export function PhotoUpload({ visionType, onAnalysed, title, description }: PhotoUploadProps) {
+  const inputId = useId()
   const [isDragOver, setIsDragOver] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -111,7 +112,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
   if (loading && imageUrl) return <ScanAnimation imageUrl={imageUrl} optimizing={optimizing} />
   if (loading && !imageUrl) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center" role="status" aria-live="polite">
         <span className="text-sm font-mono text-amber-400">Foto optimaliseren...</span>
       </div>
     )
@@ -120,7 +121,9 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
   if (!imageUrl) {
     return (
       <div className="space-y-3">
-        <div
+        <button
+          type="button"
+          aria-describedby={`${inputId}-description ${inputId}-requirements`}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true) }}
           onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false) }}
           onDrop={handleDrop}
@@ -133,23 +136,25 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="text-white/30">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <div className="text-center">
-            <p className="font-semibold text-white/80 text-sm" style={{ fontFamily: 'var(--font-sans)' }}>{title}</p>
-            <p className="text-xs text-white/40 mt-1" style={{ fontFamily: 'var(--font-sans)' }}>{description}</p>
-          </div>
-          <div className="text-[10px] text-amber-600/70" style={{ fontFamily: 'var(--font-sans)' }}>JPEG · PNG · WebP — max 10 MB</div>
-        </div>
+          <span className="text-center">
+            <span className="block font-semibold text-white/80 text-sm" style={{ fontFamily: 'var(--font-sans)' }}>{title}</span>
+            <span id={`${inputId}-description`} className="mt-1 block text-xs text-white/65" style={{ fontFamily: 'var(--font-sans)' }}>{description}</span>
+          </span>
+          <span id={`${inputId}-requirements`} className="text-[10px] text-amber-400" style={{ fontFamily: 'var(--font-sans)' }}>JPEG · PNG · WebP — max 10 MB</span>
+        </button>
 
         <input
+          id={inputId}
           ref={fileInputRef}
           type="file"
+          aria-label={`Selecteer foto: ${title}`}
           accept="image/jpeg,image/png,image/webp"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = '' }}
           className="hidden"
         />
 
         {error && (
-          <div className="bg-red-950/40 border border-red-700 rounded-xl px-3 py-2">
+          <div className="bg-red-950/40 border border-red-700 rounded-xl px-3 py-2" role="alert">
             <p className="text-xs font-mono text-red-400">{error}</p>
           </div>
         )}
@@ -168,7 +173,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
       </div>
 
       {screeningError && (
-        <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 space-y-2">
+        <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 space-y-2" role="alert">
           <div className="flex items-start gap-2">
             <span className="text-amber-400 text-sm shrink-0 mt-0.5">!</span>
             <p className="text-xs font-mono text-amber-300">{screeningError}</p>
@@ -181,7 +186,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
       )}
 
       {error && (
-        <div className="bg-red-950/40 border border-red-700 rounded-xl p-3 space-y-2">
+        <div className="bg-red-950/40 border border-red-700 rounded-xl p-3 space-y-2" role="alert">
           <p className="text-xs font-mono text-red-400">{error}</p>
           <button onClick={handleReset}
             className="w-full bg-red-950/60 hover:bg-red-950 border border-red-700/50 text-red-400 font-mono text-xs py-2 px-3 rounded-md transition-colors">

@@ -177,12 +177,13 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
         <p className="text-xs text-white/55 font-sans leading-relaxed">
           Dit is leidend voor het advies: met bestaande panelen verschuift de nadruk naar batterij en optimalisatie (niet naar nieuwe panelen als primaire stap).
         </p>
-        <p className="text-xs font-mono text-white/40 uppercase tracking-widest">Heeft u nu al zonnepanelen?</p>
-        <div className="grid grid-cols-2 gap-2">
+        <p id="st2-panelen-label" className="text-xs font-mono text-white/65 uppercase tracking-widest">Heeft u nu al zonnepanelen?</p>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="st2-panelen-label">
           {([false, true] as const).map((val) => (
             <button
               key={String(val)}
               type="button"
+              aria-pressed={state.heeft_panelen === val}
               onClick={() => {
                 dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
                 if (!val) {
@@ -251,10 +252,11 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <label className="text-xs font-mono text-white/40 uppercase tracking-widest">Paneeltype</label>
+            <label className="text-xs font-mono text-white/65 uppercase tracking-widest" htmlFor="st2-paneeltype">Paneeltype</label>
             <span className="font-mono text-amber-400 text-sm">{kwhPerPaneel} kWh/paneel</span>
           </div>
           <select
+            id="st2-paneeltype"
             value={kwhPerPaneel}
             onChange={(e) => setKwhPerPaneel(Number(e.target.value))}
             className="w-full min-w-0 bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/70 font-mono text-base sm:text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
@@ -267,14 +269,15 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
 
         {/* Dakrichting */}
         <div className="space-y-2">
-          <label className="text-xs font-mono text-white/40 uppercase tracking-widest">
+          <p id="st2-dakrichting-label" className="text-xs font-mono text-white/65 uppercase tracking-widest">
             Dakrichting <span className="normal-case">(optioneel)</span>
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-labelledby="st2-dakrichting-label">
             {(['Zuid', 'Oost/West', 'Noord'] as const).map(richting => (
               <button
                 key={richting}
                 type="button"
+                aria-pressed={state.dakrichting === richting}
                 onClick={() => dispatch({ type: 'SET_DAKRICHTING', dakrichting: state.dakrichting === richting ? null : richting })}
                 className={[
                   'py-2.5 px-1.5 rounded-lg text-xs font-sans leading-tight text-center whitespace-nowrap border transition-colors min-w-0',
@@ -288,6 +291,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
             ))}
             <button
               type="button"
+              aria-pressed={state.dakrichting === null}
               onClick={() => dispatch({ type: 'SET_DAKRICHTING', dakrichting: null })}
               className={[
                 'py-2.5 px-1.5 rounded-lg text-xs font-sans leading-tight text-center whitespace-nowrap border transition-colors min-w-0',
@@ -309,7 +313,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
       </div>
 
       {roiError && (
-        <div className="flex items-start gap-2 bg-red-950/40 border border-red-700 rounded-lg px-3 py-2">
+        <div className="flex items-start gap-2 bg-red-950/40 border border-red-700 rounded-lg px-3 py-2" role="alert">
           <span className="text-red-400 text-xs mt-0.5">!</span>
           <p className="text-red-400 text-xs font-mono">{roiError}</p>
         </div>
