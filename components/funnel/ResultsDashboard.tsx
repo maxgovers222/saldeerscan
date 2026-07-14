@@ -312,6 +312,12 @@ function ReportMobileSummary({ state, roi, metrics }: {
   metrics: ReportMetrics
 }) {
   const { animVerlies, animBesparing, animScore, heeftPanelen, terugverdien } = metrics
+  const emailStatus = state.reportModel?.delivery.emailStatus ?? 'pending'
+  const emailSummary = emailStatus === 'sent'
+    ? 'Uw volledige analyse staat in uw e-mail. Download hieronder het PDF-rapport voor alle grafieken en details.'
+    : emailStatus === 'failed'
+      ? 'De e-mail kon niet worden verstuurd. Uw volledige analyse en PDF-rapport staan hieronder klaar.'
+      : 'Uw volledige analyse en PDF-rapport staan hieronder klaar.'
 
   return (
     <div className="space-y-5 min-w-0 px-4 py-6" data-testid="report-mobile-summary">
@@ -326,7 +332,7 @@ function ReportMobileSummary({ state, roi, metrics }: {
           Uw SaldeerScan rapport
         </h2>
         <p className="text-sm text-white/50 mt-2 font-sans leading-relaxed">
-          Uw volledige analyse staat in uw e-mail. Download hieronder het PDF-rapport voor alle grafieken en details.
+          {emailSummary}
         </p>
       </div>
 
@@ -342,7 +348,7 @@ function ReportMobileSummary({ state, roi, metrics }: {
       <div className="grid grid-cols-1 gap-3">
         <div className={`${cardCls} text-center`}>
           <p className="text-[10px] text-amber-400/70 uppercase tracking-widest mb-1" style={{ fontFamily: 'var(--font-sans)' }}>Verlies per jaar vanaf 2027</p>
-          <p className="text-3xl font-black font-mono text-amber-400">−€{animVerlies.toLocaleString('nl-NL')}</p>
+          <p className="text-3xl font-black font-mono text-amber-400" data-testid="report-annual-loss">−€{animVerlies.toLocaleString('nl-NL')}</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className={`${cardCls} text-center`}>
@@ -395,6 +401,7 @@ function ReportDesktopFull({ state, roi, metrics }: {
     score, heeftPanelen, huidigePanelenAantal, batterijInvestering, batterijMeerBesparing,
     besparing, verlies, terugverdien, investering, animBesparing, animVerlies, animScore,
   } = metrics
+  const emailSent = state.reportModel?.delivery.emailStatus === 'sent'
 
   return (
     <div className="space-y-6 min-w-0 px-6 sm:px-10 py-8" data-testid="report-desktop-full">
@@ -429,7 +436,7 @@ function ReportDesktopFull({ state, roi, metrics }: {
           </h3>
 
           <div className="text-center mb-6">
-            <div className="text-5xl font-black font-mono mb-1.5 text-amber-400">
+            <div className="text-5xl font-black font-mono mb-1.5 text-amber-400" data-testid="report-annual-loss">
               −€{animVerlies.toLocaleString('nl-NL')}
             </div>
             <p className="text-xs text-white/40" style={{ fontFamily: 'var(--font-sans)' }}>per jaar · vanaf 1 januari 2027</p>
@@ -542,7 +549,9 @@ function ReportDesktopFull({ state, roi, metrics }: {
       <div className="max-w-md">
         <PDFDownloadButton state={state} />
         <p className="text-[10px] text-white/30 text-center mt-3 font-sans">
-          Download het volledige rapport als PDF — ook verstuurd naar uw e-mail.
+          {emailSent
+            ? 'Download het volledige rapport als PDF — ook verstuurd naar uw e-mail.'
+            : 'Download het volledige rapport hieronder als PDF.'}
         </p>
       </div>
 
@@ -569,7 +578,7 @@ export function ResultsDashboard({ state }: { state: FunnelState }) {
   const isDesktop = useIsDesktopViewport()
 
   return (
-    <div className="min-w-0 overflow-x-hidden">
+    <div className="min-w-0 overflow-x-hidden" data-testid="report-root">
       {isDesktop
         ? <ReportDesktopFull state={state} roi={roi} metrics={metrics} />
         : <ReportMobileSummary state={state} roi={roi} metrics={metrics} />}

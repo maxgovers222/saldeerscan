@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { FUNNEL_STATE_STEP6 } from '../fixtures/funnel-state'
+import { expectedReportFixture } from '../fixtures/report'
 import { seedFunnelAtInternalStep } from './fixtures/funnel-state'
 
 /**
@@ -48,6 +49,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
             leadId: 'test-lead-id-123',
             reportToken: 'test-report-token',
             status: 'ingediend',
+            report: expectedReportFixture,
           }),
         })
       }
@@ -125,6 +127,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
           reportToken: 'test-report-token',
           status: 'ingediend',
           emailStatus: 'sent',
+          report: expectedReportFixture,
         }),
       })
     })

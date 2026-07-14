@@ -6,6 +6,7 @@ import type { FunnelState, FunnelAction } from './types'
 import { StepHeader } from './StepHeader'
 import { PDFDownloadButton } from './PDFDownloadButton'
 import { ResultsDashboard } from './ResultsDashboard'
+import type { NormalizedReport } from '@/lib/report-model'
 
 function extractStad(adres?: string): string {
   if (!adres) return 'Nederland'
@@ -95,7 +96,14 @@ function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: 
 }
 
 function SuccessState({ state }: { state: FunnelState }) {
-  const statusText = 'Gegevens ontvangen — uw rapport staat hieronder klaar'
+  const emailStatus = state.reportModel?.delivery.emailStatus ?? 'pending'
+  const statusText = emailStatus === 'sent'
+    ? 'Gegevens ontvangen — bevestiging verstuurd naar uw e-mail'
+    : emailStatus === 'failed'
+      ? 'Gegevens ontvangen — de e-mail kon niet worden verstuurd; uw rapport staat hieronder klaar'
+      : emailStatus === 'not_configured'
+        ? 'Gegevens ontvangen — uw rapport staat hieronder klaar'
+        : 'Gegevens ontvangen — de e-mailstatus wordt gecontroleerd'
   return (
     <div className="min-w-0 overflow-x-hidden">
       <div className="flex items-center gap-2 px-4 sm:px-6 pt-4 text-emerald-400">
@@ -222,7 +230,12 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
       const data = await res.json() as {
         leadId: string
         reportToken?: string | null
+        report?: NormalizedReport
       }
+      if (!data.report || data.report.version !== 1) {
+        throw new Error('Rapport kon niet betrouwbaar worden opgebouwd. Probeer het later opnieuw.')
+      }
+      dispatch({ type: 'SET_REPORT_MODEL', report: data.report })
       if (typeof data.reportToken === 'string' && data.reportToken.length > 0) {
         dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: data.reportToken })
       } else {

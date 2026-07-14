@@ -14,6 +14,11 @@ import {
   readBoundedJson,
 } from '@/lib/lead-submission'
 import { getNetcongestie } from '@/lib/netcongestie'
+import {
+  buildReportModel,
+  reportSourceFromStoredLead,
+  type ReportEmailStatus,
+} from '@/lib/report-model'
 import { Resend } from 'resend'
 
 export const maxDuration = 60
@@ -83,6 +88,7 @@ export async function POST(request: Request) {
       utm_medium: submission.utmMedium,
       utm_campaign: submission.utmCampaign,
       landing_page: submission.landingPage,
+      report_email_status: resend ? 'pending' : 'not_configured',
     })
     .select('id')
     .single()
@@ -107,9 +113,10 @@ export async function POST(request: Request) {
     )
   }
 
-  let emailStatus: 'sent' | 'failed' | 'not_configured' = resend
-    ? 'failed'
+  let emailStatus: ReportEmailStatus = resend
+    ? 'pending'
     : 'not_configured'
+  let emailError: string | null = null
 
   if (resend) {
     const score = health.score
@@ -232,13 +239,69 @@ export async function POST(request: Request) {
 </html>`,
       })
       if ('error' in emailResult && emailResult.error) {
+        emailStatus = 'failed'
+        emailError = emailResult.error.message
         console.error('[api/leads] email error:', emailResult.error)
       } else {
         emailStatus = 'sent'
       }
     } catch (err) {
+      emailStatus = 'failed'
+      emailError = err instanceof Error ? err.message : String(err)
       console.error('[api/leads] email exception:', err)
     }
+  }
+
+  const emailUpdate = emailStatus === 'sent'
+    ? {
+        report_email_status: 'sent',
+        report_email_sent_at: new Date().toISOString(),
+        report_email_error: null,
+      }
+    : {
+        report_email_status: emailStatus,
+        report_email_sent_at: null,
+        report_email_error: emailError?.slice(0, 1000) ?? null,
+      }
+  const { error: emailUpdateError } = await supabaseAdmin
+    .from('leads')
+    .update(emailUpdate)
+    .eq('id', lead.id)
+  if (emailUpdateError) {
+    console.error('[api/leads] email status update error:', emailUpdateError.message)
+  }
+
+  const { data: storedLead, error: storedLeadError } = await supabaseAdmin
+    .from('leads')
+    .select(`
+      id,
+      created_at,
+      adres,
+      wijk,
+      stad,
+      bag_data,
+      netcongestie_status,
+      health_score,
+      roi_berekening,
+      meterkast_analyse,
+      plaatsing_analyse,
+      omvormer_analyse,
+      is_eigenaar,
+      heeft_panelen,
+      huidige_panelen_aantal,
+      report_email_status
+    `)
+    .eq('id', lead.id)
+    .single()
+  if (storedLeadError || !storedLead) {
+    console.error('[api/leads] report lead reload error:', lead.id, storedLeadError?.message)
+    return Response.json({ error: 'report_generation_failed' }, { status: 500 })
+  }
+
+  const report = buildReportModel(reportSourceFromStoredLead(storedLead))
+  if (!report) {
+    console.error('[api/leads] report generation failed:', lead.id)
+    return Response.json({ error: 'report_generation_failed' }, { status: 500 })
   }
 
   after(async () => {
@@ -263,7 +326,8 @@ export async function POST(request: Request) {
       leadId: lead.id,
       reportToken: reportAccessToken ?? null,
       status: 'ingediend',
-      emailStatus,
+      report,
+      emailStatus: report.delivery.emailStatus,
     },
     { status: 201 },
   )
