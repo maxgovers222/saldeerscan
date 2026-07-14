@@ -1,0 +1,33 @@
+name: Update visual snapshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-linux-snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.signature
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.signature
+      MAPBOX_ACCESS_TOKEN: pk.ci-placeholder
+      LEAD_REPORT_HMAC_SECRET: ci-only-not-a-production-secret
+      CRON_SECRET: ci-only-cron-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test tests/e2e/visual-regression.spec.ts --project=chromium --update-snapshots
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "test(phase-4b): visual regression baselines (linux)"
+          file_pattern: tests/e2e/__screenshots__
