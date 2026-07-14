@@ -16,6 +16,8 @@ test('mobile shows the key result, metrics, disclosures and PDF action', async (
   await expect(page.getByRole('group', { name: 'Uw aanbevolen oplossing' })).toBeVisible()
   await expect(page.getByRole('button', { name: /PDF-rapport/ })).toBeVisible()
   await expect(page.getByTestId('report-desktop-grid')).toBeHidden()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth))
 })
 
 test('desktop is full width without a mobile-to-desktop hydration switch', async ({ page }) => {
@@ -41,6 +43,7 @@ test('email failure never claims the report was sent', async ({ page }) => {
   await expect(page.getByText('Aanvraag ontvangen')).toBeVisible()
   await expect(page.getByText(/e-mail kon niet worden verstuurd/i)).toBeVisible()
   await expect(page.getByText(/verzonden naar uw e-mail/i)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /PDF-rapport/ })).toBeVisible()
 })
 
 test('existing panels show an upgrade recommendation on web', async ({ page }) => {

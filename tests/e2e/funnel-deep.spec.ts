@@ -11,6 +11,7 @@
  *   - StepHeader stap-prop = "Stap N — Naam"; gebruik step TITLE-tekst voor asserts
  */
 import { test, expect, type Page } from '@playwright/test'
+import { expectedReportFixture } from '../fixtures/report'
 
 // Alleen chromium — mobile cold-start timing is infra-issue, geen testlogica
 test.use({ ...require('@playwright/test').devices['Desktop Chrome'] })
@@ -159,7 +160,34 @@ async function setupMocks(page: Page) {
   )
   await page.route('/api/leads**', async (route) => {
     if (route.request().method() !== 'GET') {
-      return route.fulfill({ json: { leadId: 'test-lead-abc123', success: true } })
+      const leadId = 'test-lead-abc123'
+      const submission = route.request().postDataJSON() as {
+        isEigenaar?: boolean | null
+        heeftPanelen?: boolean | null
+        huidigePanelenAantal?: number | null
+      }
+      const report = {
+        ...expectedReportFixture,
+        leadId,
+        qualification: {
+          isEigenaar: submission.isEigenaar ?? null,
+          heeftPanelen: submission.heeftPanelen ?? null,
+          huidigePanelenAantal: submission.huidigePanelenAantal ?? null,
+        },
+        grid: {
+          status: MOCK_NETCONGESTIE_GROEN.status,
+          operator: MOCK_NETCONGESTIE_GROEN.netbeheerder,
+          explanation: MOCK_NETCONGESTIE_GROEN.uitleg,
+        },
+      }
+      return route.fulfill({
+        json: {
+          leadId,
+          reportToken: 'test-report-token',
+          report,
+          emailStatus: report.delivery.emailStatus,
+        },
+      })
     }
     const u = route.request().url()
     const m = u.match(/\/api\/leads\/([^/?]+)/)
@@ -178,6 +206,15 @@ function mockLeadHydrateBody(
 ) {
   return {
     leadId,
+    report: {
+      ...expectedReportFixture,
+      leadId,
+      grid: {
+        status: netcongestie.status,
+        operator: netcongestie.netbeheerder,
+        explanation: netcongestie.uitleg,
+      },
+    },
     adres: 'Prinsengracht 263, Amsterdam',
     wijk: '',
     stad: '',
@@ -972,17 +1009,18 @@ test.describe('Stap 6 — Lead formulier', () => {
     await page.locator('#lead-telefoon').fill('0687654321')
     await page.locator('#lead-gdpr').click({ force: true })
     await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=Uw SaldeerScan rapport').first()).toBeVisible({ timeout: 12000 })
+    await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 12000 })
   })
 
-  test('na submit: ResultsDashboard met ShockChart zichtbaar', async ({ page }) => {
+  test('na submit: ResultsDashboard met salderingsafbouw zichtbaar', async ({ page }) => {
     await page.locator('#lead-naam').fill('Maria van der Berg')
     await page.locator('#lead-email').fill('maria@test.nl')
     await page.locator('#lead-telefoon').fill('0687654321')
     await page.locator('#lead-gdpr').click({ force: true })
     await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=Jaarlijks saldeer-verlies').first()).toBeVisible({ timeout: 12000 })
-    await expect(page.locator('text=2024').first()).toBeVisible()
+    const desktopReport = page.getByTestId('report-desktop-grid')
+    await expect(desktopReport.getByText('Afbouw saldering')).toBeVisible({ timeout: 12000 })
+    await expect(desktopReport.getByText('2024')).toBeVisible()
   })
 
   test('loading-spinner zichtbaar tijdens vertraagde API', async ({ page }) => {
@@ -1122,7 +1160,7 @@ test.describe('ResultsDashboard', () => {
 
   test('dashboard toont bij aanwezige leadId', async ({ page }) => {
     await gotoResults(page)
-    await expect(page.locator('text=Uw SaldeerScan rapport')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 8000 })
   })
 
   test('adresblok aanwezig', async ({ page }) => {
@@ -1131,36 +1169,39 @@ test.describe('ResultsDashboard', () => {
     await expect(page.locator('text=Prinsengracht 263, Amsterdam').last()).toBeVisible({ timeout: 8000 })
   })
 
-  test('ShockChart met 4 jaar-labels', async ({ page }) => {
+  test('salderingsafbouw met 4 jaar-labels', async ({ page }) => {
     await gotoResults(page)
+    const desktopReport = page.getByTestId('report-desktop-grid')
     for (const yr of ['2024', '2025', '2026', '2027']) {
-      await expect(page.locator(`text=${yr}`).first()).toBeVisible({ timeout: 8000 })
+      await expect(desktopReport.getByText(yr, { exact: true })).toBeVisible({ timeout: 8000 })
     }
   })
 
-  test('ROI tijdlijn aanwezig', async ({ page }) => {
+  test('scenariovergelijking aanwezig', async ({ page }) => {
     await gotoResults(page)
-    await expect(page.locator('text=ROI tijdlijn').first()).toBeVisible({ timeout: 8000 })
-    await expect(page.locator('text=Installatie').first()).toBeVisible()
-    await expect(page.locator('text=Terugverdiend').first()).toBeVisible()
-    await expect(page.locator('text=15 jaar winst').first()).toBeVisible()
+    const desktopReport = page.getByTestId('report-desktop-grid')
+    await expect(desktopReport.getByText('Scenariovergelijking')).toBeVisible({ timeout: 8000 })
+    await expect(desktopReport.getByRole('rowheader', { name: 'Nu' })).toBeVisible()
+    await expect(desktopReport.getByRole('rowheader', { name: 'Met batterij' })).toBeVisible()
+    await expect(desktopReport.getByRole('rowheader', { name: 'Wachten tot 2027' })).toBeVisible()
   })
 
-  test('"Gevalideerd 2027" stempel verschijnt', async ({ page }) => {
+  test('rapport toont modelversie', async ({ page }) => {
     await gotoResults(page)
-    await expect(page.locator('text=Gevalideerd 2027').first()).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText(/model v1/i)).toBeVisible({ timeout: 8000 })
   })
 
-  test('"Wat gebeurt er nu?" sectie aanwezig', async ({ page }) => {
+  test('waarheidsgetrouwe verzendstatus aanwezig', async ({ page }) => {
     await gotoResults(page)
-    await expect(page.locator('text=Wat gebeurt er nu?').first()).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole('status')).toContainText('Aanvraag ontvangen', { timeout: 8000 })
+    await expect(page.getByRole('status')).toContainText('verzonden naar uw e-mail')
   })
 
-  test('referral sectie met WhatsApp + kopieer-knop', async ({ page }) => {
+  test('genormaliseerde aanbeveling aanwezig', async ({ page }) => {
     await gotoResults(page)
-    await expect(page.locator('text=Uw buur mist dit misschien ook').first()).toBeVisible({ timeout: 8000 })
-    await expect(page.locator('text=Deel via WhatsApp').first()).toBeVisible()
-    await expect(page.locator('text=Kopieer link').first()).toBeVisible()
+    const desktopReport = page.getByTestId('report-desktop-grid')
+    await expect(desktopReport.getByText('Geadviseerde configuratie')).toBeVisible({ timeout: 8000 })
+    await expect(desktopReport.getByText('Panelen en een batterij verdienen nader onderzoek.')).toBeVisible()
   })
 
   test('PDF-downloadknop aanwezig', async ({ page }) => {
@@ -1179,7 +1220,7 @@ test.describe('ResultsDashboard', () => {
     await page.locator('#lead-telefoon').fill('0612345678')
     await page.locator('#lead-gdpr').click({ force: true })
     await page.locator('button[type="submit"]').click()
-    await expect(page.locator('text=u heeft aangegeven huurder te zijn').first()).toBeVisible({ timeout: 12000 })
+    await expect(page.getByTestId('report-desktop-grid').getByText('U gaf aan huurder te zijn')).toBeVisible({ timeout: 12000 })
   })
 
   test('netcongestie ROOD callout in dashboard', async ({ page }) => {
@@ -1207,7 +1248,7 @@ test.describe('ResultsDashboard', () => {
       await opnieuw.click()
       await page.waitForTimeout(300)
     }
-    await expect(page.locator('text=Netcongestie in uw wijk').first()).toBeVisible({ timeout: 8000 })
+    await expect(page.getByTestId('report-desktop-grid').getByText('Netcongestie in uw regio')).toBeVisible({ timeout: 8000 })
   })
 
   test('?leadId= URL param toont ResultsDashboard', async ({ page }) => {
@@ -1218,7 +1259,7 @@ test.describe('ResultsDashboard', () => {
     await page.goto('/check?leadId=vanuit-email-555')
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1500)
-    await expect(page.locator('text=Uw SaldeerScan rapport')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -1250,28 +1291,27 @@ test.describe('URL params handshake', () => {
     await page.goto('/check?leadId=vanuit-email-888')
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1500)
-    await expect(page.locator('text=Uw SaldeerScan rapport')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 10000 })
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 10. Countdown timer
+// 10. Homepage conversion hero
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('Countdown timer', () => {
-  test('homepage: timer-labels aanwezig', async ({ page }) => {
+test.describe('Homepage conversion hero', () => {
+  test('homepage: klantvraag en adresinvoer aanwezig', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('text=Salderingsregeling eindigt over')).toBeVisible({ timeout: 10000 })
-    await expect(page.locator('text=Dagen')).toBeVisible()
-    await expect(page.locator('text=Uren')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Wat kost stoppen met salderen u?' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('combobox', { name: 'Uw adres' })).toBeVisible()
   })
 
-  test('homepage: timer toont cijfers na hydration (niet "--")', async ({ page }) => {
+  test('homepage: adresactie blijft stabiel na hydration', async ({ page }) => {
     await page.goto('/')
+    const action = page.getByRole('button', { name: 'Bekijk mijn inzicht' })
+    await expect(action).toBeDisabled()
     await page.waitForTimeout(2000)
-    const dagenEl = page.locator('text=Dagen').first().locator('..')
-    const text = await dagenEl.innerText()
-    expect(text).toMatch(/\d/)
+    await expect(action).toBeDisabled()
   })
 
   test('/check: timer aanwezig (compact modus)', async ({ page }) => {
@@ -1282,12 +1322,10 @@ test.describe('Countdown timer', () => {
     await expect(page.locator('text=saldering eindigt 1 jan 2027').first()).toBeVisible({ timeout: 15000 })
   })
 
-  test('countdown staat in de toekomst (> 100 dagen)', async ({ page }) => {
+  test('homepage toont de 2027-context zonder runtime countdown', async ({ page }) => {
     await page.goto('/')
-    await page.waitForTimeout(2000)
-    const text = await page.locator('text=Dagen').first().locator('..').innerText()
-    const match = text.match(/(\d+)/)
-    if (match) expect(parseInt(match[1])).toBeGreaterThan(100)
+    await expect(page.getByText('Persoonlijk energieadvies voor 2027')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/U ziet direct uw verwachte verlies/)).toBeVisible()
   })
 })
 
@@ -1309,8 +1347,11 @@ test.describe('Navigatie & scroll', () => {
   })
 
   test('homepage CTA navigeert naar /check', async ({ page }) => {
+    await setupMocks(page)
     await page.goto('/')
-    await page.locator('a[href="/check"]:has-text("Gratis analyseren")').first().click()
+    await page.getByRole('combobox', { name: 'Uw adres' }).fill('Pri')
+    await page.getByRole('option', { name: /Prinsengracht 263/ }).click()
+    await page.getByRole('button', { name: 'Bekijk mijn inzicht' }).click()
     await expect(page).toHaveURL(/\/check/, { timeout: 8000 })
   })
 
@@ -1415,7 +1456,7 @@ test.describe('Volledige E2E funnel', () => {
     await page.locator('#lead-gdpr').click({ force: true })
     await page.locator('button[type="submit"]').click()
 
-    // React 18 batch: FunnelContainer toont ResultsDashboard direct
-    await expect(page.locator('text=Uw SaldeerScan rapport').first()).toBeVisible({ timeout: 15000 })
+    // React batch: FunnelContainer toont het genormaliseerde rapport direct.
+    await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 15000 })
   })
 })

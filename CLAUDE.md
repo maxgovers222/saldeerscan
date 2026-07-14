@@ -68,8 +68,8 @@ app/
     health-score/route.ts           # Energie score 0-100
     vision/route.ts                 # Two-tier Vision analyse
     generate-content/route.ts       # Gemini Flash pSEO content
-    leads/route.ts                  # Lead opslaan + webhook trigger + Resend bevestigingsmail
-    leads/[id]/route.ts             # GDPR DELETE — verwijdert lead na email-token verificatie + bevestigingsmail
+    leads/route.ts                  # Lead opslaan + serverrapport + persistente Resend-status + webhook trigger
+    leads/[id]/route.ts             # Get token-beveiligd serverrapport; DELETE verwijdert lead na verificatie
     webhooks/b2b/route.ts           # B2B partner webhook dispatcher
     webhooks/retry/route.ts         # Webhook retry job — dagelijkse cron, backoff 24h/48h/96h, byte-identieke replay
     indexing/cron/route.ts          # Dagelijkse Google Indexing API cron (automatisch, max 200 URLs/dag)
@@ -80,7 +80,7 @@ components/
     FunnelContainer.tsx             # useReducer state machine (6 stappen), accepteert initialAdres/initialWijk/initialStad props + localStorage persistentie + ?leadId=&token= email-link hydration (server fetch → ResultsDashboard)
     Step1Adres.tsx                  # Auto-zoekt bij mount als initialAdres aanwezig; AnalysisLoading tijdens fetch
     Step2ROI.tsx … Step6LeadCapture.tsx
-    ResultsDashboard.tsx            # Resultaten dashboard na lead submit: mobiel = compacte samenvatting + PDF-knop, desktop = volledig rapport (ShockChart + ROITijdlijn + GevalideerdStempel), donker thema, geen print
+    ResultsDashboard.tsx            # Responsive webweergave van NormalizedReport v1; CSS-breakpoints, geen viewport-hook
     Shock2027Banner.tsx             # 2027 saldering urgentie — amber design (bg-amber-950/20 border-amber-500/25), geen rode kleuren
     PhotoUpload.tsx                 # Dropzone + vision API (geen icon prop, vaste SVG upload icon)
     FunnelProgress.tsx
@@ -88,6 +88,7 @@ components/
     StepHeader.tsx                  # Gedeelde stap-header component — clean design: geen grid/glow, stap-label 'Stap X — Naam' in DM Sans
     PDFDownloadButton.tsx           # @react-pdf/renderer v4, dynamic import (ssr:false) — zie PDFDownloadButtonInner
     types.ts                        # Gedeelde funnel types (incl. wijk + stad in FunnelState)
+  report/                           # Gedeelde websecties voor samenvatting, impact, advies, woning en techniek
   pseo/
     LocalSchema.tsx                 # JSON-LD LocalBusiness + FAQPage injectie (prop: jsonLd)
   ui/                               # Shadcn componenten
@@ -96,6 +97,8 @@ lib/
   bag.ts                            # BAG adapter (Mapbox → PDOK)
   netcongestie.ts                   # Postcode-prefix cache lookup
   roi.ts                            # ROI algoritme + saldering afbouw 2026→2027
+  report-model.ts                   # NormalizedReport v1 + pure builder vanuit opgeslagen server-lead
+  report-email.ts                   # HTML-e-mail vanuit hetzelfde NormalizedReport
   health-score.ts                   # Score 0-100 (bouwjaar/label/dak/congestie)
   gemini.ts                         # Gemini 2.5 Flash adapter (pSEO content + screening + generateWijkContent met 800w + 5 FAQs)
   vision.ts                         # Two-tier: Gemini screen → Claude diepanalyse + withRetry
@@ -203,18 +206,20 @@ Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden
 - anders: geen badge
 
 ### CountdownTimer component
-`components/CountdownTimer.tsx` — `'use client'`, telt af naar `2027-01-01T00:00:00+01:00`. SSR-safe: rendert `--` placeholder, hydrates bij client mount. Geplaatst op: homepage (hero), `/check`, wijk pagina's. 4 glass cards: Dagen/Uren/Min/Sec.
+`components/CountdownTimer.tsx` — `'use client'`, telt af naar `2027-01-01T00:00:00+01:00`. SSR-safe: rendert `--` placeholder en hydrateert bij client mount. Geplaatst op `/check` en wijkpagina's; de homepage gebruikt stabiele server-rendered 2027-copy.
 
-### ResultsDashboard — success state (responsive split, geen window.print meer)
-`components/funnel/ResultsDashboard.tsx` — volledig resultaten scherm na lead submit in Step 6 (én via `?leadId=` email-link). Rendert twee volledig gescheiden layouts op basis van Tailwind breakpoint (`md:hidden` / `hidden md:block`), niet enkel CSS-verkleining:
-- **Mobiel (`ReportMobileSummary`, < md)** — compacte samenvatting (verlies/besparing/score + korte toelichting) + prominente PDF-downloadknop. Volledige grafieken/tabellen staan alléén in de PDF en de bevestigingsmail — te druk voor een klein scherm.
-- **Desktop (`ReportDesktopFull`, ≥ md)** — volledig rapport, 2-koloms grid (Impact 2027 + Geadviseerde configuratie), donker thema (geen witte kaarten — `bg-slate-900/40` cards zoals de rest van de site), `/check` pagina is op dit punt breder (`md:max-w-4xl`, funnel-stappen blijven `md:max-w-xl` via wrapper in `FunnelContainer`).
-- Gedeelde helpers: `useCountUp`, `ShockChart`, `ROITijdlijn`, `GevalideerdStempel`, `useReportMetrics` (afgeleide cijfers), `ReportAlerts` (huurder/netcongestie), `WatGebeurtErNu`.
-- **Geen `window.print()` / afdrukknop meer** — onbetrouwbaar op mobiel en zag er niet uit. PDF-download (zie hieronder) is de enige export.
-- Root container mist voorheen horizontale padding (`py-2` zonder `px-`) — vandaar "geen marges" klacht. Nu altijd `px-4`/`px-6 sm:px-10` in beide varianten.
+### NormalizedReport v1 — één rapportcontract
+- `lib/report-model.ts` definieert `NormalizedReport` versie 1. `buildReportModel(reportSourceFromStoredLead(...))` bouwt het model uit de opgeslagen, server-berekende lead; ongeldige of incomplete ROI-data levert geen rapport op.
+- `POST /api/leads` en de token-beveiligde `GET /api/leads/[id]` retourneren `report`. De client bewaart dit als `reportModel`; `roiResult` en `healthScore` blijven alleen legacy-displaydata en zijn geen bron voor commerciële rapportcijfers.
+- Web (`ResultsDashboard`), e-mail (`renderReportEmail`), PDF (`SaldeerRapportPDF`) en B2B (`buildPartnerPayload`) consumeren hetzelfde model. Partnerpayloads bevatten `report_version` en `report`; compatibiliteitsvelden worden van model/serverbron afgeleid.
+- `report_email_status`: `pending` = afleverstatus wordt nog bepaald; `sent` = Resend heeft de verzending geaccepteerd; `failed` = verzending faalde maar aanvraag en PDF blijven beschikbaar; `not_configured` = e-mail is in deze omgeving niet geconfigureerd en de PDF blijft beschikbaar. Alleen `sent` mag als verzonden worden getoond.
+- Rapporttoken-gedrag is ongewijzigd: HMAC-token op `?leadId=...&token=...`, 401 zonder geldig token tenzij de expliciete legacy-env aanstaat. `?leadId=` zonder token blijft stabiliseren zonder fetch-loop.
+
+### ResultsDashboard — responsive zonder viewport-switch
+`components/funnel/ResultsDashboard.tsx` ontvangt uitsluitend een `NormalizedReport`. De mobiele samenvatting en disclosure-accordions (`md:hidden`) en het brede desktopgrid (`hidden md:grid`) worden met CSS-breakpoints gekozen; er is geen runtime `window.innerWidth`, media-queryhook of hydration-switch. De PDF-knop blijft op beide formaten beschikbaar en horizontale documentoverflow is niet toegestaan.
 
 ### PDF-download — blob + nieuw tabblad (niet meer `PDFDownloadLink`)
-`components/funnel/PDFDownloadButtonInner.tsx` — `PDFDownloadLink` (anchor met `download`-attribuut) was onbetrouwbaar op mobiel/iOS Safari (respecteert `download` niet consistent, opent soms niets). Nieuwe aanpak: `window.open('', '_blank')` **synchroon** in de click-handler (voorkomt popup-blocker omdat `pdf().toBlob()` async is), dan `newTab.location.href = objectUrl` zodra de blob klaar is; fallback naar een `<a download>`-klik als de popup toch geblokkeerd wordt.
+`components/funnel/PDFDownloadButton.tsx` laadt `PDFDownloadButtonInner` via `next/dynamic({ ssr: false })`; alleen de inner importeert `@react-pdf/renderer`. Daardoor blijft React-PDF buiten de initiële `/`- en `/check`-chunks. De click-handler opent synchroon een tabblad vóór `pdf().toBlob()` en gebruikt bij een geblokkeerde popup een directe `<a download>`-fallback. De PDF ontvangt hetzelfde `NormalizedReport` en berekent geen commerciële waarden opnieuw.
 
 ### Sitemaps
 `app/sitemap.ts` gebruikt `generateSitemaps()` om per provincie een apart XML-bestand te genereren (max 50k URL's per sitemap). Bevat nu ook provincie-URLs (priority 0.9) en stad-URLs (priority 0.85).
@@ -226,7 +231,7 @@ Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden
 `scripts/seed-wijken.ts` — géén template fallback, altijd Gemini. Haalt CBS PDOK WFS data op voor echte `aantalWoningen`. Gemini prompt: 800w hyperlocale content + 5 FAQs. JSON-LD @graph: WebPage + FAQPage. Flags: `--skip-existing`, `--batch=START,END`, `--dry-run`.
 
 ### Email bevestiging
-`app/api/leads/route.ts` — na succesvolle lead opslag stuurt Resend een bevestigingsmail. Email call is **geawait** (niet fire-and-forget) zodat de Promise niet wegvalt in serverless. FROM-adres: `RESEND_FROM_EMAIL` env var — **geen fallback meer**. Stel in Vercel in als `SaldeerScan <noreply@saldeerscan.nl>` (display name zonder punt vermijdt RFC 5322 422-errors). Email template: donker amber urgency bar (`#1c1208` + `#fbbf24`), geen download knop, dynamisch copyright jaar.
+`app/api/leads/route.ts` — na succesvolle leadopslag bouwt de server het rapport en rendert `lib/report-email.ts` de HTML uit datzelfde model. De Resend-call is **geawait** en de uitkomst wordt als `report_email_status` opgeslagen vóór het definitieve rapport en de B2B-snapshot worden opgebouwd. FROM-adres: `RESEND_FROM_EMAIL` env var — **geen fallback meer**. Stel in Vercel in als `SaldeerScan <noreply@saldeerscan.nl>`.
 
 ### Lead validatie (Step 6)
 `components/funnel/Step6LeadCapture.tsx` — strikte validatie vóór submit:
@@ -410,7 +415,7 @@ Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `202605020000
 | 0 Veilige fundering | **LIVE** (jul 2026, PR #1 → `master` `527bc87`) | gemerged | `docs/superpowers/plans/2026-07-10-safe-foundation.md` |
 | 1 Design system + entry | **Uitgevoerd, lokaal geverifieerd** (jul 2026; nog niet gecommit) | `feat/phase-1-design-system` | `docs/superpowers/plans/2026-07-10-design-system-conversion-entry.md` |
 | 2 Funnel + analytics | Gepland | `feat/phase-2-funnel-analytics` | `docs/superpowers/plans/2026-07-10-funnel-analytics.md` |
-| 3 Rapportketen | Gepland | `feat/phase-3-report-chain` | `docs/superpowers/plans/2026-07-10-report-chain.md` |
+| 3 Rapportketen | **Uitgevoerd, lokaal geverifieerd** (jul 2026; klaar voor review) | `feat/phase-3-report-chain` | `docs/superpowers/plans/2026-07-10-report-chain.md` |
 | 4 Route-uitrol | Gepland | `feat/phase-4-route-rollout` | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
 
 ### Fase 1 design-systemcontract
