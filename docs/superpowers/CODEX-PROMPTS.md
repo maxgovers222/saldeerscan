@@ -428,3 +428,138 @@ Stop na Task 9.
 | 4.1, 4.2 | **Sol Max** |
 | 4.3 | **Sol** |
 | 4b | **Sol Max** + **Sol** |
+| 5a, 5c | **Sol Max** |
+| 5b | **Sol Max** (funnel) |
+| 5d | **Sol** |
+
+---
+
+## FASE 5 — Brand unification + Funnel CRO
+
+**Handoff:** `docs/superpowers/HANDOFF-2026-07-14-phase-5-brand-funnel-cro.md`  
+**Plan:** `docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md`
+
+**Niet starten met ~11% weekquota resterend** — volledige fase ~1,3M–2,5M tokens. Maximaal Task 1 in een korte sessie.
+
+| Deel | Tasks | Branch | Model |
+|------|-------|--------|-------|
+| 5a | 1, 2, 9 (deel) | `feat/phase-5a-brand-pdf` | Sol Max → Sol verify |
+| 5b | 3–7 | `feat/phase-5b-funnel-cro` | Sol Max |
+| 5c | 8, 9 (rest) | `feat/phase-5c-pseo-wijk-straat` | Sol Max |
+| 5d | 10 + release gates | `feat/phase-5d-analytics-release` | Sol |
+
+### Sessie 5a.1 — Tasks 1–2 (merk + PDF/e-mail)
+
+**Model: Sol Max**
+
+```
+[plak gedeelde prefix]
+
+Lees ook: docs/superpowers/HANDOFF-2026-07-14-phase-5-brand-funnel-cro.md
+
+Plan: docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md
+Branch: feat/phase-5a-brand-pdf (maak aan vanaf master)
+
+Voer uit: Task 1 en Task 2.
+- Task 1: lib/brand-colors.ts, BrandLockup, globals merkcontract
+- Task 2: PDF/e-mail/webrapport branding (geen berekeningen wijzigen)
+
+Invarianten: NormalizedReport, server-trust, dynamische PDF-import, performance-budgets.
+
+Stop na Task 2. Geen commit tenzij ik "commit nu" zeg.
+```
+
+**Jij na sessie:** `npm run typecheck && npm run test:unit && npm run build`
+
+---
+
+### Sessie 5a.2 — Task 9 deel + verify 5a
+
+**Model: Sol**
+
+```
+[plak gedeelde prefix]
+
+Branch: feat/phase-5a-brand-pdf
+Plan: docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md
+
+Voer uit: Task 9 (OG, favicon, error/loading spot-check) voor merkoppervlakken die in 5a horen.
+Daarna verify: unit PDF/e-mail tests, build, test:e2e:core.
+
+Stop na verify-rapport. Geen commit tenzij "commit nu".
+```
+
+---
+
+### Sessie 5b.1 — Tasks 3–4 (primitives + vier stadia)
+
+**Model: Sol Max**
+
+```
+[plak gedeelde prefix]
+
+Branch: feat/phase-5b-funnel-cro (vanaf master na merge 5a)
+Plan: docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md
+
+Voer uit: Task 3 en Task 4.
+- Funnel ui/ primitives
+- FunnelProgress vier stadia; interne step 1–6 intact; analyticsmapping 1→1, 2→2, 3–5→3, 6→4
+
+Stop na Task 4.
+```
+
+---
+
+### Sessie 5b.2 — Tasks 5–7 (stadium UX + lead capture)
+
+**Model: Sol Max**
+
+```
+[plak gedeelde prefix]
+
+Branch: feat/phase-5b-funnel-cro
+Plan: docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md
+
+Voer uit: Task 5, Task 6, Task 7.
+Telefoon optioneel maken: NIET — aparte commerciële beslissing.
+
+Stop na Task 7.
+```
+
+**Jij na 5b:** funnel-four-stages, funnel-deep, step6-validatie, funnel-handshake
+
+---
+
+### Sessie 5c — Task 8 (+ Task 9 rest)
+
+**Model: Sol Max**
+
+```
+[plak gedeelde prefix]
+
+Branch: feat/phase-5c-pseo-wijk-straat
+Plan: docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md
+
+Voer uit: Task 8 en resterende Task 9 (CountdownTimer, AnalysisLoading, banners).
+pSEO metadata/JSON-LD/ISR/slugs: byte-semantisch behouden.
+
+Stop na Task 8 + 9.
+```
+
+---
+
+### Sessie 5d — Task 10 + release gate
+
+**Model: Sol**
+
+```
+[plak gedeelde prefix]
+
+Branch: feat/phase-5d-analytics-release
+Plan: docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md
+
+Voer uit: Task 10 + visual regression uitbreiding + volledige release gate uit plan.
+Analytics: geen PII; bestaand contract uitbreiden, niet breken.
+
+Stop na verify-rapport.
+```

@@ -427,7 +427,8 @@ docs/superpowers/
 | Versie | Datum | Wijziging |
 |--------|-------|-----------|
 | 1.0 | 2026-07-10 | Initiële handoff na fase 0 deploy + gebruiker bevestigde Supabase migratie |
+| 2.0 | 2026-07-14 | Fases 0–4b live (PR #7). Vervolg: **fase 5** → `HANDOFF-2026-07-14-phase-5-brand-funnel-cro.md` |
 
 ---
 
-*Einde handoff. Bij hervatten: open dit bestand + het plan van de actieve fase.*
+*Einde handoff (overhaul 0–4b). Voor fase 5: open `HANDOFF-2026-07-14-phase-5-brand-funnel-cro.md`.*

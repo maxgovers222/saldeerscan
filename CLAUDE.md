@@ -446,12 +446,11 @@ Laatst volledig geverifieerd op 14 juli 2026: typecheck en build groen; **34 uni
 
 ## Customer-first UI overhaul — voortgang
 
-**Handoff (lees bij hervatten):** `docs/superpowers/HANDOFF-2026-07-10-customer-first-ui-overhaul.md`  
-**Codex uitvoering (nu):** `docs/superpowers/CODEX-EXECUTION-PLAN.md`  
-**Codex prompts (copy-paste):** `docs/superpowers/CODEX-PROMPTS.md`  
+**Handoff overhaul 0–4b:** `docs/superpowers/HANDOFF-2026-07-10-customer-first-ui-overhaul.md`  
+**Handoff fase 5 (hervatten):** `docs/superpowers/HANDOFF-2026-07-14-phase-5-brand-funnel-cro.md`  
+**Codex prompts:** `docs/superpowers/CODEX-PROMPTS.md`  
 **Design spec:** `docs/superpowers/specs/2026-07-10-customer-first-ui-overhaul-design.md`  
-**Vorige chat:** transcript `827f96be-974a-4a0c-9d2a-8e76dc979a14`  
-**Hervatten:** ~8 augustus 2026 · model **GPT 5.6 Sol** · **1 fase/sessie** · **niet** op Auto voor fasen 1–4
+**Vorige chat:** transcript `827f96be-974a-4a0c-9d2a-8e76dc979a14`
 
 | Fase | Status | Branch / merge | Plan |
 |------|--------|----------------|------|
@@ -460,7 +459,8 @@ Laatst volledig geverifieerd op 14 juli 2026: typecheck en build groen; **34 uni
 | 2 Funnel + analytics | **LIVE** (PR #3) | `feat/phase-2-funnel-analytics`, gemerged | `docs/superpowers/plans/2026-07-10-funnel-analytics.md` |
 | 3 Rapportketen | **LIVE** (PR #4) | `feat/phase-3-report-chain`, gemerged | `docs/superpowers/plans/2026-07-10-report-chain.md` |
 | 4a Route-uitrol | **LIVE** (PR #5) | `feat/phase-4-route-rollout`, gemerged | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
-| 4b Stabilisatie | Snapshot-workflow **LIVE** (PR #6); stabilisatie **KLAAR VOOR MERGE** (PR #7, CI groen) | `feat/phase-4b-workflow-dispatch` gemerged; `feat/phase-4b-stabilization` open | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
+| 4b Stabilisatie | **LIVE** (PR #7, jul 2026) | gemerged naar `master` | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
+| 5 Brand + funnel CRO | **Gepland** (jul 2026) | `feat/phase-5a-brand-pdf` … `5d` | `docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md` |
 
 ### Fase 1 design-systemcontract
 
