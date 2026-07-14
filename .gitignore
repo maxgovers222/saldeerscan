@@ -19,6 +19,7 @@
 /playwright-report/
 /.playwright-mcp/
 *.png
+!tests/e2e/__screenshots__/**/*.png
 
 # next.js
 /.next/

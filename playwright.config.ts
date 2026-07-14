@@ -6,6 +6,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
   forbidOnly: Boolean(process.env.CI),
   workers: process.env.CI ? 2 : undefined,
+  expect: {
+    toHaveScreenshot: {
+      animations: 'disabled',
+      maxDiffPixelRatio: 0.015,
+    },
+  },
+  snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}-{projectName}-{platform}{ext}',
   use: {
     baseURL: 'http://localhost:3000',
     headless: true,

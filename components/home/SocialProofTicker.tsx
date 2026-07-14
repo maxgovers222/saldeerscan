@@ -20,7 +20,11 @@ export function SocialProofTicker() {
   const rounded = Math.floor(count / 10) * 10
 
   return (
-    <p className="text-sm text-white/60" aria-label={`${rounded} of meer analyses uitgevoerd`}>
+    <p
+      data-testid="social-proof-dynamic"
+      className="text-sm text-white/60"
+      aria-label={`${rounded} of meer analyses uitgevoerd`}
+    >
       <strong className="font-mono text-trust">{rounded}+</strong> analyses uitgevoerd
     </p>
   )
