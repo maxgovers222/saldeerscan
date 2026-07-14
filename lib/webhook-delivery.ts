@@ -1,4 +1,8 @@
 import { createHmac } from 'node:crypto'
+import {
+  buildReportModel,
+  reportSourceFromStoredLead,
+} from '@/lib/report-model'
 
 export const RETRY_DELAYS_SECONDS = [
   24 * 60 * 60,
@@ -6,10 +10,11 @@ export const RETRY_DELAYS_SECONDS = [
   96 * 60 * 60,
 ] as const
 
-export interface StoredLeadForWebhook {
+export interface StoredLeadForWebhook extends Record<string, unknown> {
   id: string
   created_at?: string | null
   adres?: unknown
+  wijk?: unknown
   postcode?: unknown
   stad?: unknown
   provincie?: unknown
@@ -21,6 +26,10 @@ export interface StoredLeadForWebhook {
   plaatsing_analyse?: unknown
   omvormer_analyse?: unknown
   isde_pre_fill?: unknown
+  is_eigenaar?: unknown
+  heeft_panelen?: unknown
+  huidige_panelen_aantal?: unknown
+  report_email_status?: unknown
   naam?: unknown
   email?: unknown
   telefoon?: unknown
@@ -41,22 +50,27 @@ export interface DeliveryState {
 }
 
 export function buildPartnerPayload(lead: StoredLeadForWebhook): string {
+  const report = buildReportModel(reportSourceFromStoredLead(lead))
+  if (!report) {
+    throw new Error(`Lead ${lead.id} heeft geen geldig rapportmodel`)
+  }
+
   return JSON.stringify({
     event: 'lead.technisch_dossier',
     lead_id: lead.id,
     timestamp: lead.created_at ?? null,
-    adres: lead.adres ?? null,
-    postcode: lead.postcode ?? null,
-    stad: lead.stad ?? null,
-    provincie: lead.provincie ?? null,
-    health_score: lead.health_score ?? null,
-    netcongestie: lead.netcongestie_status ?? null,
+    report_version: report.version,
+    report,
+    adres: report.home.address,
+    postcode: report.home.postcode,
+    stad: report.home.stad,
+    health_score: report.summary.healthScore,
+    netcongestie: report.grid.status,
     bag: lead.bag_data ?? {},
     roi: lead.roi_berekening ?? {},
-    meterkast: lead.meterkast_analyse ?? {},
-    plaatsing: lead.plaatsing_analyse ?? {},
-    omvormer: lead.omvormer_analyse ?? {},
-    isde: lead.isde_pre_fill ?? {},
+    meterkast: report.technical.meterkast,
+    plaatsing: report.technical.plaatsing,
+    omvormer: report.technical.omvormer,
     contact: {
       naam: lead.naam ?? null,
       email: lead.email ?? null,

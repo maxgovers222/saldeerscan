@@ -436,7 +436,7 @@ export function FunnelContainer({ urlParams }: {
               <ResultsDashboard report={state.reportModel!} />
               <div className="border-t border-ink/10 bg-paper px-4 pb-8 pt-3 sm:px-8">
                 <div className="mx-auto max-w-md">
-                  <PDFDownloadButton state={state} />
+                  <PDFDownloadButton report={state.reportModel!} />
                 </div>
               </div>
             </>

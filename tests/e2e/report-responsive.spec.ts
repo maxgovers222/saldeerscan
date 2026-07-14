@@ -51,3 +51,41 @@ test('existing panels show an upgrade recommendation on web', async ({ page }) =
   await expect(page.getByText(/10 bestaande panelen/i)).toBeVisible()
   await expect(page.getByText(/€360.*extra/i)).toBeVisible()
 })
+
+test('PDF opens in a new tab after generation', async ({ page }) => {
+  await page.addInitScript(() => {
+    URL.createObjectURL = () => `${window.location.origin}/pdf-test.pdf`
+    URL.revokeObjectURL = () => undefined
+  })
+  await seedReportState(page, expectedReportFixture)
+  await page.goto('/check')
+  await page.getByRole('button', { name: 'Doorgaan' }).click()
+
+  const popupPromise = page.waitForEvent('popup')
+  await page.getByRole('button', { name: /PDF-rapport/ }).click()
+  const popup = await popupPromise
+
+  await expect.poll(() => popup.url()).toMatch(/\/pdf-test\.pdf$/)
+})
+
+test('PDF falls back to a direct download when the popup is blocked', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.open = () => null
+    const nativeClick = HTMLElement.prototype.click
+    HTMLElement.prototype.click = function click() {
+      if (this instanceof HTMLAnchorElement) {
+        document.documentElement.dataset.pdfFallbackHref = this.href
+        document.documentElement.dataset.pdfFallbackDownload = this.download
+        return
+      }
+      nativeClick.call(this)
+    }
+  })
+  await seedReportState(page, expectedReportFixture)
+  await page.goto('/check')
+  await page.getByRole('button', { name: 'Doorgaan' }).click()
+  await page.getByRole('button', { name: /PDF-rapport/ }).click()
+
+  await expect.poll(() => page.locator('html').getAttribute('data-pdf-fallback-href')).toMatch(/^blob:/)
+  await expect.poll(() => page.locator('html').getAttribute('data-pdf-fallback-download')).toMatch(/\.pdf$/)
+})

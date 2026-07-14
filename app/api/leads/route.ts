@@ -124,8 +124,6 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Lead kon niet worden opgeslagen' }, { status: 500 })
   }
 
-  const preparedPartnerDeliveries = await preparePartnerDeliveries(lead.id)
-
   const reportAccessToken = signLeadReportAccessToken(lead.id)
   if (!reportAccessToken) {
     console.warn(
@@ -218,6 +216,8 @@ export async function POST(request: Request) {
     console.error('[api/leads] report generation failed:', lead.id)
     return Response.json({ error: 'report_generation_failed' }, { status: 500 })
   }
+
+  const preparedPartnerDeliveries = await preparePartnerDeliveries(lead.id)
 
   after(async () => {
     const outcomes = await Promise.allSettled([
