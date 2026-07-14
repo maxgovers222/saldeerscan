@@ -31,6 +31,7 @@ import { Step3Meterkast } from './Step3Meterkast'
 import { Step4Plaatsing } from './Step4Plaatsing'
 import { Step5Omvormer } from './Step5Omvormer'
 import { Step6LeadCapture } from './Step6LeadCapture'
+import { PDFDownloadButton } from './PDFDownloadButton'
 import { ResultsDashboard } from './ResultsDashboard'
 
 function hydrateLegacyReportDisplay(
@@ -374,7 +375,7 @@ export function FunnelContainer({ urlParams }: {
     && !state.leadId
     && savedState
     && !resumeBannerDismissed
-  const reportRoiReady = parseStoredRoi(state.roiResult) !== null
+  const reportReady = state.reportModel?.version === REPORT_MODEL_VERSION
 
   return (
     <div className="space-y-6 min-w-0 w-full">
@@ -410,28 +411,35 @@ export function FunnelContainer({ urlParams }: {
           </div>
         </div>
       )}
-      {/* ResultsDashboard — toon als lead ingediend is (ook via ?leadId= email-link). Breder op desktop dan de funnel-stappen. */}
-      {state.leadId ? (
-        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden min-w-0">
+      {/* ResultsDashboard — een geldig servermodel is leidend, ook na localStorage-herstel. */}
+      {state.leadId || reportReady ? (
+        <div className="overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-[0_8px_32px_rgba(0,0,0,0.18)] min-w-0">
           {state.loading ? (
             <div className="p-10 flex flex-col items-center justify-center gap-4 text-center">
-              <div className="w-10 h-10 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" aria-hidden />
-              <p className="text-sm font-mono text-amber-300/90">Rapport laden…</p>
+              <div className="w-10 h-10 border-2 border-action border-t-transparent rounded-full animate-spin" aria-hidden />
+              <p className="text-sm font-mono text-ink-muted">Rapport laden…</p>
             </div>
-          ) : !reportRoiReady ? (
+          ) : !reportReady ? (
             <div className="p-8 space-y-4 text-center">
-              <p className="text-sm font-sans text-white/80 leading-relaxed">
-                {state.error ?? 'Onvoldoende data om het rapport te tonen. De opgeslagen berekening ontbreekt of is ongeldig.'}
+              <p className="text-sm font-sans text-ink-muted leading-relaxed">
+                {state.error ?? 'Onvoldoende data om het rapport te tonen. Het opgeslagen rapport ontbreekt of is ongeldig.'}
               </p>
               <a
                 href="/check"
-                className="inline-flex items-center justify-center gap-2 text-sm font-bold bg-amber-500 text-slate-950 px-5 py-2.5 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.35)]"
+                className="inline-flex items-center justify-center gap-2 text-sm font-bold bg-action text-evergreen-950 px-5 py-2.5 rounded-full"
               >
                 Nieuwe check starten
               </a>
             </div>
           ) : (
-            <ResultsDashboard state={state} />
+            <>
+              <ResultsDashboard report={state.reportModel!} />
+              <div className="border-t border-ink/10 bg-paper px-4 pb-8 pt-3 sm:px-8">
+                <div className="mx-auto max-w-md">
+                  <PDFDownloadButton state={state} />
+                </div>
+              </div>
+            </>
           )}
         </div>
       ) : (

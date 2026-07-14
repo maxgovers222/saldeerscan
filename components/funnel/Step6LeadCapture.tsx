@@ -96,23 +96,16 @@ function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: 
 }
 
 function SuccessState({ state }: { state: FunnelState }) {
-  const emailStatus = state.reportModel?.delivery.emailStatus ?? 'pending'
-  const statusText = emailStatus === 'sent'
-    ? 'Gegevens ontvangen — bevestiging verstuurd naar uw e-mail'
-    : emailStatus === 'failed'
-      ? 'Gegevens ontvangen — de e-mail kon niet worden verstuurd; uw rapport staat hieronder klaar'
-      : emailStatus === 'not_configured'
-        ? 'Gegevens ontvangen — uw rapport staat hieronder klaar'
-        : 'Gegevens ontvangen — de e-mailstatus wordt gecontroleerd'
+  if (!state.reportModel) return null
+
   return (
-    <div className="min-w-0 overflow-x-hidden">
-      <div className="flex items-center gap-2 px-4 sm:px-6 pt-4 text-emerald-400">
-        <svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true" className="shrink-0">
-          <path d="M6 16l6 6L26 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <p className="text-xs font-mono">{statusText}</p>
+    <div className="min-w-0 overflow-hidden bg-paper">
+      <ResultsDashboard report={state.reportModel} />
+      <div className="border-t border-ink/10 bg-paper px-4 pb-8 pt-3 sm:px-8">
+        <div className="mx-auto max-w-md">
+          <PDFDownloadButton state={state} />
+        </div>
       </div>
-      <ResultsDashboard state={state} />
     </div>
   )
 }

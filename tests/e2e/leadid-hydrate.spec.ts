@@ -101,7 +101,7 @@ test.describe('Email leadId rapport-hydratie', () => {
     })
 
     await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText('Download het volledige rapport hieronder als PDF.')).toBeVisible()
+    await expect(page.getByText(/e-mail kon niet worden verstuurd/i)).toBeVisible()
     await expect(page.getByText(/verstuurd naar uw e-mail/i)).toHaveCount(0)
     await page.waitForTimeout(750)
     const settledRequestCount = requestCount
