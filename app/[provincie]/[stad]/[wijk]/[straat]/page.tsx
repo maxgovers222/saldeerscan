@@ -3,6 +3,10 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getPseoPage, getTopPseoPages, getStratenByWijk, getWijkPage } from '@/lib/pseo'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
+import { PseoConversionCard } from '@/components/pseo/PseoConversionCard'
+import { PseoHero } from '@/components/pseo/PseoHero'
+import { PseoPageShell } from '@/components/pseo/PseoPageShell'
+import { PseoStatusBadge, type PseoStatus } from '@/components/pseo/PseoStatusBadge'
 import { RenovatieInsightCard } from '@/components/pseo/RenovatieInsightCard'
 import { renovatieIntelligence, straatVsWijkDelta } from '@/lib/pseo-variation'
 import { buildCheckHref } from '@/lib/conversion-context'
@@ -14,6 +18,12 @@ const getCachedPseoPage = cache(getPseoPage)
 
 function toDisplay(slug: string) {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function toStatus(status: string | null): PseoStatus | undefined {
+  return status === 'ROOD' || status === 'ORANJE' || status === 'GROEN'
+    ? status
+    : undefined
 }
 
 // ISR: revalidate every 30 days
@@ -65,14 +75,14 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
   const p = await params
   const page = await getCachedPseoPage(p)
   if (!page) notFound()
-  const checkHref = `${buildCheckHref({
+  const checkHref = buildCheckHref({
     landingPath: `/${p.provincie}/${p.stad}/${p.wijk}/${p.straat}`,
     pseoLevel: 'straat',
     provincie: p.provincie,
     stad: p.stad,
     wijk: p.wijk,
     straat: p.straat,
-  })}&adres=${encodeURIComponent(`${p.straat} ${p.stad}`)}`
+  })
 
   const wijkPage = await getWijkPage({ provincie: p.provincie, stad: p.stad, wijk: p.wijk })
   const straatDelta = wijkPage
@@ -124,9 +134,13 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
     ORANJE: { label: 'Druk stroomnet', color: 'text-amber-400 bg-amber-900/30' },
     GROEN: { label: 'Vrij stroomnet', color: 'text-emerald-400 bg-emerald-900/30' },
   }
+  const netStatus = toStatus(page.netcongestieStatus)
 
   return (
-    <main className="min-h-screen bg-[#0f172a] text-slate-100">
+    <PseoPageShell
+      headerContext={`${toDisplay(p.straat)}, ${toDisplay(p.stad)}`}
+      ctaHref={checkHref}
+    >
       {/* JSON-LD — FAQPage gefilterd op straat-niveau */}
       {pageJsonLd && Object.keys(pageJsonLd).length > 0 && (
         <LocalSchema jsonLd={pageJsonLd} />
@@ -150,69 +164,56 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
         }}
       />
 
-      {/* Hero */}
-      <section className="px-4 py-16 max-w-4xl mx-auto">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-xs text-slate-500 mb-6 flex-wrap">
-          <a href="/" className="hover:text-amber-400 transition-colors">Home</a>
-          <span>/</span>
-          <a href={`/${p.provincie}`} className="hover:text-amber-400 transition-colors capitalize">{p.provincie.replace(/-/g, ' ')}</a>
-          <span>/</span>
-          <a href={`/${p.provincie}/${p.stad}`} className="hover:text-amber-400 transition-colors capitalize">{p.stad.replace(/-/g, ' ')}</a>
-          <span>/</span>
-          <a
-            href={`/${p.provincie}/${p.stad}/${p.wijk}`}
-            data-analytics-event="pseo_second_click"
-            data-analytics-label={`straat-breadcrumb-wijk:${p.wijk}`}
-            className="hover:text-amber-400 transition-colors capitalize font-semibold text-amber-500/90"
-          >
-            {p.wijk.replace(/-/g, ' ')}
-          </a>
-          <span>/</span>
-          <span className="text-slate-400 capitalize">{p.straat.replace(/-/g, ' ')}</span>
-        </nav>
+      <PseoHero
+        breadcrumbs={[
+          { name: 'Home', href: '/' },
+          { name: toDisplay(p.provincie), href: `/${p.provincie}` },
+          { name: toDisplay(p.stad), href: `/${p.provincie}/${p.stad}` },
+          {
+            name: toDisplay(p.wijk),
+            href: `/${p.provincie}/${p.stad}/${p.wijk}`,
+          },
+          { name: toDisplay(p.straat) },
+        ]}
+        eyebrow={`${toDisplay(p.wijk)} · Straatanalyse 2027`}
+        title={page.titel ?? `Zonnepanelen & batterij op ${toDisplay(p.straat)}`}
+        summary={page.metaDescription ?? `Lokale woningdata en 2027-impact voor ${toDisplay(p.straat)} in ${toDisplay(p.stad)}.`}
+        badge={netStatus ? (
+          <PseoStatusBadge
+            status={netStatus}
+            label={netBadge[netStatus].label}
+          />
+        ) : undefined}
+        metrics={[
+          {
+            label: 'Gem. bouwjaar',
+            value: page.gemBouwjaar ? String(page.gemBouwjaar) : '—',
+          },
+          {
+            label: 'Energiescore',
+            value: page.gemHealthScore ? `${page.gemHealthScore}/100` : '—',
+            note: healthLabel ?? undefined,
+          },
+          {
+            label: 'Woningen',
+            value: page.aantalWoningen ? String(page.aantalWoningen) : '—',
+          },
+        ]}
+      />
 
-        <div className="flex flex-wrap gap-3 mb-6">
-          {page.netcongestieStatus && netBadge[page.netcongestieStatus as keyof typeof netBadge] && (
-            <span className={`text-xs font-mono px-3 py-1 rounded-full ${netBadge[page.netcongestieStatus as keyof typeof netBadge].color}`}>
-              {netBadge[page.netcongestieStatus as keyof typeof netBadge].label}
-            </span>
-          )}
-          {page.gemBouwjaar && (
-            <span className="text-xs font-mono px-3 py-1 rounded-full text-slate-400 bg-slate-800">
-              Bouwjaar ~{page.gemBouwjaar}
-            </span>
-          )}
-          {healthLabel && (
-            <span className="text-xs font-mono px-3 py-1 rounded-full text-amber-400 bg-amber-900/30">
-              Score: {healthLabel}
-            </span>
-          )}
-          {page.aantalWoningen && (
-            <span className="text-xs font-mono px-3 py-1 rounded-full text-slate-400 bg-slate-800">
-              {page.aantalWoningen} woningen
-            </span>
-          )}
-        </div>
-
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">
-          {page.titel ?? `Zonnepanelen & batterij op ${p.straat}`}
-        </h1>
-
-        {page.metaDescription && (
-          <p className="text-slate-400 text-lg mb-8">{page.metaDescription}</p>
-        )}
-
-        {/* CTA */}
-        <a
-          href={checkHref}
-          data-analytics-event="pseo_check_cta"
-          data-analytics-label={`straat:${p.wijk}:${p.straat}`}
-          className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-6 py-3 rounded-lg transition-colors"
-        >
-          Check uw woning gratis →
-        </a>
-      </section>
+      <PseoConversionCard
+        context={{
+          landingPath: `/${p.provincie}/${p.stad}/${p.wijk}/${p.straat}`,
+          pseoLevel: 'straat',
+          provincie: p.provincie,
+          stad: p.stad,
+          wijk: p.wijk,
+          straat: p.straat,
+        }}
+        title={`Uw woning aan ${toDisplay(p.straat)} controleren`}
+        description="Vul uw huisnummer en adres in voor uw eigen woningdata en 2027-impact."
+        placeholder={`${toDisplay(p.straat)} en huisnummer`}
+      />
 
       {straatDelta && (
         <section className="px-4 pb-8 max-w-4xl mx-auto">
@@ -332,6 +333,6 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
           </div>
         </div>
       </section>
-    </main>
+    </PseoPageShell>
   )
 }

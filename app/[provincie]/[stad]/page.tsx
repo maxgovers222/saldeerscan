@@ -1,7 +1,14 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getWijkenByStad, getTopStadden } from '@/lib/pseo'
-import { rankUrgentWijken, summarizeStad } from '@/lib/pseo-variation'
+import { Container } from '@/components/design-system/Container'
+import { PseoCardGrid } from '@/components/pseo/PseoCardGrid'
+import { PseoConversionCard } from '@/components/pseo/PseoConversionCard'
+import { PseoHero } from '@/components/pseo/PseoHero'
+import { PseoPageShell } from '@/components/pseo/PseoPageShell'
+import type { PseoStatus } from '@/components/pseo/PseoStatusBadge'
+import { buildCheckHref } from '@/lib/conversion-context'
+import { getTopStadden, getWijkenByStad } from '@/lib/pseo'
 import {
   buildBreadcrumbListLd,
   buildHubCollectionLd,
@@ -9,7 +16,7 @@ import {
   toDisplaySlug,
 } from '@/lib/pseo-hubs'
 import { buildHubMetadata, provincieDisplaySlug } from '@/lib/pseo-metadata'
-import { buildCheckHref } from '@/lib/conversion-context'
+import { rankUrgentWijken, summarizeStad } from '@/lib/pseo-variation'
 
 export const revalidate = 604800
 
@@ -18,8 +25,10 @@ type Params = { provincie: string; stad: string }
 export async function generateStaticParams() {
   try {
     const stads = await getTopStadden(200)
-    return stads.map(s => ({ provincie: s.provincie, stad: s.stad }))
-  } catch { return [] }
+    return stads.map(item => ({ provincie: item.provincie, stad: item.stad }))
+  } catch {
+    return []
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
@@ -39,22 +48,11 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   })
 }
 
-const NET_CONFIG = {
-  ROOD:   { label: 'Vol',   dot: '#ef4444', cls: 'bg-red-950/50 border-red-700/60 text-red-400' },
-  ORANJE: { label: 'Druk',  dot: '#f59e0b', cls: 'bg-amber-950/50 border-amber-700/60 text-amber-400' },
-  GROEN:  { label: 'Vrij',  dot: '#10b981', cls: 'bg-emerald-950/50 border-emerald-700/60 text-emerald-400' },
+function toStatus(status: string | null): PseoStatus | undefined {
+  return status === 'ROOD' || status === 'ORANJE' || status === 'GROEN'
+    ? status
+    : undefined
 }
-
-const N1 = '#020617'
-const AMBER = '#f59e0b'
-const G = '#00aa65'
-
-const amberBtnCls = [
-  'bg-amber-500 text-slate-950 font-bold rounded-full',
-  'transition-all duration-300',
-  'shadow-[0_0_25px_rgba(245,158,11,0.4)]',
-  'hover:opacity-90 active:scale-105',
-].join(' ')
 
 export default async function StadPage({ params }: { params: Promise<Params> }) {
   const { provincie, stad } = await params
@@ -69,17 +67,17 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
     provincie,
     stad,
   })
-
-  const totalWoningen = wijken.reduce((s, w) => s + (w.aantal_woningen ?? 0), 0)
+  const totalWoningen = wijken.reduce((sum, wijk) => sum + (wijk.aantal_woningen ?? 0), 0)
+  const scoredWijken = wijken.filter(wijk => wijk.gem_health_score)
   const avgScore = Math.round(
-    wijken.filter(w => w.gem_health_score).reduce((s, w) => s + (w.gem_health_score ?? 0), 0) /
-    (wijken.filter(w => w.gem_health_score).length || 1)
+    scoredWijken.reduce((sum, wijk) => sum + (wijk.gem_health_score ?? 0), 0) /
+    (scoredWijken.length || 1),
   )
-  const roodCount = wijken.filter(w => w.netcongestie_status === 'ROOD').length
+  const roodCount = wijken.filter(wijk => wijk.netcongestie_status === 'ROOD').length
 
-  const hubChildren = wijken.map(w => ({
-    name: `${toDisplaySlug(w.wijk)} ${stadDisplay} — 2027 Saldeercheck`,
-    url: `/${provincie}/${stad}/${w.wijk}`,
+  const hubChildren = wijken.map(wijk => ({
+    name: `${toDisplaySlug(wijk.wijk)} ${stadDisplay} — 2027 Saldeercheck`,
+    url: `/${provincie}/${stad}/${wijk.wijk}`,
   }))
   const jsonLd = buildHubCollectionLd({
     name: `Zonnepanelen ${stadDisplay} — 2027 Saldeercheck`,
@@ -87,292 +85,125 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
     url: `/${provincie}/${stad}`,
     children: hubChildren,
   })
-
   const breadcrumbLd = buildBreadcrumbListLd(hubBreadcrumbItems({ provincie, stad }))
   const urgentWijken = rankUrgentWijken(wijken, 9)
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: N1 }}>
+    <PseoPageShell headerContext={`${stadDisplay}, ${provDisplay}`} ctaHref={checkHref}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: G }}>
-              <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                <path d="M9 2L15.5 6V13L9 17L2.5 13V6L9 2Z" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="1.3" strokeLinejoin="round"/>
-                <path d="M9 6.5L12 8.5V12L9 14L6 12V8.5L9 6.5Z" fill="white"/>
-              </svg>
-            </div>
-            <span className="font-bold text-[#0e352e] tracking-tight text-lg" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-              SaldeerScan<span style={{ color: G }}>.nl</span>
-            </span>
-          </a>
-          <div className="flex items-center gap-3">
-            <a href={`/${provincie}`} className="hidden sm:block text-sm text-slate-500 hover:text-slate-800 transition-colors">
-              {provDisplay}
-            </a>
-            <a href={checkHref} className="text-sm font-bold px-5 py-2.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.35)] hover:brightness-110 transition-all">
-              Gratis analyseren
-            </a>
-          </div>
-        </div>
-      </nav>
+      <PseoHero
+        breadcrumbs={[
+          { name: 'Home', href: '/' },
+          { name: provDisplay, href: `/${provincie}` },
+          { name: stadDisplay },
+        ]}
+        eyebrow="Zonnepanelen per wijk"
+        title={`Zonnepanelen ${stadDisplay}`}
+        summary={`${wijken.length} wijken in ${provDisplay}, met lokale netdruk en woningfit.`}
+        metrics={[
+          { label: 'Wijken', value: String(wijken.length) },
+          {
+            label: 'Woningen',
+            value: totalWoningen > 0 ? `${Math.round(totalWoningen / 1000)}k+` : '—',
+          },
+          {
+            label: 'Vol stroomnet',
+            value: String(roodCount),
+            tone: roodCount > 0 ? 'danger' : 'default',
+          },
+        ]}
+      />
 
-      {/* Breadcrumb */}
-      <div className="max-w-6xl mx-auto px-6 pt-6">
-        <p className="text-xs font-mono text-white/30">
-          <a href="/" className="hover:text-white/60 transition-colors">Home</a>
-          {' · '}
-          <a href={`/${provincie}`} className="hover:text-white/60 transition-colors">{provDisplay}</a>
-          {' · '}
-          <span className="text-white/50">{stadDisplay}</span>
+      <PseoConversionCard
+        context={{
+          landingPath: `/${provincie}/${stad}`,
+          pseoLevel: 'stad',
+          provincie,
+          stad,
+        }}
+        title={`Uw woning in ${stadDisplay} persoonlijk controleren`}
+        description="Krijg uw woningkenmerken, 2027-impact en beste vervolgstap in plaats van alleen het wijkgemiddelde."
+        placeholder={`Uw adres in ${stadDisplay}`}
+      />
+
+      <div className="border-y border-action/20 bg-action/10 px-4 py-3 text-center">
+        <p className="text-sm text-action">
+          Deadline 1 januari 2027 — woningbezitters in {stadDisplay} verliezen gemiddeld €{avgScore > 60 ? '650' : '450'}–€{avgScore > 60 ? '950' : '700'} per jaar aan saldeervoordeel
         </p>
       </div>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden px-6 pt-10 pb-12" style={{ background: N1 }}>
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-          maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
-        }} />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'rgba(245,158,11,0.06)' }} />
-
-        <div className="relative max-w-5xl mx-auto text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: AMBER, fontFamily: 'var(--font-sans)' }}>
-            Zonnepanelen per wijk
-          </p>
-          <h1 className="font-black text-white mb-2 leading-none"
-            style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 6vw, 3.8rem)', letterSpacing: '-0.03em' }}>
-            Zonnepanelen {stadDisplay}
-          </h1>
-          <p className="text-base mb-8 font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            {wijken.length} wijken · {provDisplay} · 2027 saldering impact
-          </p>
-
-          {/* Stad stats ribbon */}
-          <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto mb-2">
-            <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-[9px] font-mono uppercase tracking-widest text-white/30 mb-1">Wijken</p>
-              <p className="text-2xl font-black font-mono" style={{ color: AMBER }}>{wijken.length}</p>
-              <p className="text-[9px] font-mono text-white/25 mt-1">geanalyseerd</p>
-            </div>
-            <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-[9px] font-mono uppercase tracking-widest text-white/30 mb-1">Woningen</p>
-              <p className="text-2xl font-black font-mono" style={{ color: AMBER }}>
-                {totalWoningen > 0 ? `${Math.round(totalWoningen / 1000)}k+` : '—'}
-              </p>
-              <p className="text-[9px] font-mono text-white/25 mt-1">CBS 2023</p>
-            </div>
-            <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-[9px] font-mono uppercase tracking-widest text-white/30 mb-1">Netdruk</p>
-              <p className="text-2xl font-black font-mono text-red-400">{roodCount}</p>
-              <p className="text-[9px] font-mono text-white/25 mt-1">wijken vol net</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Urgentie strip */}
-      <div className="border-y border-amber-500/20 px-6 py-3" style={{ background: 'rgba(28,18,8,0.95)' }}>
-        <div className="max-w-5xl mx-auto text-center">
-          <p className="text-xs font-sans text-amber-300/80">
-            Deadline 1 januari 2027 — woningbezitters in {stadDisplay} verliezen gemiddeld €{avgScore > 60 ? '650' : '450'}–€{avgScore > 60 ? '950' : '700'} per jaar aan saldeervoordeel
-          </p>
-        </div>
-      </div>
-
-      {/* Hoogste urgentie (druk net / lagere scores) */}
       {urgentWijken.length > 0 && (
-        <section className="max-w-5xl mx-auto px-6 pt-8 pb-2">
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-500/70 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>
-              Focus 2027
-            </p>
-            <h2 className="text-lg font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-              Wijken met de hoogste urgentie
-            </h2>
-            <p className="text-xs font-sans text-white/40 mt-1 max-w-2xl">
+        <section className="py-12 sm:py-16">
+          <Container>
+            <p className="text-sm font-semibold text-action">Focus 2027</p>
+            <h2 className="mt-2 text-2xl font-bold text-white">Wijken met de hoogste urgentie</h2>
+            <p className="mt-3 max-w-2xl text-white/55">
               Gesorteerd op netdruk (ROOD → ORANJE → GROEN) en lagere energiescore — waar saldering na 2027 het hardst voelt.
             </p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {urgentWijken.map(w => {
-              const net = w.netcongestie_status ? NET_CONFIG[w.netcongestie_status as keyof typeof NET_CONFIG] : null
-              return (
-                <a
-                  key={w.wijk}
-                  href={`/${provincie}/${stad}/${w.wijk}`}
-                  data-analytics-event="pseo_second_click"
-                  data-analytics-label={`stad-urgent:${w.wijk}`}
-                  className="group rounded-2xl border border-amber-500/25 bg-amber-950/15 px-4 py-4 hover:border-amber-500/45 hover:bg-amber-950/25 transition-all"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="font-bold text-white text-sm group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
-                      {toDisplaySlug(w.wijk)}
-                    </span>
-                    {net && (
-                      <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border shrink-0 ${net.cls}`}>
-                        {w.netcongestie_status}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] font-mono text-white/35">
-                    Score {w.gem_health_score ?? '—'}/100
-                    {w.gem_bouwjaar ? ` · bouwjaar ${w.gem_bouwjaar}` : ''}
-                  </p>
-                </a>
-              )
-            })}
-          </div>
+            <div className="mt-6">
+              <PseoCardGrid
+                items={urgentWijken.map(wijk => ({
+                  href: `/${provincie}/${stad}/${wijk.wijk}`,
+                  title: toDisplaySlug(wijk.wijk),
+                  meta: `Score ${wijk.gem_health_score ?? '—'}/100${wijk.gem_bouwjaar ? ` · bouwjaar ${wijk.gem_bouwjaar}` : ''}`,
+                  status: toStatus(wijk.netcongestie_status),
+                  analyticsLabel: `stad-urgent:${wijk.wijk}`,
+                }))}
+              />
+            </div>
+          </Container>
         </section>
       )}
 
-      {/* Wijk grid */}
-      <section className="max-w-5xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>Wijken</p>
-            <h2 className="text-xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-              Alle wijken in {stadDisplay}
-            </h2>
-          </div>
-          <a href={checkHref} className="hidden min-h-11 items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/60 transition hover:border-white/30 hover:text-white sm:inline-flex">
-            Mijn adres scannen →
-          </a>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {wijken.map((w) => {
-            const net = w.netcongestie_status ? NET_CONFIG[w.netcongestie_status as keyof typeof NET_CONFIG] : null
-            const score = w.gem_health_score ?? 52
-            const scoreColor = score >= 75 ? '#10b981' : score >= 60 ? AMBER : score >= 45 ? '#f97316' : '#ef4444'
-
-            return (
-              <a
-                key={w.wijk}
-                href={`/${provincie}/${stad}/${w.wijk}`}
-                data-analytics-event="pseo_second_click"
-                data-analytics-label={`stad-grid:${w.wijk}`}
-                className="group bg-slate-900/40 border border-white/10 rounded-2xl p-5 hover:border-amber-500/30 hover:bg-slate-900/60 transition-all duration-200"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
-                    {toDisplaySlug(w.wijk)}
-                  </h3>
-                  {net && (
-                    <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border ${net.cls} shrink-0 ml-2`}>
-                      {w.netcongestie_status}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4 text-xs font-mono">
-                  <div>
-                    <p className="text-white/30 text-[9px] uppercase tracking-wider">Score</p>
-                    <p className="font-bold" style={{ color: scoreColor }}>{score}/100</p>
-                  </div>
-                  {w.gem_bouwjaar && (
-                    <div>
-                      <p className="text-white/30 text-[9px] uppercase tracking-wider">Bouwjaar</p>
-                      <p className="text-white/70">{w.gem_bouwjaar}</p>
-                    </div>
-                  )}
-                  {w.aantal_woningen && (
-                    <div>
-                      <p className="text-white/30 text-[9px] uppercase tracking-wider">Woningen</p>
-                      <p className="text-white/70">{w.aantal_woningen.toLocaleString('nl-NL')}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-3 flex items-center gap-1 text-[10px] font-mono text-amber-500/60 group-hover:text-amber-400 transition-colors">
-                  <span>Bekijk wijk →</span>
-                </div>
-              </a>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="max-w-5xl mx-auto px-6 pb-10">
-        <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-8 text-center"
-          style={{ boxShadow: '0 0 40px rgba(245,158,11,0.04)' }}>
-          <h2 className="text-xl font-extrabold text-white mb-2" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-            Uw woning in {stadDisplay} analyseren?
-          </h2>
-          <p className="text-sm mb-5 max-w-md mx-auto" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Gratis AI-scan op basis van BAG-data. ROI-berekening en 2027 impact in 3 minuten.
-          </p>
-          <a href={checkHref}
-            data-analytics-event="pseo_check_cta"
-            data-analytics-label={`stad-cta:${stad}`}
-            className="inline-flex items-center gap-2 font-bold px-8 py-4 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_30px_rgba(245,158,11,0.45)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] transition-all text-sm"
-            style={{ fontFamily: 'var(--font-heading)' }}>
-            Start gratis Saldeercheck
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </a>
-        </div>
-      </section>
-
-      {/* ── Kennisbank + Nieuws links ────────────────────────────── */}
-      <section className="py-8 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        <div className="max-w-5xl mx-auto flex flex-wrap gap-4">
-          <a href="/kennisbank" className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors text-sm border border-white/10 rounded-lg px-3 py-2 hover:border-amber-500/30">
-            <svg className="w-3.5 h-3.5 text-amber-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            Kennisbank zonnepanelen
-          </a>
-          <a href="/nieuws" className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors text-sm border border-white/10 rounded-lg px-3 py-2 hover:border-amber-500/30">
-            <svg className="w-3.5 h-3.5 text-amber-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-            </svg>
-            Nieuws saldering 2027
-          </a>
-        </div>
-      </section>
-
-      <footer className="py-12 px-6" style={{ background: N1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 mb-10">
+      <section className="bg-evergreen-900/40 py-12 sm:py-16">
+        <Container>
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: G }}>
-                  <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                    <path d="M9 2L15.5 6V13L9 17L2.5 13V6L9 2Z" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="1.3" strokeLinejoin="round" />
-                    <path d="M9 6.5L12 8.5V12L9 14L6 12V8.5L9 6.5Z" fill="white" />
-                  </svg>
-                </div>
-                <span className="font-bold text-white text-base" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-                  SaldeerScan.nl
-                </span>
-              </div>
-              <p className="text-sm max-w-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                Gratis energieanalyse voor Nederlandse woningeigenaren.
-              </p>
+              <p className="text-sm font-semibold text-trust">Wijken</p>
+              <h2 className="mt-2 text-2xl font-bold text-white">Alle wijken in {stadDisplay}</h2>
             </div>
-            <a href={checkHref} className={`text-sm px-6 py-3 ${amberBtnCls}`}>
-              Gratis analyseren
-            </a>
+            <Link
+              href={checkHref}
+              className="min-h-11 content-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-white/65 transition hover:border-trust/40 hover:text-white"
+            >
+              Mijn adres scannen →
+            </Link>
           </div>
-          <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-            <div className="flex gap-6 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-              <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
-              <a href={checkHref} className="hover:text-white/50 transition-colors">Analyseer uw woning</a>
-            </div>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
+          <div className="mt-6">
+            <PseoCardGrid
+              items={wijken.map(wijk => {
+                const score = wijk.gem_health_score ?? 52
+                return {
+                  href: `/${provincie}/${stad}/${wijk.wijk}`,
+                  title: toDisplaySlug(wijk.wijk),
+                  meta: `Score ${score}/100${wijk.gem_bouwjaar ? ` · bouwjaar ${wijk.gem_bouwjaar}` : ''}${wijk.aantal_woningen ? ` · ${wijk.aantal_woningen.toLocaleString('nl-NL')} woningen` : ''}`,
+                  status: toStatus(wijk.netcongestie_status),
+                  analyticsLabel: `stad-grid:${wijk.wijk}`,
+                }
+              })}
+            />
           </div>
-        </div>
-      </footer>
-    </div>
+        </Container>
+      </section>
+
+      <section className="py-10">
+        <Container className="flex flex-wrap gap-3">
+          <Link
+            href="/kennisbank"
+            className="min-h-11 content-center rounded-xl border border-white/10 px-4 text-sm text-white/55 transition hover:border-trust/40 hover:text-white"
+          >
+            Kennisbank zonnepanelen
+          </Link>
+          <Link
+            href="/nieuws"
+            className="min-h-11 content-center rounded-xl border border-white/10 px-4 text-sm text-white/55 transition hover:border-trust/40 hover:text-white"
+          >
+            Nieuws saldering 2027
+          </Link>
+        </Container>
+      </section>
+    </PseoPageShell>
   )
 }

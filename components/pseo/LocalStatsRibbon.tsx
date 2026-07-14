@@ -1,7 +1,5 @@
 import type { NetcongestieNarrative } from '@/lib/pseo-variation'
-
-const G = '#00aa65'
-const AMBER = '#f59e0b'
+import { PseoStatusBadge } from './PseoStatusBadge'
 
 type Props = {
   /** Resultaat van netcongestieNarrative() of alleen status + label uit DB */
@@ -31,78 +29,41 @@ export function LocalStatsRibbon({
     <div
       role="group"
       aria-label={ariaLabel}
-      className={`mx-auto grid max-w-2xl grid-cols-3 gap-3 ${className}`}
+      className={`mx-auto grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3 ${className}`}
     >
-      <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-center backdrop-blur-md">
-        <p
-          className="mb-2 text-xs font-semibold uppercase tracking-widest"
-          style={{ color: G, fontFamily: 'var(--font-heading)' }}
-        >
+      <div className="min-w-0 rounded-2xl border border-white/10 bg-evergreen-900/70 p-4 text-center">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-trust">
           Grid Status
         </p>
         {net?.status ? (
           <>
             <div className="mb-1 flex items-center justify-center gap-1.5">
-              <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: net.dot }} />
-              <span
-                className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                  net.status === 'ROOD'
-                    ? 'border-red-700 bg-red-950/50 text-red-400'
-                    : net.status === 'ORANJE'
-                      ? 'border-amber-700 bg-amber-950/50 text-amber-400'
-                      : 'border-emerald-700 bg-emerald-950/50 text-emerald-400'
-                }`}
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
-                {net.status}
-              </span>
+              <span className="size-2 animate-pulse rounded-full" style={{ background: net.dot }} />
+              <PseoStatusBadge status={net.status} />
             </div>
-            <p className="text-xs text-white/40">{net.label}</p>
+            <p className="break-words text-sm text-white/50">{net.label}</p>
           </>
         ) : (
-          <span className="text-sm text-white/20">—</span>
+          <span className="font-mono text-sm text-white/25">—</span>
         )}
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-center backdrop-blur-md">
-        <p
-          className="mb-2 text-xs font-semibold uppercase tracking-widest"
-          style={{ color: G, fontFamily: 'var(--font-heading)' }}
-        >
-          Gem. Bouwjaar
+      <div className="min-w-0 rounded-2xl border border-white/10 bg-evergreen-900/70 p-4 text-center">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-trust">
+          Gem. bouwjaar
         </p>
-        <p
-          className="text-2xl font-extrabold"
-          style={{
-            fontFamily: 'var(--font-heading)',
-            color: AMBER,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {gemBouwjaar ?? '—'}
-        </p>
-        <p className="mt-1 text-xs text-white/30">BAG 2026</p>
+        <p className="font-mono text-2xl font-bold text-action">{gemBouwjaar ?? '—'}</p>
+        <p className="mt-1 text-sm text-white/40">BAG 2026</p>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-center backdrop-blur-md">
-        <p
-          className="mb-2 text-xs font-semibold uppercase tracking-widest"
-          style={{ color: G, fontFamily: 'var(--font-heading)' }}
-        >
-          Energy Score
+      <div className="min-w-0 rounded-2xl border border-white/10 bg-evergreen-900/70 p-4 text-center">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-trust">
+          Energiescore
         </p>
-        <p
-          className="text-2xl font-extrabold"
-          style={{
-            fontFamily: 'var(--font-heading)',
-            color: scoreColor,
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {score}
-          <span className="text-sm font-normal text-white/30">/100</span>
+        <p className="font-mono text-2xl font-bold" style={{ color: scoreColor }}>
+          {score}<span className="text-sm font-normal text-white/40">/100</span>
         </p>
-        <p className="mt-1 text-xs" style={{ color: scoreColor }}>
+        <p className="mt-1 break-words text-sm" style={{ color: scoreColor }}>
           {scoreLabelText}
         </p>
       </div>

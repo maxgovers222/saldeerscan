@@ -13,7 +13,7 @@ interface WijkSaldeerChartProps {
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{value: number; name: string; color: string}>; label?: string }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 shadow-2xl">
+    <div className="rounded-xl border border-white/10 bg-evergreen-900 px-4 py-3 shadow-2xl">
       <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-2">{label}</p>
       {payload.map((entry) => (
         <div key={entry.name} className="flex items-center gap-2 text-sm font-mono">
@@ -42,12 +42,12 @@ export function WijkSaldeerChart({ besparing, wijk }: WijkSaldeerChartProps) {
       <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="amberGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
-            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+            <stop offset="5%" stopColor="var(--color-action)" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="var(--color-action)" stopOpacity={0.0} />
           </linearGradient>
           <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-            <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+            <stop offset="5%" stopColor="var(--color-trust)" stopOpacity={0.15} />
+            <stop offset="95%" stopColor="var(--color-trust)" stopOpacity={0.0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -59,14 +59,14 @@ export function WijkSaldeerChart({ besparing, wijk }: WijkSaldeerChartProps) {
           width={48}
         />
         <Tooltip content={<CustomTooltip />} />
-        <ReferenceLine x="2027" stroke="rgba(239,68,68,0.4)" strokeDasharray="4 4" label={{ value: '2027 →', fill: 'rgba(239,68,68,0.6)', fontSize: 10, fontFamily: 'ui-monospace' }} />
+        <ReferenceLine x="2027" stroke="var(--color-action)" strokeDasharray="4 4" label={{ value: '2027 →', fill: 'var(--color-action)', fontSize: 10, fontFamily: 'ui-monospace' }} />
         <Area
           type="monotone" dataKey="metBatterij" name="Met batterij"
-          stroke="#10b981" strokeWidth={2} fill="url(#emeraldGrad)"
+          stroke="var(--color-trust)" strokeWidth={2} fill="url(#emeraldGrad)"
         />
         <Area
           type="monotone" dataKey="zonderBatterij" name={`Zonder batterij (${wijk})`}
-          stroke="#f59e0b" strokeWidth={2.5} fill="url(#amberGrad)"
+          stroke="var(--color-action)" strokeWidth={2.5} fill="url(#amberGrad)"
         />
         <Legend
           wrapperStyle={{ fontSize: '10px', fontFamily: 'ui-monospace', color: 'rgba(255,255,255,0.4)', paddingTop: '8px' }}

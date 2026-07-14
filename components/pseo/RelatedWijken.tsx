@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { getWijkenByStad, getTopWijken } from '@/lib/pseo'
 import { toDisplaySlug } from '@/lib/pseo-hubs'
+import { PseoCardGrid } from './PseoCardGrid'
 
 type RelatedWijk = {
   provincie: string
@@ -69,29 +69,17 @@ export async function RelatedWijken({
       <h2 className="font-heading text-xl text-white font-bold mb-2">
         {title}
       </h2>
-      <p className="text-slate-400 text-sm mb-6">
+      <p className="mb-6 text-base text-white/55">
         {description}
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {wijken.map(({ provincie: prov, stad: city, wijk, score, bouwjaar }) => (
-          <Link
-            key={`${prov}/${city}/${wijk}`}
-            href={`/${prov}/${city}/${wijk}`}
-            data-analytics-event="pseo_second_click"
-            data-analytics-label={`related:${city}:${wijk}`}
-            className="group bg-slate-900/40 border border-white/10 rounded-xl p-4 hover:border-amber-500/40 hover:bg-slate-900/60 transition-all"
-          >
-            <div className="text-white font-semibold text-sm group-hover:text-amber-300 transition-colors leading-tight">
-              {toDisplaySlug(wijk)}
-            </div>
-            <div className="text-slate-500 text-xs mt-1">
-              {toDisplaySlug(city)}
-              {score ? ` · ${score}/100` : ''}
-              {bouwjaar ? ` · ${bouwjaar}` : ''}
-            </div>
-          </Link>
-        ))}
-      </div>
+      <PseoCardGrid
+        items={wijken.map(({ provincie: prov, stad: city, wijk, score, bouwjaar }) => ({
+          href: `/${prov}/${city}/${wijk}`,
+          title: toDisplaySlug(wijk),
+          meta: `${toDisplaySlug(city)}${score ? ` · ${score}/100` : ''}${bouwjaar ? ` · ${bouwjaar}` : ''}`,
+          analyticsLabel: `related:${city}:${wijk}`,
+        }))}
+      />
     </section>
   )
 }

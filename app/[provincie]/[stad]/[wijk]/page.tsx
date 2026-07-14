@@ -12,15 +12,15 @@ import {
   scoreLabel,
 } from '@/lib/pseo-variation'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
-import { LocalStatsRibbon } from '@/components/pseo/LocalStatsRibbon'
+import { PseoConversionCard } from '@/components/pseo/PseoConversionCard'
+import { PseoHero } from '@/components/pseo/PseoHero'
+import { PseoPageShell } from '@/components/pseo/PseoPageShell'
+import { PseoStatusBadge, type PseoStatus } from '@/components/pseo/PseoStatusBadge'
 import { WijkSaldeerChart } from '@/components/pseo/WijkSaldeerChart'
 import { RenovatieInsightCard } from '@/components/pseo/RenovatieInsightCard'
 import { WijkComparisonTable, buildWijkComparisonRows } from '@/components/pseo/WijkComparisonTable'
 import { CountdownTimer } from '@/components/CountdownTimer'
-import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { WijkCtaButton } from '@/components/pseo/WijkCtaButton'
-import { Container } from '@/components/design-system/Container'
-import { SiteHeader } from '@/components/design-system/SiteHeader'
 import { buildCheckHref } from '@/lib/conversion-context'
 
 const getCachedWijkPage = cache(getWijkPage)
@@ -54,6 +54,12 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
 function toDisplay(slug: string) {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function toStatus(status: string | null): PseoStatus | undefined {
+  return status === 'ROOD' || status === 'ORANJE' || status === 'GROEN'
+    ? status
+    : undefined
 }
 
 function renderBold(text: string) {
@@ -109,7 +115,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
     wijk,
   })
   const score = resolveWijkScore(page.gemBouwjaar, page.gemHealthScore)
-  const { label: scorelabel, color: scoreColor } = scoreLabel(score)
+  const { label: scorelabel } = scoreLabel(score)
   const besparing = computeBesparing(page.gemBouwjaar, score)
   // Verlies = terugleveringsvoordeel dat wegvalt na 2027 (~40% van besparing)
   const verlies = computeVerlies(page.gemBouwjaar, score)
@@ -128,7 +134,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
     ORANJE: { cls: 'bg-amber-950/50 border-amber-700 text-amber-400' },
     GROEN:  { cls: 'bg-emerald-950/50 border-emerald-700 text-emerald-400' },
   }
-  const net = page.netcongestieStatus ? netConfig[page.netcongestieStatus as keyof typeof netConfig] : null
+  const netStatus = toStatus(page.netcongestieStatus)
 
   const placeSchema = {
     '@context': 'https://schema.org',
@@ -143,7 +149,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   }
 
   return (
-    <div className="min-h-screen" style={{ background: N1 }}>
+    <PseoPageShell headerContext={`${wijkDisplay}, ${stadDisplay}`} ctaHref={checkHref}>
       {page.jsonLd && Object.keys(page.jsonLd).length > 0 && <LocalSchema jsonLd={page.jsonLd} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(placeSchema).replace(/<\/script>/g, '<\\/script>') }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -157,127 +163,45 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
         ],
       }).replace(/<\/script>/g, '<\\/script>') }} />
 
-      {/* ── Nav ─────────────────────────────────────────────────── */}
-      <SiteHeader
-        tone="dark"
-        contextLabel={`${wijkDisplay}, ${stadDisplay}`}
-        ctaHref={checkHref}
+      <PseoHero
+        breadcrumbs={[
+          { name: 'Home', href: '/' },
+          { name: toDisplay(provincie), href: `/${provincie}` },
+          { name: stadDisplay, href: `/${provincie}/${stad}` },
+          { name: wijkDisplay },
+        ]}
+        eyebrow={`${stadDisplay} · Wijkanalyse 2027`}
+        title={wijkDisplay}
+        summary={`Wat stoppen met salderen betekent voor woningen in ${wijkDisplay}, gebaseerd op lokale woningdata en netdruk.`}
+        badge={netStatus || ranking ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {netStatus && <PseoStatusBadge status={netStatus} />}
+            {ranking && (
+              <span className="rounded-lg border border-action/30 bg-action/10 px-2.5 py-1 text-xs font-semibold text-action">
+                {ranking.label} in {stadDisplay}
+              </span>
+            )}
+          </div>
+        ) : undefined}
+        metrics={[
+          { label: 'Energiescore', value: `${score}/100`, note: scorelabel },
+          { label: 'Gem. bouwjaar', value: page.gemBouwjaar ? String(page.gemBouwjaar) : '—' },
+          { label: 'Mogelijke besparing', value: `€${besparing}/jaar`, tone: 'trust' },
+        ]}
       />
 
-      {/* ── Hero ────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ background: N1 }}>
-        {/* SVG grid — vervaagt naar beneden */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true"
-          style={{ opacity: 0.03, maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)' }}>
-          <defs>
-            <pattern id="wijk-grid" width="48" height="48" patternUnits="userSpaceOnUse">
-              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="rgb(100,116,139)" strokeOpacity="0.3" strokeWidth="0.5" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#wijk-grid)" />
-        </svg>
-        {/* Zachte radiale gloed */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: `radial-gradient(ellipse 70% 50% at 50% -5%, rgba(0,170,101,0.14) 0%, transparent 70%)`,
-        }} />
-
-        <div className="relative max-w-4xl mx-auto px-6 py-20 sm:py-28 text-center">
-          {/* Breadcrumb */}
-          <p className="text-xs text-white/30 mb-6">
-            <a href="/" className="hover:text-white/60 transition-colors">Home</a>
-            {' · '}
-            <a href={`/${provincie}`} className="hover:text-white/60 transition-colors">{toDisplay(provincie)}</a>
-            {' · '}
-            <a href={`/${provincie}/${stad}`} className="hover:text-white/60 transition-colors">{stadDisplay}</a>
-            {' · '}
-            <span className="text-white/50">{wijkDisplay}</span>
-          </p>
-
-          {/* Green badge — zelfde patroon als homepage */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-8"
-            style={{ background: G, color: 'white', fontFamily: 'var(--font-heading)' }}>
-            <span className="w-1.5 h-1.5 bg-white rounded-full opacity-80" />
-            {stadDisplay} · Gratis wijkanalyse 2027
-          </div>
-
-          <h1 className="font-extrabold text-white mb-4"
-            style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 8vw, 4.5rem)', letterSpacing: '-0.03em', lineHeight: 1.05 }}>
-            {wijkDisplay}
-          </h1>
-          <p className="text-lg text-white/65 mb-4">
-            {page.aantalWoningen ? `${page.aantalWoningen.toLocaleString('nl')} woningen` : stadDisplay} · {toDisplay(provincie)}
-          </p>
-
-          {ranking ? (
-            <div className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full text-xs font-semibold"
-              style={{ background: 'rgba(245,158,11,0.15)', color: AMBER, border: '1px solid rgba(245,158,11,0.3)', fontFamily: 'var(--font-heading)' }}>
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1.5l1.6 3.9 4.4.4-3.2 3 .9 4.3L8 10.8l-3.7 2.3.9-4.3L2 5.8l4.4-.4z"/></svg>
-              {ranking.label} in {stadDisplay}
-            </div>
-          ) : (
-            <div className="mb-8" />
-          )}
-
-          {/* Data Ribbon */}
-          <LocalStatsRibbon
-            net={netNarrative}
-            gemBouwjaar={page.gemBouwjaar}
-            score={score}
-            scoreLabelText={scorelabel}
-            scoreColor={scoreColor}
-            ariaLabel={`Kernstatistieken voor ${wijkDisplay}`}
-            className="mb-10"
-          />
-
-          <WijkCtaButton
-            provincie={provincie}
-            wijk={wijk}
-            stad={stad}
-            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-white/65 underline decoration-white/25 underline-offset-4 transition hover:text-white"
-          >
-            Bekijk de persoonlijke check
-          </WijkCtaButton>
-
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/45 mt-6">
-            {['BAG officiële data', 'AVG-compliant', 'Volledig gratis'].map((t) => (
-              <span key={t} className="flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke={G} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Urgentie Chart ──────────────────────────────────────── */}
-      <section className="bg-mist py-10 sm:py-14">
-        <Container>
-          <div className="grid gap-6 rounded-3xl border border-ink/10 bg-paper p-5 shadow-sm sm:p-8 lg:grid-cols-[1fr_.9fr] lg:items-center">
-            <div>
-              <p className="text-sm font-semibold text-trust-dark">
-                Persoonlijke check voor {wijkDisplay}
-              </p>
-              <h2 className="mt-2 text-3xl font-bold text-ink">
-                Wat betekent 2027 voor uw adres?
-              </h2>
-              <p className="mt-3 max-w-xl leading-7 text-ink-muted">
-                De wijkcijfers zijn een gemiddelde. Vul uw adres in voor uw
-                woningkenmerken, verwachte impact en beste vervolgstap.
-              </p>
-            </div>
-            <AddressAutocomplete
-              context={{
-                landingPath: `/${provincie}/${stad}/${wijk}`,
-                pseoLevel: 'wijk',
-                provincie,
-                stad,
-                wijk,
-              }}
-              placeholder={`Uw adres in ${wijkDisplay}`}
-            />
-          </div>
-        </Container>
-      </section>
+      <PseoConversionCard
+        context={{
+          landingPath: `/${provincie}/${stad}/${wijk}`,
+          pseoLevel: 'wijk',
+          provincie,
+          stad,
+          wijk,
+        }}
+        title={`Wat betekent 2027 voor uw woning in ${wijkDisplay}?`}
+        description="De wijkcijfers zijn een gemiddelde. Vul uw adres in voor uw woningkenmerken, verwachte impact en beste vervolgstap."
+        placeholder={`Uw adres in ${wijkDisplay}`}
+      />
 
       <section className="py-20 px-6" style={{ background: N2 }}>
         <div className="max-w-4xl mx-auto">
@@ -594,39 +518,6 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
         </div>
       </section>
 
-      {/* ── Footer ──────────────────────────────────────────────── */}
-      <footer className="py-12 px-6" style={{ background: N1, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8 mb-10">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: G }}>
-                  <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                    <path d="M9 2L15.5 6V13L9 17L2.5 13V6L9 2Z" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="1.3" strokeLinejoin="round" />
-                    <path d="M9 6.5L12 8.5V12L9 14L6 12V8.5L9 6.5Z" fill="white" />
-                  </svg>
-                </div>
-                <span className="font-bold text-white text-base" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
-                  SaldeerScan.nl
-                </span>
-              </div>
-              <p className="text-sm max-w-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                Gratis energieanalyse voor Nederlandse woningeigenaren.
-              </p>
-            </div>
-            <WijkCtaButton provincie={provincie} stad={stad} wijk={wijk} className="text-sm font-semibold text-white/50 underline decoration-white/20 underline-offset-4 transition hover:text-white">
-              Gratis analyseren
-            </WijkCtaButton>
-          </div>
-          <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-            <div className="flex gap-6 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-              <a href="/privacy" className="hover:text-white/50 transition-colors">Privacyverklaring</a>
-              <WijkCtaButton provincie={provincie} stad={stad} wijk={wijk} className="hover:text-white/50 transition-colors">Analyseer uw woning</WijkCtaButton>
-            </div>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>© {new Date().getFullYear()} SaldeerScan.nl</p>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </PseoPageShell>
   )
 }
