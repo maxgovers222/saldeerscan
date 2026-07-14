@@ -2,6 +2,12 @@ name: Update visual snapshots
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to update snapshots on
+        required: true
+        default: feat/phase-4b-stabilization
+        type: string
 
 permissions:
   contents: write
@@ -20,6 +26,8 @@ jobs:
       CRON_SECRET: ci-only-cron-secret
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -30,4 +38,4 @@ jobs:
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "test(phase-4b): visual regression baselines (linux)"
-          file_pattern: tests/e2e/__screenshots__
+          file_pattern: tests/e2e/__screenshots__/**/*
