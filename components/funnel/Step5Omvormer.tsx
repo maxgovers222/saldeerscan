@@ -2,6 +2,7 @@
 
 import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, OmvormerAnalyse } from './types'
+import type { FunnelTracker } from '@/lib/analytics'
 import { PhotoUpload } from './PhotoUpload'
 import { StepHeader } from './StepHeader'
 
@@ -37,6 +38,7 @@ function FallbackOmvormer({ onComplete }: { onComplete: (data: OmvormerAnalyse) 
 interface Step5OmvormerProps {
   state: FunnelState
   dispatch: Dispatch<FunnelAction>
+  trackFunnel: FunnelTracker
 }
 
 const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
@@ -108,7 +110,7 @@ function OmvormerResultaat({ analyse }: { analyse: OmvormerAnalyse }) {
   )
 }
 
-export function Step5Omvormer({ state, dispatch }: Step5OmvormerProps) {
+export function Step5Omvormer({ state, dispatch, trackFunnel }: Step5OmvormerProps) {
   const analyse = state.omvormerAnalyse
   const [showFallback, setShowFallback] = useState(false)
 
@@ -131,6 +133,7 @@ export function Step5Omvormer({ state, dispatch }: Step5OmvormerProps) {
         <PhotoUpload
           visionType="omvormer"
           onAnalysed={(r) => dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: r as OmvormerAnalyse })}
+          trackFunnel={trackFunnel}
           title="Foto van uw omvormer"
           description="Maak een foto van het label/sticker op de omvormer. Zorg dat merk en model leesbaar zijn."
         />
@@ -147,6 +150,7 @@ export function Step5Omvormer({ state, dispatch }: Step5OmvormerProps) {
       {!analyse && showFallback && (
         <FallbackOmvormer
           onComplete={(data) => {
+            trackFunnel('technical_scan_completed', { scan_type: 'Omvormer', completion: 'manual' })
             dispatch({ type: 'SET_OMVORMER', omvormerAnalyse: data })
             dispatch({ type: 'SET_STEP', step: 6 })
           }}
@@ -169,7 +173,15 @@ export function Step5Omvormer({ state, dispatch }: Step5OmvormerProps) {
           className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm py-3 px-4 rounded-full transition-colors">
           ← Terug
         </button>
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 6 })}
+        <button onClick={() => {
+          if (!analyse) {
+            trackFunnel('technical_scan_skipped', { scan_type: 'Omvormer' })
+            if (!state.meterkastAnalyse && !state.plaatsingsAnalyse) {
+              trackFunnel('technical_module_skipped')
+            }
+          }
+          dispatch({ type: 'SET_STEP', step: 6 })
+        }}
           className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}>
           {analyse ? 'Aanvraag versturen →' : 'Overslaan →'}
         </button>

@@ -2,6 +2,7 @@
 
 import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, PlaatsingsAnalyse } from './types'
+import type { FunnelTracker } from '@/lib/analytics'
 import { PhotoUpload } from './PhotoUpload'
 import { StepHeader } from './StepHeader'
 
@@ -35,6 +36,7 @@ function FallbackPlaatsing({ onComplete }: { onComplete: (data: PlaatsingsAnalys
 interface Step4PlaatsingProps {
   state: FunnelState
   dispatch: Dispatch<FunnelAction>
+  trackFunnel: FunnelTracker
 }
 
 const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
@@ -90,7 +92,7 @@ function PlaatsingResultaat({ analyse }: { analyse: PlaatsingsAnalyse }) {
   )
 }
 
-export function Step4Plaatsing({ state, dispatch }: Step4PlaatsingProps) {
+export function Step4Plaatsing({ state, dispatch, trackFunnel }: Step4PlaatsingProps) {
   const analyse = state.plaatsingsAnalyse
   const [showFallback, setShowFallback] = useState(false)
 
@@ -120,6 +122,7 @@ export function Step4Plaatsing({ state, dispatch }: Step4PlaatsingProps) {
       )}
       {!analyse && !showFallback && (
         <PhotoUpload visionType="plaatsingslocatie" onAnalysed={(r) => dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: r as PlaatsingsAnalyse })}
+          trackFunnel={trackFunnel}
           title="Foto van plaatsingslocatie" description="Foto van de ruimte waar de batterij of omvormer geplaatst wordt (garage, meterkast, bijkeuken)" />
       )}
       {!analyse && !showFallback && (
@@ -134,6 +137,7 @@ export function Step4Plaatsing({ state, dispatch }: Step4PlaatsingProps) {
       {!analyse && showFallback && (
         <FallbackPlaatsing
           onComplete={(data) => {
+            trackFunnel('technical_scan_completed', { scan_type: 'Plaatsingslocatie', completion: 'manual' })
             dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: data })
             dispatch({ type: 'SET_STEP', step: 5 })
           }}
@@ -151,7 +155,10 @@ export function Step4Plaatsing({ state, dispatch }: Step4PlaatsingProps) {
       <div className="flex gap-3">
         <button onClick={() => dispatch({ type: 'SET_STEP', step: 3 })}
           className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm py-3 px-4 rounded-full transition-colors">← Terug</button>
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 5 })}
+        <button onClick={() => {
+          if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Plaatsingslocatie' })
+          dispatch({ type: 'SET_STEP', step: 5 })
+        }}
           className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}>
           {analyse ? 'Omvormer scannen →' : 'Overslaan →'}
         </button>

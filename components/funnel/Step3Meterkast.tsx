@@ -2,6 +2,7 @@
 
 import { useState, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, MeterkastAnalyse } from './types'
+import type { FunnelTracker } from '@/lib/analytics'
 import { PhotoUpload } from './PhotoUpload'
 import { StepHeader } from './StepHeader'
 
@@ -66,6 +67,7 @@ function FallbackMeterkast({ onComplete }: { onComplete: (data: MeterkastAnalyse
 interface Step3MeterkastProps {
   state: FunnelState
   dispatch: Dispatch<FunnelAction>
+  trackFunnel: FunnelTracker
 }
 
 const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
@@ -132,7 +134,7 @@ function MeterkastResultaat({ analyse }: { analyse: MeterkastAnalyse }) {
   )
 }
 
-export function Step3Meterkast({ state, dispatch }: Step3MeterkastProps) {
+export function Step3Meterkast({ state, dispatch, trackFunnel }: Step3MeterkastProps) {
   const analyse = state.meterkastAnalyse
   const [showFallback, setShowFallback] = useState(false)
 
@@ -152,6 +154,7 @@ export function Step3Meterkast({ state, dispatch }: Step3MeterkastProps) {
       )}
       {!analyse && !showFallback && (
         <PhotoUpload visionType="meterkast" onAnalysed={(r) => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: r as MeterkastAnalyse })}
+          trackFunnel={trackFunnel}
           title="Foto van uw meterkast" description="Maak een foto van uw open meterkast, inclusief alle groepen zichtbaar" />
       )}
       {!analyse && !showFallback && (
@@ -166,6 +169,7 @@ export function Step3Meterkast({ state, dispatch }: Step3MeterkastProps) {
       {!analyse && showFallback && (
         <FallbackMeterkast
           onComplete={(data) => {
+            trackFunnel('technical_scan_completed', { scan_type: 'Meterkast', completion: 'manual' })
             dispatch({ type: 'SET_METERKAST', meterkastAnalyse: data })
             dispatch({ type: 'SET_STEP', step: 4 })
           }}
@@ -183,7 +187,10 @@ export function Step3Meterkast({ state, dispatch }: Step3MeterkastProps) {
       <div className="flex gap-3">
         <button onClick={() => dispatch({ type: 'SET_STEP', step: 2 })}
           className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm py-3 px-4 rounded-full transition-colors">← Terug</button>
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 4 })}
+        <button onClick={() => {
+          if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Meterkast' })
+          dispatch({ type: 'SET_STEP', step: 4 })
+        }}
           className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}>
           {analyse ? 'Plaatsing scannen →' : 'Overslaan →'}
         </button>

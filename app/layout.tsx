@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
+import { WebVitals } from "@/components/WebVitals";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
@@ -107,6 +108,7 @@ export default function RootLayout({
           Naar hoofdinhoud
         </a>
         <Analytics />
+        <WebVitals />
         {children}
       </body>
     </html>

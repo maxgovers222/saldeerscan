@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction } from './types'
+import type { FunnelTracker } from '@/lib/analytics'
 import { StepHeader } from './StepHeader'
 import { AnalysisLoading } from './AnalysisLoading'
 
 interface Step1AdresProps {
   state: FunnelState
   dispatch: Dispatch<FunnelAction>
+  trackFunnel: FunnelTracker
 }
 
 const amberBtnCls = 'bg-[#f59e0b] text-slate-950 font-bold rounded-full transition-all duration-200 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
@@ -175,7 +177,7 @@ function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }
   )
 }
 
-export function Step1Adres({ state, dispatch }: Step1AdresProps) {
+export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
   const [inputValue, setInputValue] = useState(state.adres || '')
   const [selectedAdres, setSelectedAdres] = useState<string | null>(state.adres || null)
   const [localLoading, setLocalLoading] = useState(false)
@@ -191,13 +193,23 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
   async function doSearch(adres: string) {
     setLocalLoading(true)
     setLocalError(null)
+    let failureTracked = false
     try {
       const bagRes = await fetch(`/api/bag?adres=${encodeURIComponent(adres)}`)
       if (!bagRes.ok) {
+        trackFunnel('bag_match_failed', {
+          reason: bagRes.status === 404 ? 'not_found' : 'api_error',
+        })
+        failureTracked = true
         const errData = await bagRes.json().catch(() => ({}))
         throw new Error((errData as { error?: string }).error || 'Adres niet gevonden in BAG')
       }
       const bagData = await bagRes.json()
+      trackFunnel('bag_match_succeeded', {
+        postcode_prefix: typeof bagData.postcode === 'string'
+          ? bagData.postcode.replace(/\s/g, '').slice(0, 4)
+          : '',
+      })
       dispatch({ type: 'SET_ADRES', adres })
       dispatch({ type: 'SET_BAG_DATA', bagData: {
         bouwjaar: bagData.bouwjaar, oppervlakte: bagData.oppervlakte,
@@ -239,6 +251,9 @@ export function Step1Adres({ state, dispatch }: Step1AdresProps) {
       }
       await Promise.all(promises)
     } catch (err) {
+      if (!failureTracked) {
+        trackFunnel('bag_match_failed', { reason: 'api_error' })
+      }
       setLocalError(err instanceof Error ? err.message : 'Onbekende fout bij ophalen adresgegevens')
     } finally {
       setLocalLoading(false)

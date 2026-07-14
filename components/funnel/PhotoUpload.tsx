@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useId } from 'react'
 import type { MeterkastAnalyse, PlaatsingsAnalyse, OmvormerAnalyse } from './types'
-import { trackEvent } from '@/lib/analytics'
+import type { FunnelTracker } from '@/lib/analytics'
 import { prepareVisionImage } from './prepare-vision-image'
 
 type VisionType = 'meterkast' | 'plaatsingslocatie' | 'omvormer'
@@ -13,6 +13,7 @@ interface PhotoUploadProps {
   onAnalysed: (result: VisionResult) => void
   title: string
   description: string
+  trackFunnel: FunnelTracker
 }
 
 function ScanAnimation({ imageUrl, optimizing }: { imageUrl: string; optimizing?: boolean }) {
@@ -38,7 +39,7 @@ function ScanAnimation({ imageUrl, optimizing }: { imageUrl: string; optimizing?
   )
 }
 
-export function PhotoUpload({ visionType, onAnalysed, title, description }: PhotoUploadProps) {
+export function PhotoUpload({ visionType, onAnalysed, title, description, trackFunnel }: PhotoUploadProps) {
   const inputId = useId()
   const [isDragOver, setIsDragOver] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -83,7 +84,15 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
         throw new Error(errData.error ?? 'Vision analyse mislukt')
       }
       const data = await res.json() as { analyse: VisionResult }
-      trackEvent('photo_uploaded', { type: visionType })
+      const scanType = {
+        meterkast: 'Meterkast',
+        plaatsingslocatie: 'Plaatsingslocatie',
+        omvormer: 'Omvormer',
+      } as const
+      trackFunnel('technical_scan_completed', {
+        scan_type: scanType[visionType],
+        completion: 'photo',
+      })
       onAnalysed(data.analyse)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Onbekende fout bij analyse')
@@ -91,7 +100,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description }: Phot
       setLoading(false)
       setOptimizing(false)
     }
-  }, [visionType, onAnalysed])
+  }, [visionType, onAnalysed, trackFunnel])
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
