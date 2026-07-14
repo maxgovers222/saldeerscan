@@ -9,6 +9,7 @@ export interface SiteHeaderProps {
   contextLabel?: string
   ctaHref?: string
   ctaLabel?: string
+  showPrimaryAction?: boolean
 }
 
 export function SiteHeader({
@@ -17,6 +18,7 @@ export function SiteHeader({
   contextLabel,
   ctaHref = '/check',
   ctaLabel = 'Gratis check',
+  showPrimaryAction = true,
 }: SiteHeaderProps) {
   const dark = tone === 'dark'
 
@@ -53,9 +55,11 @@ export function SiteHeader({
             >
               Nieuws
             </Link>
-            <PrimaryAction href={ctaHref} className={compact ? 'px-4 py-2' : undefined}>
-              {ctaLabel}
-            </PrimaryAction>
+            {showPrimaryAction && (
+              <PrimaryAction href={ctaHref} className={compact ? 'px-4 py-2' : undefined}>
+                {ctaLabel}
+              </PrimaryAction>
+            )}
           </div>
         </nav>
       </Container>

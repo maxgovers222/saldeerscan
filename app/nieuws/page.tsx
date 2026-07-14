@@ -1,7 +1,9 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ContentIndexShell } from '@/components/content/ContentIndexShell'
+import { Container } from '@/components/design-system/Container'
+import { PseoConversionCard } from '@/components/pseo/PseoConversionCard'
 import { getAllPublishedNieuws } from '@/lib/nieuws'
-import { NavDark, FooterDark } from '@/components/NavDark'
 
 export const revalidate = 3600
 
@@ -26,91 +28,47 @@ export default async function NieuwsOverzicht() {
   const articles = await getAllPublishedNieuws()
 
   return (
-    <main className="min-h-screen bg-[#020617]">
-      <NavDark />
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-        <Link href="/" className="text-slate-500 hover:text-white transition-colors text-sm">Home</Link>
-        <span className="text-slate-700">/</span>
-        <span className="text-slate-300 text-sm">Nieuws</span>
-      </div>
-
-      {/* Hero */}
-      <section className="max-w-6xl mx-auto px-4 pt-16 pb-10">
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1 mb-6">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-amber-300 text-xs font-medium tracking-wide uppercase">Wekelijks bijgewerkt</span>
-          </div>
-          <h1 className="font-heading text-4xl md:text-5xl text-white font-bold leading-tight mb-4">
-            Nieuws
-          </h1>
-          <p className="text-slate-400 text-lg leading-relaxed">
-            Actuele berichten over zonnepanelen, netcongestie en de salderingswijzigingen.
-            Blijf op de hoogte van alles rondom 1 januari 2027.
-          </p>
-        </div>
-      </section>
-
-      {/* Articles list */}
-      <section className="max-w-6xl mx-auto px-4 pb-24">
+    <ContentIndexShell
+      kind="nieuws"
+      title="Nieuws"
+      intro="Actuele berichten over zonnepanelen, netcongestie en de salderingswijzigingen. Blijf op de hoogte van alles rondom 1 januari 2027."
+    >
+      <Container className="pb-16">
         {articles.length === 0 ? (
-          <p className="text-slate-500 text-center py-16">Eerste nieuwsartikelen worden binnenkort gepubliceerd.</p>
+          <p className="rounded-3xl border border-ink/10 bg-paper px-6 py-16 text-center text-ink-muted">
+            Eerste nieuwsartikelen worden binnenkort gepubliceerd.
+          </p>
         ) : (
           <div className="space-y-4">
             {articles.map(article => (
               <Link
                 key={article.slug}
                 href={`/nieuws/${article.slug}`}
-                className="group flex flex-col md:flex-row md:items-start gap-4 bg-slate-900/40 border border-white/10 rounded-2xl p-6 hover:border-amber-500/30 hover:bg-slate-900/60 transition-all"
+                className="group flex flex-col gap-4 rounded-3xl border border-ink/10 bg-paper p-6 shadow-sm transition hover:border-trust/40 hover:shadow-md md:flex-row md:items-start"
               >
-                <div className="shrink-0">
-                  {article.publishedAt && (
-                    <span className="text-slate-500 text-sm font-mono whitespace-nowrap">
-                      {formatDate(article.publishedAt)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-heading text-lg text-white font-semibold mb-2 group-hover:text-amber-300 transition-colors leading-snug">
+                {article.publishedAt && (
+                  <time className="shrink-0 whitespace-nowrap font-mono text-sm text-ink-muted" dateTime={article.publishedAt}>
+                    {formatDate(article.publishedAt)}
+                  </time>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-semibold leading-snug text-ink transition group-hover:text-trust-dark">
                     {article.titel}
                   </h2>
-                  {article.intro && (
-                    <p className="text-slate-400 text-sm leading-relaxed line-clamp-2">
-                      {article.intro}
-                    </p>
-                  )}
+                  {article.intro && <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink-muted">{article.intro}</p>}
                 </div>
-                <div className="shrink-0 flex items-center gap-1 text-amber-400 text-sm font-medium whitespace-nowrap">
-                  Lees meer
-                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
+                <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-trust-dark">Lees meer →</span>
               </Link>
             ))}
           </div>
         )}
-
-        {/* CTA */}
-        <div className="mt-16 bg-amber-950/20 border border-amber-500/25 rounded-2xl p-8 text-center">
-          <h2 className="font-heading text-2xl text-white font-bold mb-3">
-            Persoonlijk advies voor uw woning
-          </h2>
-          <p className="text-slate-400 mb-6 max-w-lg mx-auto">
-            Bereken gratis wat de 2027-wijzigingen betekenen voor uw specifieke situatie.
-          </p>
-          <Link
-            href="/check"
-            className="inline-flex items-center gap-2 bg-amber-500 text-slate-950 font-semibold px-6 py-3 rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-colors"
-          >
-            Gratis 2027-check starten
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </div>
-      </section>
-      <FooterDark />
-    </main>
+      </Container>
+      <PseoConversionCard
+        context={{ landingPath: '/nieuws', pseoLevel: 'nieuws' }}
+        title="Persoonlijk advies voor uw woning"
+        description="Bereken gratis wat de 2027-wijzigingen betekenen voor uw specifieke situatie."
+        placeholder="Vul uw adres in"
+      />
+    </ContentIndexShell>
   )
 }
