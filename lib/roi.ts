@@ -7,6 +7,8 @@ export const SALDERING_SCHEMA: Record<number, number> = {
   2027: 0.00,  // Volledig einde saldering
 }
 
+export const REFERENCE_BATTERY_CAPACITY_KWH = 10
+
 // Dynamische tarieven 2026
 const LEVERINGSTARIEF = 0.40   // €/kWh inkoop
 const TERUGLEVERTARIEF = 0.09  // €/kWh uitkoop (marktprijs)

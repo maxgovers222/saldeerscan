@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import type { FunnelState } from './types'
+import type { NormalizedReport } from '@/lib/report-model'
 
 const Inner = dynamic(() => import('./PDFDownloadButtonInner'), {
   ssr: false,
@@ -13,6 +13,6 @@ const Inner = dynamic(() => import('./PDFDownloadButtonInner'), {
   ),
 })
 
-export function PDFDownloadButton({ state }: { state: FunnelState }) {
-  return <Inner state={state} />
+export function PDFDownloadButton({ report }: { report: NormalizedReport }) {
+  return <Inner report={report} />
 }

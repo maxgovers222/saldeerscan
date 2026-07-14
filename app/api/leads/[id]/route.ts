@@ -4,17 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { parseStoredRoi } from '@/lib/roi-result-guard'
 import { verifyLeadReportAccessToken } from '@/lib/lead-report-token'
 import { applyRateLimit } from '@/lib/rate-limit'
+import { buildReportModel, reportSourceFromStoredLead } from '@/lib/report-model'
 import { Resend } from 'resend'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
-
-function mapHealth(score: number | null) {
-  if (score === null) return null
-  if (score >= 75) return { label: 'Uitstekend', kleur: 'groen' } as const
-  if (score >= 55) return { label: 'Goed', kleur: 'geel' } as const
-  if (score >= 35) return { label: 'Matig', kleur: 'oranje' } as const
-  return { label: 'Slecht', kleur: 'rood' } as const
-}
 
 export async function GET(
   req: Request,
@@ -53,6 +46,7 @@ export async function GET(
     .from('leads')
     .select(`
       id,
+      created_at,
       adres,
       wijk,
       stad,
@@ -68,7 +62,10 @@ export async function GET(
       huidige_panelen_aantal,
       dakrichting,
       verbruik_bron,
-      huishouden_grootte
+      huishouden_grootte,
+      report_email_status,
+      report_email_sent_at,
+      report_email_error
     `)
     .eq('id', id)
     .maybeSingle()
@@ -77,36 +74,40 @@ export async function GET(
     return NextResponse.json({ error: 'Lead niet gevonden' }, { status: 404 })
   }
 
-  const score = typeof lead.health_score === 'number' ? lead.health_score : null
-  const mapped = mapHealth(score)
-  const roiResult = parseStoredRoi(lead.roi_berekening)
+  const reportSource = reportSourceFromStoredLead(lead)
+  const report = buildReportModel(reportSource)
+  if (!report) {
+    return NextResponse.json(
+      { error: 'Rapportgegevens zijn onvolledig' },
+      { status: 422 },
+    )
+  }
 
   return NextResponse.json({
+    report,
     leadId: lead.id,
     adres: lead.adres ?? '',
     wijk: lead.wijk ?? '',
     stad: lead.stad ?? '',
     bagData: lead.bag_data ?? null,
-    netcongestie: lead.netcongestie_status ? {
-      status: lead.netcongestie_status,
-      netbeheerder: '',
-      uitleg: '',
-      terugleveringBeperkt: lead.netcongestie_status !== 'GROEN',
-    } : null,
-    healthScore: score !== null && mapped ? {
-      score,
-      label: mapped.label,
-      kleur: mapped.kleur,
-      breakdown: { bouwjaar: 0, energielabel: 0, dakpotentieel: 0, netcongestie: 0 },
-      aanbevelingen: [],
-    } : null,
-    roiResult,
-    meterkastAnalyse: lead.meterkast_analyse ?? null,
-    plaatsingsAnalyse: lead.plaatsing_analyse ?? null,
-    omvormerAnalyse: lead.omvormer_analyse ?? null,
-    isEigenaar: typeof lead.is_eigenaar === 'boolean' ? lead.is_eigenaar : null,
-    heeftPanelen: typeof lead.heeft_panelen === 'boolean' ? lead.heeft_panelen : null,
-    huidigePanelenAantal: typeof lead.huidige_panelen_aantal === 'number' ? lead.huidige_panelen_aantal : null,
+    netcongestie: report.grid.status
+      ? {
+          status: report.grid.status,
+          netbeheerder: report.grid.operator ?? '',
+          uitleg: report.grid.explanation ?? '',
+          terugleveringBeperkt: report.grid.status !== 'GROEN',
+        }
+      : null,
+    healthScore: report.summary.healthScore === null
+      ? null
+      : reportSource.healthScore,
+    roiResult: parseStoredRoi(lead.roi_berekening),
+    meterkastAnalyse: report.technical.meterkast,
+    plaatsingsAnalyse: report.technical.plaatsing,
+    omvormerAnalyse: report.technical.omvormer,
+    isEigenaar: report.qualification.isEigenaar,
+    heeftPanelen: report.qualification.heeftPanelen,
+    huidigePanelenAantal: report.qualification.huidigePanelenAantal,
     dakrichting: lead.dakrichting ?? null,
     verbruik_bron: lead.verbruik_bron ?? 'schatting',
     huishouden_grootte: lead.huishouden_grootte ?? null,

@@ -2,29 +2,31 @@
 
 import { useCallback, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
+import { trackEvent } from '@/lib/analytics'
+import type { NormalizedReport } from '@/lib/report-model'
 import { SaldeerRapportPDF } from './SaldeerRapportPDF'
-import type { FunnelState } from './types'
 
-export default function PDFDownloadButtonInner({ state }: { state: FunnelState }) {
+export default function PDFDownloadButtonInner({ report }: { report: NormalizedReport }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
-  const filename = `SaldeerScan-2027-Rapport-${(state.bagData?.postcode ?? 'rapport').replace(/\s/g, '')}.pdf`
+  const filename = `SaldeerScan-2027-Rapport-${(report.home.postcode ?? 'rapport').replace(/\s/g, '')}.pdf`
 
   const handleDownload = useCallback(async () => {
     setLoading(true)
     setError(false)
-    // Open het tabblad synchroon binnen de click-handler — voorkomt dat mobiele
+    trackEvent('pdf_generation_started', { report_version: report.version })
+    // Open het tabblad synchroon binnen de click-handler - voorkomt dat mobiele
     // browsers (o.a. iOS Safari) de popup blokkeren omdat het PDF-genereren async is.
     const newTab = window.open('', '_blank')
     try {
-      const blob = await pdf(<SaldeerRapportPDF state={state} />).toBlob()
+      const blob = await pdf(<SaldeerRapportPDF report={report} />).toBlob()
       const url = URL.createObjectURL(blob)
       if (newTab) {
-        // Nieuw tabblad met de PDF: werkt betrouwbaar op desktop én mobiel
+        // Nieuw tabblad met de PDF: werkt betrouwbaar op desktop en mobiel
         // (iOS Safari respecteert het download-attribuut op <a> niet consistent).
         newTab.location.href = url
       } else {
-        // Popup geblokkeerd — val terug op een directe download-link in dit tabblad.
+        // Popup geblokkeerd - val terug op een directe download-link in dit tabblad.
         const anchor = document.createElement('a')
         anchor.href = url
         anchor.download = filename
@@ -33,14 +35,16 @@ export default function PDFDownloadButtonInner({ state }: { state: FunnelState }
         anchor.click()
         document.body.removeChild(anchor)
       }
+      trackEvent('pdf_open_succeeded', { report_version: report.version })
       setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } catch {
       setError(true)
       newTab?.close()
+      trackEvent('pdf_generation_failed', { report_version: report.version })
     } finally {
       setLoading(false)
     }
-  }, [state, filename])
+  }, [report, filename])
 
   return (
     <button
@@ -51,7 +55,7 @@ export default function PDFDownloadButtonInner({ state }: { state: FunnelState }
       style={{ fontFamily: 'var(--font-heading)' }}
     >
       {error ? (
-        <span className="text-sm">Fout bij genereren — probeer opnieuw</span>
+        <span className="text-sm">Fout bij genereren - probeer opnieuw</span>
       ) : loading ? (
         <>
           <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />

@@ -1,4 +1,12 @@
 import { test, expect } from '@playwright/test'
+import { expectedReportFixture } from '../fixtures/report'
+
+declare global {
+  interface Window {
+    gtag: (...args: unknown[]) => void
+    __captureGtag: (...args: unknown[]) => void
+  }
+}
 
 // Alleen desktop — mobile-chrome project vereist volledige `playwright install` op sommige Windows-setup
 test.use({ ...require('@playwright/test').devices['Desktop Chrome'] })
@@ -8,44 +16,6 @@ const MOCK_LEAD_ID = '11111111-1111-4111-8111-111111111111'
 const MOCK_LEAD_API_PATH = `/api/leads/${MOCK_LEAD_ID}`
 /** Token in URL triggert dezelfde fetch als productie (`?token=`); waarde wordt door de mock genegeerd. */
 const MOCK_URL_TOKEN = 'e2e-mock-token'
-
-/** Minimaal geldige `roiResult` volgens `parseStoredRoi` (client + server). */
-const validRoiResult = {
-  geschatVerbruikKwh: 3500,
-  aantalPanelen: 12,
-  productieKwh: 4200,
-  eigenGebruikPct: 45,
-  scenarioNu: {
-    naam: 'Huidige situatie',
-    beschrijving: 'Test',
-    besparingJaarEur: 850,
-    investeringEur: 11000,
-    terugverdientijdJaar: 12,
-  },
-  scenarioMetBatterij: {
-    naam: 'Met batterij',
-    beschrijving: 'Test',
-    besparingJaarEur: 1200,
-    investeringEur: 22000,
-    terugverdientijdJaar: 18,
-  },
-  scenarioWachten: {
-    naam: 'Wachten',
-    beschrijving: 'Test',
-    besparingJaarEur: 200,
-    investeringEur: 0,
-    terugverdientijdJaar: 99,
-  },
-  shockEffect2027: {
-    jaarlijksVerlies: 240,
-    cumulatiefVerlies5Jaar: 1200,
-    maandelijksVerlies: 20,
-    boodschap: 'Einde saldering treft uw opbrengst.',
-  },
-  aanbeveling: 'panelen' as const,
-  aanbevelingTekst: 'Testadvies voor Playwright.',
-  isdeSchatting: { bedragEur: 0, apparaatType: '—', vermogenKwp: 0 },
-}
 
 test.describe('Email leadId rapport-hydratie', () => {
   test.beforeEach(async ({ page }) => {
@@ -60,6 +30,15 @@ test.describe('Email leadId rapport-hydratie', () => {
 
   test('?leadId= laadt mock-API en toont volledig rapport (non-zero)', async ({ page }) => {
     test.setTimeout(60_000)
+    const captured: unknown[][] = []
+    await page.exposeFunction('__captureGtag', (...args: unknown[]) => {
+      captured.push(args)
+    })
+    await page.addInitScript(() => {
+      window.gtag = (...args: unknown[]) => {
+        window.__captureGtag(...args)
+      }
+    })
     await page.route(
       (url: URL) => url.pathname === MOCK_LEAD_API_PATH,
       async route => {
@@ -68,22 +47,7 @@ test.describe('Email leadId rapport-hydratie', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             leadId: MOCK_LEAD_ID,
-            adres: 'Speelstraat 99, 1234 AB Mockstad',
-            wijk: '',
-            stad: '',
-            bagData: null,
-            netcongestie: null,
-            healthScore: null,
-            roiResult: validRoiResult,
-            meterkastAnalyse: null,
-            plaatsingsAnalyse: null,
-            omvormerAnalyse: null,
-            isEigenaar: true,
-            heeftPanelen: false,
-            huidigePanelenAantal: null,
-            dakrichting: null,
-            verbruik_bron: 'schatting',
-            huishouden_grootte: null,
+            report: expectedReportFixture,
           }),
         })
       },
@@ -94,11 +58,56 @@ test.describe('Email leadId rapport-hydratie', () => {
       { waitUntil: 'domcontentloaded', timeout: 45_000 },
     )
 
-    await expect(page.locator('text=Uw SaldeerScan rapport')).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('text=Speelstraat 99')).toBeVisible({ timeout: 10_000 })
-    await expect(page.locator('text=Jaarlijks saldeer-verlies na 1 januari 2027')).toBeVisible()
-    await expect(page.locator('div.text-5xl.font-mono').first()).toContainText('240', { timeout: 12_000 })
+    await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('report-annual-loss')).toContainText('400')
     await expect(page.locator('text=Vorige sessie gevonden')).toHaveCount(0)
+
+    await expect.poll(() => captured.filter(event =>
+      event[0] === 'event' && event[1] === 'report_reopened',
+    ).length).toBe(1)
+    const reopened = captured.find(event =>
+      event[0] === 'event' && event[1] === 'report_reopened',
+    )!
+    const payload = reopened[2] as Record<string, unknown>
+    expect(payload.report_version).toBe(1)
+    expect(Object.keys(payload).sort()).toEqual(['email_status', 'report_version'])
+    expect(JSON.stringify(payload)).not.toContain(MOCK_LEAD_ID)
+    expect(JSON.stringify(payload)).not.toContain(MOCK_URL_TOKEN)
+  })
+
+  test('?leadId= zonder token stabiliseert en claimt bij failure geen verzending', async ({ page }) => {
+    let requestCount = 0
+    await page.route(
+      (url: URL) => url.pathname === MOCK_LEAD_API_PATH,
+      async route => {
+        requestCount += 1
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            leadId: MOCK_LEAD_ID,
+            report: {
+              ...expectedReportFixture,
+              delivery: { emailStatus: 'failed' },
+            },
+          }),
+        })
+      },
+    )
+
+    await page.goto(`/check?leadId=${MOCK_LEAD_ID}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 45_000,
+    })
+
+    await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/e-mail kon niet worden verstuurd/i)).toBeVisible()
+    await expect(page.getByText(/verstuurd naar uw e-mail/i)).toHaveCount(0)
+    await page.waitForTimeout(750)
+    const settledRequestCount = requestCount
+    expect(settledRequestCount).toBeLessThanOrEqual(2)
+    await page.waitForTimeout(750)
+    expect(requestCount).toBe(settledRequestCount)
   })
 
   test('?leadId= bij 404 toont fouttekst, geen dashboard', async ({ page }) => {

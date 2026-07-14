@@ -71,6 +71,7 @@ export function decodeStoredFunnel(
       ...base,
       ...candidateState,
       roiInput: candidateState.roiInput ?? null,
+      reportModel: candidateState.reportModel ?? null,
       leadReportToken: candidateState.leadReportToken ?? null,
       funnelSessionId: candidateState.funnelSessionId ?? null,
       attribution: candidateState.attribution ?? {
