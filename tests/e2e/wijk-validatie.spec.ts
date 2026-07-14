@@ -89,8 +89,7 @@ for (const url of WIJK_URLS) {
     }, NET_BADGE_TEXTS)
     expect(hasNetBadge).toBe(true)
 
-    const ribbonCards = page.locator('text=Grid Status')
-    await expect(ribbonCards.first()).toBeVisible()
+    await expect(page.getByText('Energiescore', { exact: true }).first()).toBeVisible()
   })
 }
 
@@ -121,7 +120,7 @@ test('Straat pagina (via populaire straten op wijk)', async ({ page }) => {
     const breadcrumb = page.locator('nav').filter({ hasText: 'Home' }).first()
     await expect(breadcrumb).toBeVisible({ timeout: 5000 })
 
-    await expect(page.locator('a:has-text("Check uw woning")').first()).toBeVisible()
+    await expect(page.getByTestId('pseo-conversion-entry')).toBeVisible()
     return
   }
 

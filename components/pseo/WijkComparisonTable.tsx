@@ -1,8 +1,5 @@
 import { rankUrgentWijken, type RankedUrgentWijk, type WijkStadRow } from '@/lib/pseo-variation'
 
-const G = '#00aa65'
-const AMBER = '#f59e0b'
-
 export type WijkComparisonRow = {
   wijkSlug: string
   wijkDisplay: string
@@ -73,18 +70,18 @@ export function WijkComparisonTable({
   return (
     <div className={className}>
       <div className="mb-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-widest" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-trust">
           {title}
         </p>
         {stadContextLabel && (
-          <p className="text-sm text-white/50" style={{ fontFamily: 'var(--font-sans)' }}>
+          <p className="text-base text-white/55">
             {stadContextLabel}
           </p>
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-md">
-        <table className="w-full min-w-[320px] border-collapse text-left text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-evergreen-900/70">
+        <table className="w-full min-w-[320px] border-collapse text-left text-base sm:text-sm">
           <thead>
             <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-white/40">
               <th className="px-4 py-3 font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
@@ -104,13 +101,12 @@ export function WijkComparisonTable({
                 <td className="px-4 py-3">
                   <a
                     href={row.href}
-                    className="font-bold text-white transition-colors hover:text-amber-300"
-                    style={{ fontFamily: 'var(--font-heading)' }}
+                    className="inline-flex min-h-11 items-center break-words font-heading font-bold text-white transition-colors hover:text-action"
                   >
                     {row.wijkDisplay}
                   </a>
                 </td>
-                <td className="px-4 py-3 font-mono" style={{ color: AMBER }}>
+                <td className="px-4 py-3 font-mono text-action">
                   {row.score}
                   <span className="text-white/30">/100</span>
                 </td>

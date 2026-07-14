@@ -83,9 +83,10 @@ test('straatroute behoudt conversie, kruimelpad en FAQ-filtering', async ({ page
     if (streetResponse?.status() === 404) continue
 
     await expect(page.getByTestId('pseo-conversion-entry')).toBeVisible()
-    await expect(page.locator('script[type="application/ld+json"]')).not.toContainText(
-      '"@type":"FAQPage"',
-    )
+    const schema = (
+      await page.locator('script[type="application/ld+json"]').allTextContents()
+    ).join('\n')
+    expect(schema).not.toContain('"@type":"FAQPage"')
     await expect(page.getByRole('navigation', { name: 'Kruimelpad' })).toBeVisible()
     return
   }
