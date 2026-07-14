@@ -7,7 +7,7 @@ export default function NotFound() {
   return (
     <PageShell className="flex flex-col">
       <SiteHeader />
-      <main className="grid flex-1 place-items-center px-4 py-16">
+      <main id="main-content" className="grid flex-1 place-items-center px-4 py-16">
         <div className="max-w-lg rounded-3xl border border-ink/10 bg-paper p-8 text-center shadow-sm">
           <p className="text-sm font-semibold text-trust-dark">404</p>
           <h1 className="mt-2 text-3xl font-bold text-ink">Deze pagina bestaat niet</h1>

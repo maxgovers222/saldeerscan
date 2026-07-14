@@ -55,7 +55,7 @@ export default function PDFDownloadButtonInner({ report }: { report: NormalizedR
       style={{ fontFamily: 'var(--font-heading)' }}
     >
       {error ? (
-        <span className="text-sm">Fout bij genereren - probeer opnieuw</span>
+        <span className="text-sm" aria-live="polite">Fout bij genereren - probeer opnieuw</span>
       ) : loading ? (
         <>
           <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />

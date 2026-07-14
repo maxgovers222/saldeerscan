@@ -33,7 +33,7 @@ export function SiteHeader({
             <BrandMark className={compact ? 'size-8 rounded-lg' : undefined} />
             <span className="min-w-0">
               <span className="block truncate font-heading text-base font-bold tracking-tight sm:text-lg">
-                SaldeerScan<span className="text-trust">.nl</span>
+                SaldeerScan<span className={dark ? 'text-trust' : 'text-trust-dark'}>.nl</span>
               </span>
               {contextLabel && (
                 <span className={dark ? 'block truncate text-xs text-white/55' : 'block truncate text-xs text-ink-muted'}>

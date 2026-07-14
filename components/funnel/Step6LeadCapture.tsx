@@ -6,7 +6,8 @@ import type { FunnelState, FunnelAction } from './types'
 import { StepHeader } from './StepHeader'
 import { PDFDownloadButton } from './PDFDownloadButton'
 import { ResultsDashboard } from './ResultsDashboard'
-import type { NormalizedReport } from '@/lib/report-model'
+import type { NormalizedReport, ReportEmailStatus } from '@/lib/report-model'
+import { leadQualitySegment, type FunnelTracker } from '@/lib/analytics'
 
 function extractStad(adres?: string): string {
   if (!adres) return 'Nederland'
@@ -36,6 +37,7 @@ function extractProvincie(postcodePrefix: string): string | null {
 interface Step6LeadCaptureProps {
   state: FunnelState
   dispatch: Dispatch<FunnelAction>
+  trackFunnel: FunnelTracker
 }
 
 const COUNTRIES = [
@@ -112,7 +114,7 @@ function SuccessState({ state }: { state: FunnelState }) {
 
 const inputBase = 'w-full min-w-0 bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-sans text-base sm:text-sm transition-colors focus:outline-none amber-glow'
 
-export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
+export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCaptureProps) {
   const router = useRouter()
   const step2PanelenComplete =
     state.heeft_panelen !== null
@@ -183,6 +185,11 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
       const huidigePayload = heeftPayload === true
         ? (panelenAntwoordLocked ? state.huidige_panelen_aantal : Number(form.huidigePanelenAantal || 0))
         : null
+      const segment = leadQualitySegment({
+        isEigenaar: form.isEigenaar,
+        heeftPanelen: heeftPayload,
+      })
+      trackFunnel('lead_submit_started', { lead_quality_segment: segment })
 
       const res = await fetch('/api/leads', {
         method: 'POST',
@@ -216,6 +223,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
         }),
       })
       if (!res.ok) {
+        trackFunnel('lead_submit_failed', { failure_type: `http_${res.status}` })
         const err = await res.json().catch(() => ({}))
         setErrors({ submit: (err as { error?: string }).error ?? 'Er is een fout opgetreden. Probeer opnieuw.' })
         return
@@ -223,11 +231,16 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
       const data = await res.json() as {
         leadId: string
         reportToken?: string | null
+        emailStatus?: ReportEmailStatus
         report?: NormalizedReport
       }
       if (!data.report || data.report.version !== 1) {
         throw new Error('Rapport kon niet betrouwbaar worden opgebouwd. Probeer het later opnieuw.')
       }
+      trackFunnel('lead_submit_succeeded', {
+        lead_quality_segment: segment,
+        email_status: data.emailStatus ?? data.report.delivery.emailStatus,
+      })
       dispatch({ type: 'SET_REPORT_MODEL', report: data.report })
       if (typeof data.reportToken === 'string' && data.reportToken.length > 0) {
         dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: data.reportToken })
@@ -242,6 +255,7 @@ export function Step6LeadCapture({ state, dispatch }: Step6LeadCaptureProps) {
       router.replace(`/check${reportQs}`, { scroll: false })
       setSubmitted(true)
     } catch (err) {
+      trackFunnel('lead_submit_failed', { failure_type: 'network' })
       setSubmitError(err instanceof Error ? err.message : 'Indienen mislukt. Probeer het opnieuw.')
     } finally {
       setLoading(false)

@@ -223,9 +223,9 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                 </h3>
               </div>
               <div className="bg-red-950/50 border border-red-700/60 rounded-xl px-4 py-3 shrink-0 text-right">
-                <p className="text-xs font-semibold uppercase tracking-widest text-red-400/70 mb-0.5" style={{ fontFamily: 'var(--font-heading)' }}>Verlies vanaf 2027</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-red-300 mb-0.5" style={{ fontFamily: 'var(--font-heading)' }}>Verlies vanaf 2027</p>
                 <p className="text-xl font-extrabold text-red-400" style={{ fontFamily: 'var(--font-heading)' }}>
-                  −€{verlies}<span className="text-xs font-normal text-red-400/60">/jaar</span>
+                  −€{verlies}<span className="text-xs font-normal text-red-300">/jaar</span>
                 </p>
               </div>
             </div>
@@ -322,7 +322,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                     <div key={label} className="flex items-start justify-between gap-2 pb-3 border-b border-white/5 last:border-0 last:pb-0">
                       <div>
                         <p className="text-xs font-semibold text-white/50">{label}</p>
-                        <p className="text-xs text-white/25">{sub}</p>
+                        <p className="text-xs text-white/65">{sub}</p>
                       </div>
                       <span className={`text-sm font-extrabold shrink-0 ${danger ? 'text-red-400' : 'text-amber-400'}`}
                         style={{ fontFamily: 'var(--font-heading)' }}>
@@ -384,7 +384,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
           >
             Ga naar de persoonlijke adrescheck →
           </WijkCtaButton>
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-5 text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-5 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
             <span className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               BAG-data
@@ -475,7 +475,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                         </span>
                       )}
                     </div>
-                    <p className="text-xs font-mono mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    <p className="text-xs font-mono mt-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
                       Score {ws}/100 {w.gem_bouwjaar ? `· ${w.gem_bouwjaar}` : ''}
                     </p>
                   </a>
@@ -489,7 +489,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
       {/* ── Kennisbank interne linking ──────────────────────────── */}
       <section className="py-10 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="max-w-5xl mx-auto">
-          <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">Lees ook in de Kennisbank</p>
+          <p className="text-slate-400 text-xs uppercase tracking-wider mb-4">Lees ook in de Kennisbank</p>
           <div className="flex flex-wrap gap-3">
             {(page.netcongestieStatus === 'ROOD'
               ? [

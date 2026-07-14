@@ -22,23 +22,19 @@ test.describe('Funnel Step 1 — Adres validatie', () => {
     await expect(page.getByRole('progressbar', { name: /Stap 1 van 6/ })).toBeVisible({ timeout: 8000 })
   })
 
-  test('Countdown timer zichtbaar op homepage', async ({ page }) => {
+  test('Homepage toont de 2027-urgentie zonder client-countdown', async ({ page }) => {
     await page.goto('/')
 
-    await expect(page.locator('text=Salderingsregeling eindigt over')).toBeVisible()
-    await expect(page.locator('text=Dagen')).toBeVisible()
-
-    // Timer geeft getallen terug (niet --)
-    await page.waitForTimeout(1500) // wacht op client hydration
-    const timerText = await page.locator('text=Dagen').first().locator('..').innerText()
-    expect(timerText).toMatch(/\d+/)
+    await expect(page.getByText('Persoonlijk energieadvies voor 2027')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Wat kost stoppen met salderen u?' })).toBeVisible()
+    await expect(page.getByText('Salderingsregeling eindigt over')).toHaveCount(0)
   })
 
   test('Homepage navigeert naar /check via CTA knop', async ({ page }) => {
     await page.goto('/')
 
-    // Klik op de "Gratis analyseren" nav-knop — directe <a href="/check">
-    const ctaBtn = page.locator('a[href="/check"]:has-text("Gratis analyseren")').first()
+    // Klik op de gedeelde header-CTA naar /check.
+    const ctaBtn = page.getByRole('link', { name: 'Gratis check' })
     await expect(ctaBtn).toBeVisible()
     await ctaBtn.click()
 

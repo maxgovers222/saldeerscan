@@ -15,7 +15,7 @@ export function PseoPageShell({
   return (
     <PageShell surface="evergreen" className="flex flex-col">
       <SiteHeader tone="dark" contextLabel={headerContext} ctaHref={ctaHref} />
-      <main className="flex-1">{children}</main>
+      <main id="main-content" className="flex-1">{children}</main>
       <SiteFooter />
     </PageShell>
   )

@@ -7,15 +7,11 @@ test.describe('Funnel URL handshake', () => {
     // Pagina laadt zonder crash
     await expect(page).toHaveURL(/\/check/)
 
-    // Header aanwezig
-    await expect(page.locator('text=SaldeerScan')).toBeVisible()
-
-    // AnalysisLoading of Step 1 content zichtbaar
-    // (bij aanwezige wijk param triggert auto-search)
-    const funnelVisible = await page.locator('text=Adres').first().isVisible().catch(() => false)
-      || await page.locator('text=Analyseren').first().isVisible().catch(() => false)
-      || await page.locator('text=leidsche').first().isVisible({ timeout: 5000 }).catch(() => false)
-    expect(funnelVisible).toBe(true)
+    await expect(page.getByRole('link', { name: 'SaldeerScan.nl', exact: true })).toBeVisible()
+    await expect.poll(() => page.evaluate(() => {
+      const stored = JSON.parse(localStorage.getItem('wep_funnel_state') ?? '{}')
+      return [stored.state?.wijk, stored.state?.stad]
+    })).toEqual(['leidsche-rijn', 'utrecht'])
   })
 
   test('Countdown timer zichtbaar op /check', async ({ page }) => {
@@ -29,11 +25,8 @@ test.describe('Funnel URL handshake', () => {
   test('?adres param prefilled op /check', async ({ page }) => {
     await page.goto('/check?adres=Keizersgracht+1+Amsterdam')
 
-    // Pagina laadt
-    await expect(page.locator('text=SaldeerScan')).toBeVisible()
-
-    // Funnel container aanwezig
-    const container = page.locator('text=Saldeercheck').first()
-    await expect(container).toBeVisible()
+    await expect(page.getByRole('link', { name: 'SaldeerScan.nl', exact: true })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Uw adres' }))
+      .toHaveValue('Keizersgracht 1 Amsterdam')
   })
 })

@@ -1,6 +1,7 @@
 'use client'
 
-import { useReducer, useEffect, useMemo, useState, useRef, type Dispatch } from 'react'
+import { useReducer, useEffect, useMemo, useState, useRef, useCallback, type Dispatch } from 'react'
+import dynamic from 'next/dynamic'
 import type {
   FunnelState,
   FunnelAction,
@@ -12,13 +13,19 @@ import {
   makeInitialState,
   mergeSavedState,
   parseFunnelUrlContext,
+  visualStageForStep,
 } from './funnel-state'
 import {
   clearStoredFunnel,
   loadStoredFunnel,
   saveStoredFunnel,
 } from './funnel-storage'
-import { trackEvent } from '@/lib/analytics'
+import {
+  buildFunnelEventParams,
+  trackEvent,
+  type FunnelEventExtra,
+  type FunnelEventName,
+} from '@/lib/analytics'
 import { parseStoredRoi } from '@/lib/roi-result-guard'
 import {
   REPORT_MODEL_VERSION,
@@ -27,12 +34,37 @@ import {
 import { FunnelProgress } from './FunnelProgress'
 import { Step1Adres } from './Step1Adres'
 import { Step2ROI } from './Step2ROI'
-import { Step3Meterkast } from './Step3Meterkast'
-import { Step4Plaatsing } from './Step4Plaatsing'
-import { Step5Omvormer } from './Step5Omvormer'
-import { Step6LeadCapture } from './Step6LeadCapture'
 import { PDFDownloadButton } from './PDFDownloadButton'
-import { ResultsDashboard } from './ResultsDashboard'
+
+function StageSkeleton({ label }: { label: string }) {
+  return (
+    <div className="p-8 text-center" role="status" aria-live="polite">
+      <div className="mx-auto mb-3 size-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" aria-hidden />
+      <p className="text-sm font-mono text-amber-400">{label}...</p>
+    </div>
+  )
+}
+
+const Step3Meterkast = dynamic(
+  () => import('./Step3Meterkast').then(module => module.Step3Meterkast),
+  { loading: () => <StageSkeleton label="Meterkastscan laden" /> },
+)
+const Step4Plaatsing = dynamic(
+  () => import('./Step4Plaatsing').then(module => module.Step4Plaatsing),
+  { loading: () => <StageSkeleton label="Plaatsingsscan laden" /> },
+)
+const Step5Omvormer = dynamic(
+  () => import('./Step5Omvormer').then(module => module.Step5Omvormer),
+  { loading: () => <StageSkeleton label="Omvormerscan laden" /> },
+)
+const Step6LeadCapture = dynamic(
+  () => import('./Step6LeadCapture').then(module => module.Step6LeadCapture),
+  { loading: () => <StageSkeleton label="Aanvraag laden" /> },
+)
+const ResultsDashboard = dynamic(
+  () => import('./ResultsDashboard').then(module => module.ResultsDashboard),
+  { loading: () => <StageSkeleton label="Rapport laden" /> },
+)
 
 function hydrateLegacyReportDisplay(
   report: NormalizedReport,
@@ -123,11 +155,33 @@ export function FunnelContainer({ urlParams }: {
   const [resumeBannerDismissed, setResumeBannerDismissed] = useState(false)
   const leadIdParam = urlContext.leadId
   const leadReportTokenParam = urlContext.token
+  const visualStage = visualStageForStep(state.step)
+
+  const trackFunnel = useCallback((
+    event: FunnelEventName,
+    extra: FunnelEventExtra = {},
+  ) => {
+    if (!state.funnelSessionId) return
+    trackEvent(event, buildFunnelEventParams({
+      sessionId: state.funnelSessionId,
+      attribution: state.attribution,
+      stage: visualStageForStep(state.step),
+      extra,
+    }))
+  }, [state.funnelSessionId, state.attribution, state.step])
 
   function trackingDispatch(action: FunnelAction) {
     // Only track forward navigation — backward steps are not completions
-    if (action.type === 'SET_STEP' && action.step > state.step) {
-      trackEvent('funnel_step_complete', { step: state.step, next_step: action.step })
+    const currentStage = visualStageForStep(state.step)
+    const nextStage = action.type === 'SET_STEP'
+      ? visualStageForStep(action.step)
+      : currentStage
+    if (
+      action.type === 'SET_STEP'
+      && action.step > state.step
+      && nextStage > currentStage
+    ) {
+      trackFunnel('funnel_stage_completed', { completed_stage: currentStage })
     }
     dispatch(action)
   }
@@ -137,6 +191,33 @@ export function FunnelContainer({ urlParams }: {
     const loaded = loadStoredFunnel()
     if (loaded && urlContext.allowResume) setSavedState(loaded)
   }, [urlContext.allowResume])
+
+  const sessionStartedRef = useRef(false)
+  useEffect(() => {
+    if (state.funnelSessionId || sessionStartedRef.current) return
+    sessionStartedRef.current = true
+    const id = crypto.randomUUID()
+    dispatch({ type: 'SET_FUNNEL_SESSION', id })
+    trackEvent('funnel_session_started', buildFunnelEventParams({
+      sessionId: id,
+      attribution: state.attribution,
+      stage: visualStageForStep(state.step),
+    }))
+  }, [state.funnelSessionId, state.attribution, state.step])
+
+  const lastTrackedStageRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (
+      !state.funnelSessionId
+      || lastTrackedStageRef.current === visualStage
+    ) return
+    lastTrackedStageRef.current = visualStage
+    trackEvent('funnel_stage_viewed', buildFunnelEventParams({
+      sessionId: state.funnelSessionId,
+      attribution: state.attribution,
+      stage: visualStage,
+    }))
+  }, [state.funnelSessionId, state.attribution, visualStage])
 
   // Detect ?leadId= URL param — direct link vanuit bevestigingsmail naar ResultsDashboard
   useEffect(() => {
@@ -318,23 +399,26 @@ export function FunnelContainer({ urlParams }: {
   }, [state, savedState, resumeBannerDismissed])
 
   // Track funnel abandonment on page unload (only if no lead submitted yet)
+  const abandonmentSentRef = useRef(false)
   useEffect(() => {
-    const handleUnload = () => {
-      if (!state.leadId) {
-        trackEvent('funnel_abandoned', {
-          step: state.step,
-          max_step_reached: state.step,
-        })
+    const handlePageHide = (event: PageTransitionEvent) => {
+      if (
+        !event.persisted
+        && !abandonmentSentRef.current
+        && !state.leadId
+        && state.funnelSessionId
+      ) {
+        abandonmentSentRef.current = true
+        trackEvent('funnel_abandoned', buildFunnelEventParams({
+          sessionId: state.funnelSessionId,
+          attribution: state.attribution,
+          stage: visualStageForStep(state.step),
+        }))
       }
     }
-    window.addEventListener('beforeunload', handleUnload)
-    return () => window.removeEventListener('beforeunload', handleUnload)
-  }, [state.step, state.leadId])
-
-  // Track lead submission
-  useEffect(() => {
-    if (state.leadId) trackEvent('lead_submitted', { lead_id: state.leadId })
-  }, [state.leadId])
+    window.addEventListener('pagehide', handlePageHide)
+    return () => window.removeEventListener('pagehide', handlePageHide)
+  }, [state.leadId, state.funnelSessionId, state.attribution, state.step])
 
   // Scroll to top on forward navigation only
   const prevStepRef = useRef(state.step)
@@ -415,12 +499,12 @@ export function FunnelContainer({ urlParams }: {
       {state.leadId || reportReady ? (
         <div className="overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-[0_8px_32px_rgba(0,0,0,0.18)] min-w-0">
           {state.loading ? (
-            <div className="p-10 flex flex-col items-center justify-center gap-4 text-center">
+            <div className="p-10 flex flex-col items-center justify-center gap-4 text-center" role="status" aria-live="polite">
               <div className="w-10 h-10 border-2 border-action border-t-transparent rounded-full animate-spin" aria-hidden />
               <p className="text-sm font-mono text-ink-muted">Rapport laden…</p>
             </div>
           ) : !reportReady ? (
-            <div className="p-8 space-y-4 text-center">
+            <div className="p-8 space-y-4 text-center" role="alert">
               <p className="text-sm font-sans text-ink-muted leading-relaxed">
                 {state.error ?? 'Onvoldoende data om het rapport te tonen. Het opgeslagen rapport ontbreekt of is ongeldig.'}
               </p>
@@ -446,12 +530,12 @@ export function FunnelContainer({ urlParams }: {
         <div className="md:max-w-xl md:mx-auto min-w-0">
           <FunnelProgress currentStep={state.step} />
           <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden min-w-0">
-            {state.step === 1 && <Step1Adres state={state} dispatch={trackingDispatch} />}
+            {state.step === 1 && <Step1Adres state={state} dispatch={trackingDispatch} trackFunnel={trackFunnel} />}
             {state.step === 2 && <Step2ROI state={state} dispatch={trackingDispatch} />}
-            {state.step === 3 && <Step3Meterkast state={state} dispatch={trackingDispatch} />}
-            {state.step === 4 && <Step4Plaatsing state={state} dispatch={trackingDispatch} />}
-            {state.step === 5 && <Step5Omvormer state={state} dispatch={trackingDispatch} />}
-            {state.step === 6 && <Step6LeadCapture state={state} dispatch={trackingDispatch} />}
+            {state.step === 3 && <Step3Meterkast state={state} dispatch={trackingDispatch} trackFunnel={trackFunnel} />}
+            {state.step === 4 && <Step4Plaatsing state={state} dispatch={trackingDispatch} trackFunnel={trackFunnel} />}
+            {state.step === 5 && <Step5Omvormer state={state} dispatch={trackingDispatch} trackFunnel={trackFunnel} />}
+            {state.step === 6 && <Step6LeadCapture state={state} dispatch={trackingDispatch} trackFunnel={trackFunnel} />}
           </div>
         </div>
       )}

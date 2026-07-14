@@ -917,7 +917,7 @@ test.describe('Stap 6 — Lead formulier', () => {
   })
 
   test('link naar privacyverklaring aanwezig', async ({ page }) => {
-    await expect(page.locator('a[href="/privacy"]')).toBeVisible({ timeout: 6000 })
+    await expect(page.locator('a[href="/privacy"]').first()).toBeVisible({ timeout: 6000 })
   })
 
   // ── Validatie ──
