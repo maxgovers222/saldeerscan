@@ -189,7 +189,7 @@ test('BAG success and failure include only coarse location context', async ({ pa
 
   shouldSucceed = true
   await page.getByRole('button', { name: 'Adres Analyseren' }).click()
-  await expect(page.getByText('Scan Resultaat')).toBeVisible()
+  await expect(page.getByText('Uw woning is gevonden')).toBeVisible()
   await expect.poll(() => eventCalls(calls, 'bag_match_succeeded').length).toBe(1)
 
   const successParams = eventCalls(calls, 'bag_match_succeeded')[0][2]
@@ -222,7 +222,7 @@ test('technical complete and individual skip events preserve the four-stage cont
   await page.getByRole('button', { name: /Overslaan/ }).click()
   await page.getByRole('button', { name: /Overslaan/ }).click()
 
-  await expect(page.getByText('Stap 6 — Uw rapport')).toBeVisible()
+  await expect(page.getByRole('progressbar', { name: /Stadium 4 van 4: Ontvang uw rapport/ })).toBeVisible()
   expect(eventCalls(calls, 'technical_scan_completed')[0][2]).toMatchObject({
     scan_type: 'Meterkast',
     completion: 'manual',

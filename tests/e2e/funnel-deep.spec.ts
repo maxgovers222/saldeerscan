@@ -269,9 +269,9 @@ async function gotoStep(page: Page, step: number, stateOverrides: Record<string,
 const STEP_TITLE: Record<number, string> = {
   1: 'Voer uw adres in',
   2: 'Uw besparingsanalyse',
-  3: 'Meterkast analyse',
-  4: 'Locatie beoordeling',
-  5: 'Omvormer compatibiliteit',
+  3: 'Meterkast analyseren',
+  4: 'Plaatsingsplek beoordelen',
+  5: 'Omvormer controleren',
   6: 'gratis PDF-rapport',
 }
 
@@ -318,7 +318,7 @@ test.describe('Stap 1 — Adresverificatie', () => {
     // Dropdowncontainer verschijnt
     await page.locator('text=Prinsengracht 263').first().waitFor({ timeout: 5000 })
     // Aantal buttons in dropdown ≤ 8
-    const items = page.locator('[class*="bg-slate-900"] [class*="border-b"] button, [class*="bg-slate-900"] button[type="button"]')
+    const items = page.getByTestId('address-suggestions').getByRole('button')
     const cnt = await items.count()
     expect(cnt).toBeLessThanOrEqual(8)
   })
@@ -342,13 +342,12 @@ test.describe('Stap 1 — Adresverificatie', () => {
     await expect(page.locator('button:has-text("Adres Analyseren")').first()).toBeEnabled({ timeout: 3000 })
   })
 
-  test('selecteren van suggestie toont emerald vinkje in input', async ({ page }) => {
+  test('selecteren van suggestie toont groen vinkje in input', async ({ page }) => {
     const input = page.locator('input[placeholder*="Prinsengracht"]').first()
     await input.fill('Pri')
     await page.waitForTimeout(400)
     await page.locator('text=Prinsengracht 263').first().click()
-    // Groene vinkje-div verschijnt naast de input
-    const checkmark = page.locator('.bg-emerald-500\\/80, [class*="emerald-500"]').first()
+    const checkmark = page.getByTestId('address-selected')
     await expect(checkmark).toBeVisible({ timeout: 3000 })
   })
 
@@ -391,13 +390,13 @@ test.describe('Stap 1 — Adresverificatie', () => {
     await expect(page.locator('text=74/100')).toBeVisible({ timeout: 12000 })
   })
 
-  test('na BAG-analyse: "Bekijk besparingsanalyse" navigeert naar stap 2', async ({ page }) => {
+  test('na BAG-analyse: "Bereken mijn 2027-impact" navigeert naar stap 2', async ({ page }) => {
     await page.locator('input[placeholder*="Prinsengracht"]').first().fill('Pri')
     await page.waitForTimeout(400)
     await page.locator('text=Prinsengracht 263').first().click()
     await page.locator('button:has-text("Adres Analyseren")').first().click()
-    await expect(page.locator('text=Bekijk besparingsanalyse')).toBeVisible({ timeout: 12000 })
-    await page.locator('text=Bekijk besparingsanalyse').click()
+    await expect(page.getByRole('button', { name: /Bereken mijn 2027-impact/ })).toBeVisible({ timeout: 12000 })
+    await page.getByRole('button', { name: /Bereken mijn 2027-impact/ }).click()
     await expectStep(page, 2)
   })
 
@@ -484,6 +483,7 @@ test.describe('Stap 1 — Adresverificatie', () => {
 test.describe('Stap 2 — ROI Berekening', () => {
   test.beforeEach(async ({ page }) => {
     await gotoStep(page, 2)
+    await page.locator('summary').filter({ hasText: 'Berekening aanpassen' }).click()
   })
 
   test('toont stap-2 titel "Uw besparingsanalyse"', async ({ page }) => {
@@ -579,9 +579,9 @@ test.describe('Stap 2 — ROI Berekening', () => {
     await expectStep(page, 1)
   })
 
-  test('Volgende-knop navigeert naar stap 3', async ({ page }) => {
-    await expect(page.locator('text=Meterkast scannen →')).toBeVisible({ timeout: 6000 })
-    await page.locator('text=Meterkast scannen →').click()
+  test('"Verfijn mijn advies" navigeert naar stap 3', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Verfijn mijn advies' })).toBeVisible({ timeout: 6000 })
+    await page.getByRole('button', { name: 'Verfijn mijn advies' }).click()
     await expectStep(page, 3)
   })
 
@@ -742,12 +742,12 @@ test.describe('Stap 4 — Plaatsingslocatie', () => {
     await expectStep(page, 5)
   })
 
-  test('na Garage: resultaat toont NEN Compliant + score', async ({ page }) => {
+  test('na Garage: resultaat toont positieve beoordeling + score', async ({ page }) => {
     await page.locator('button:has-text("Geen foto? Kies voorkeurlocatie")').click()
     await page.locator('button:has-text("Garage")').click()
     // Terug om resultaat te zien
     await page.locator('button:has-text("← Terug")').first().click()
-    await expect(page.locator('text=NEN Compliant')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Voldoet aan de belangrijkste aandachtspunten')).toBeVisible({ timeout: 6000 })
     await expect(page.locator('text=Score')).toBeVisible()
   })
 
@@ -814,8 +814,8 @@ test.describe('Stap 5 — Omvormer', () => {
     await expectStep(page, 4)
   })
 
-  test('"Overslaan →" navigeert naar stap 6', async ({ page }) => {
-    await page.locator('button:has-text("Overslaan →")').click()
+  test('"Overslaan en doorgaan naar mijn rapport" navigeert naar stap 6', async ({ page }) => {
+    await page.getByRole('button', { name: 'Overslaan en doorgaan naar mijn rapport' }).click()
     await expectStep(page, 6)
   })
 })
@@ -874,7 +874,7 @@ test.describe('Stap 6 — Lead formulier', () => {
   test('eigenaar-toggle markering bij klik op "Ja, eigenaar"', async ({ page }) => {
     const btn = page.locator('button:has-text("Ja, eigenaar")')
     await btn.click()
-    await expect(btn).toHaveClass(/amber-500\/15/, { timeout: 2000 })
+    await expect(btn).toHaveClass(/bg-trust\/10/, { timeout: 2000 })
   })
 
   test('huishoudensgrootte toggle deselecteert bij tweede klik', async ({ page }) => {
@@ -882,9 +882,9 @@ test.describe('Stap 6 — Lead formulier', () => {
     // Wacht expliciet op visibility voor de klik — voorkomt timing-gerelateerde timeouts
     await expect(btn).toBeVisible({ timeout: 8000 })
     await btn.click()
-    await expect(btn).toHaveClass(/amber-500\/15/, { timeout: 3000 })
+    await expect(btn).toHaveClass(/bg-trust\/10/, { timeout: 3000 })
     await btn.click()
-    await expect(btn).not.toHaveClass(/amber-500\/15/, { timeout: 3000 })
+    await expect(btn).not.toHaveClass(/bg-trust\/10/, { timeout: 3000 })
   })
 
   test('accordion "Wat gebeurt er na uw aanvraag?" klapt open en dicht', async ({ page }) => {
@@ -1389,9 +1389,9 @@ test.describe('Edge cases', () => {
     await expect(page.locator('input[placeholder*="Prinsengracht"]').first()).toBeVisible({ timeout: 15000 })
   })
 
-  test('stap 2 zonder bagData toont waarschuwing "Ga terug naar stap 1"', async ({ page }) => {
+  test('stap 2 zonder bagData toont waarschuwing "Ga terug naar stadium 1"', async ({ page }) => {
     await gotoStep(page, 2, { bagData: null, roiResult: null })
-    await expect(page.locator('text=Ga terug naar stap 1')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Ga terug naar stadium 1 om een adres op te zoeken.')).toBeVisible({ timeout: 6000 })
   })
 
   test('stap 6 zonder roiResult laadt zonder crash', async ({ page }) => {
@@ -1423,14 +1423,14 @@ test.describe('Volledige E2E funnel', () => {
     await page.waitForTimeout(400)
     await page.locator('text=Prinsengracht 263').first().click()
     await page.locator('button:has-text("Adres Analyseren")').first().click()
-    await expect(page.locator('text=Bekijk besparingsanalyse')).toBeVisible({ timeout: 15000 })
-    await page.locator('text=Bekijk besparingsanalyse').click()
+    await expect(page.getByRole('button', { name: /Bereken mijn 2027-impact/ })).toBeVisible({ timeout: 15000 })
+    await page.getByRole('button', { name: /Bereken mijn 2027-impact/ }).click()
 
     // Stap 2 — panelen-vraag verplicht vóór "Volgende"
     await expectStep(page, 2)
     await page.locator('button:has-text("Nee, nog geen panelen")').click()
-    await expect(page.locator('text=Meterkast scannen →')).toBeVisible({ timeout: 10000 })
-    await page.locator('text=Meterkast scannen →').click()
+    await expect(page.getByRole('button', { name: 'Verfijn mijn advies' })).toBeVisible({ timeout: 10000 })
+    await page.getByRole('button', { name: 'Verfijn mijn advies' }).click()
 
     // Stap 3 — handmatig
     await expectStep(page, 3)

@@ -18,8 +18,8 @@ test.describe('Funnel Step 1 — Adres validatie', () => {
     await page.waitForSelector('input[placeholder*="Prinsengracht"]', { timeout: 15000 })
     await page.waitForLoadState('domcontentloaded')
 
-    // FunnelProgress: role="progressbar" + aria-label "Stap 1 van 6" (geen h1 in /check content)
-    await expect(page.getByRole('progressbar', { name: /Stap 1 van 6/ })).toBeVisible({ timeout: 8000 })
+    // FunnelProgress: vier zichtbare klantstadia boven zes interne steps.
+    await expect(page.getByRole('progressbar', { name: /Stadium 1 van 4: Uw woning/ })).toBeVisible({ timeout: 8000 })
   })
 
   test('Homepage toont de 2027-urgentie zonder client-countdown', async ({ page }) => {

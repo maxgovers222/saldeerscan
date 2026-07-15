@@ -3,9 +3,15 @@
 import { useState, useEffect, type Dispatch } from 'react'
 import { useRouter } from 'next/navigation'
 import type { FunnelState, FunnelAction } from './types'
-import { StepHeader } from './StepHeader'
 import { PDFDownloadButton } from './PDFDownloadButton'
 import { ResultsDashboard } from './ResultsDashboard'
+import { FunnelActions, funnelPrimaryButtonClass, funnelSecondaryButtonClass } from './ui/FunnelActions'
+import { FunnelCard } from './ui/FunnelCard'
+import { FunnelChoiceCard } from './ui/FunnelChoiceCard'
+import { FunnelField } from './ui/FunnelField'
+import { FunnelNotice } from './ui/FunnelNotice'
+import { FunnelStageShell } from './ui/FunnelStageShell'
+import { FunnelTrustLine } from './ui/FunnelTrustLine'
 import type { NormalizedReport, ReportEmailStatus } from '@/lib/report-model'
 import { leadQualitySegment, type FunnelTracker } from '@/lib/analytics'
 
@@ -72,28 +78,26 @@ function validatePhone(raw: string, code: CountryCode): boolean {
   return country ? country.regex.test(digits) : digits.length >= 7
 }
 
-const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
-
 function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: number; apparaatType: string; vermogenKwp: number }) {
   if (bedragEur <= 0) return null
   return (
-    <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-4">
-      <div className="text-[10px] font-mono text-amber-400 uppercase tracking-widest mb-2">ISDE Subsidie Schatting</div>
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="font-mono font-bold text-amber-400 text-2xl">€{bedragEur.toLocaleString('nl-NL')}</span>
-        <span className="text-xs font-mono text-white/30">via ISDE-regeling</span>
+    <FunnelCard surface="trust">
+      <p className="text-xs font-semibold uppercase tracking-wider text-trust-dark">ISDE Subsidie Schatting</p>
+      <div className="mt-2 flex flex-wrap items-baseline gap-2">
+        <span className="font-heading text-2xl font-bold text-ink">€{bedragEur.toLocaleString('nl-NL')}</span>
+        <span className="text-xs text-ink-muted">via ISDE-regeling</span>
       </div>
-      <div className="grid grid-cols-2 gap-2 mt-2">
+      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-trust/20 pt-3">
         <div>
-          <div className="text-[10px] font-mono text-white/40">Apparaat</div>
-          <div className="text-sm font-mono text-white/70">{apparaatType}</div>
+          <p className="text-xs text-ink-muted">Apparaat</p>
+          <p className="text-sm font-semibold text-ink">{apparaatType}</p>
         </div>
         <div>
-          <div className="text-[10px] font-mono text-white/40">Vermogen</div>
-          <div className="text-sm font-mono text-white/70">{vermogenKwp} kWp</div>
+          <p className="text-xs text-ink-muted">Vermogen</p>
+          <p className="text-sm font-semibold text-ink">{vermogenKwp} kWp</p>
         </div>
       </div>
-    </div>
+    </FunnelCard>
   )
 }
 
@@ -112,7 +116,11 @@ function SuccessState({ state }: { state: FunnelState }) {
   )
 }
 
-const inputBase = 'w-full min-w-0 bg-slate-900/60 border rounded-lg px-4 py-3 text-white placeholder:text-white/30 font-sans text-base sm:text-sm transition-colors focus:outline-none amber-glow'
+const inputBase = [
+  'w-full min-w-0 rounded-xl border bg-paper px-4 py-3 text-base text-ink placeholder:text-ink-muted/60 sm:text-sm',
+  'transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-trust/35',
+  'disabled:cursor-not-allowed disabled:bg-mist disabled:text-ink-muted',
+].join(' ')
 
 export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCaptureProps) {
   const router = useRouter()
@@ -268,377 +276,398 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
   const regio = state.wijk || (state.bagData ? state.adres.split(',').pop()?.trim() : null) || 'uw regio'
 
   return (
-    <div className="p-6 space-y-6">
-      <StepHeader stap="Stap 6 — Uw rapport" title="Ontvang uw gratis PDF-rapport" subtitle="Vul uw gegevens in — wij sturen het rapport direct naar uw e-mail" />
-
-      {isde && <IsdeSummaryCard {...isde} />}
-
-      {/* Floating report preview card */}
-      <div className="bg-slate-900/40 border border-white/10 rounded-2xl p-5">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-amber-400 uppercase tracking-widest mb-3">
-          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-            <path d="M5.5 5h5M5.5 7.5h5M5.5 10h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
-          Dit staat in uw PDF-rapport
-        </div>
-        <div className="space-y-1.5 mb-3">
-          {[
-            { label: 'ROI-berekening', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}/jaar` : '—', done: !!state.roiResult },
-            { label: 'ISDE subsidie check', value: isde ? `€${isde.bedragEur.toLocaleString('nl-NL')}` : '—', done: !!isde },
-            { label: 'Netcongestie analyse', value: state.netcongestie?.status ?? '—', done: !!state.netcongestie },
-            { label: 'Installateur advies', value: 'Na uw aanvraag', done: true },
-            { label: '2027 urgentie tijdlijn', value: 'Inbegrepen', done: true },
-          ].map(({ label, value, done }) => (
-            <div key={label} className="flex items-center justify-between text-xs font-mono">
-              <span className="flex items-center gap-1.5 text-white/50">
-                {done ? (
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-emerald-400"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                ) : (
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" className="text-white/20"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                )}
-                {label}
-              </span>
-              <span className="text-white/70 font-semibold">{value}</span>
+    <FunnelStageShell
+      eyebrow="Stadium 4 van 4 · Ontvang uw rapport"
+      title="Ontvang uw gratis PDF-rapport"
+      description="Controleer uw samenvatting en vul uw gegevens in. Na indienen opent uw persoonlijke rapport direct; de e-mailbezorgstatus wordt apart bevestigd."
+    >
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]">
+        <div className="min-w-0 space-y-4">
+          <FunnelCard surface="trust" className="overflow-hidden">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-trust-dark">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M5.5 5h5M5.5 7.5h5M5.5 10h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+              Dit staat in uw PDF-rapport
             </div>
-          ))}
-        </div>
-        {state.adres && (
-          <div className="pt-2 border-t border-white/10">
-            <div className="text-[10px] font-mono text-white/40 mb-0.5">Adres</div>
-            <div className="text-xs font-mono text-white/60 truncate">{state.adres}</div>
-          </div>
-        )}
-        {state.healthScore && (
-          <div className="flex gap-4 mt-2">
-            <div>
-              <div className="text-[10px] font-mono text-white/40">Score</div>
-              <div className="text-sm font-mono font-bold text-amber-400">{state.healthScore.score}/100</div>
-            </div>
+
             {state.roiResult && (
-              <div>
-                <div className="text-[10px] font-mono text-white/40">Besparing/jaar</div>
-                <div className="text-sm font-mono font-bold text-emerald-400">€{state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}</div>
+              <div className="mt-4 rounded-xl border border-trust/20 bg-paper p-4">
+                <p className="text-xs text-ink-muted">Berekende besparingsindicatie</p>
+                <p className="mt-1 font-heading text-2xl font-bold text-ink">
+                  €{state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}
+                  <span className="ml-1 text-sm font-semibold text-ink-muted">per jaar</span>
+                </p>
               </div>
             )}
-          </div>
-        )}
-      </div>
 
-      {/* Trust signals */}
-      <div className="bg-slate-900/40 border border-white/8 rounded-xl p-3">
-        <div className="grid grid-cols-3 gap-2">
-          {/* Beveiligd */}
-          <div className="flex flex-col items-center text-center gap-1 py-2">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6l-8-4z" stroke="#00aa65" strokeWidth="1.5" strokeLinejoin="round"/>
-              <path d="M9 12l2 2 4-4" stroke="#00aa65" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="text-[11px] font-bold text-white/80">Beveiligd</span>
-            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">SSL · AVG</span>
-          </div>
-          {/* Partners / regio */}
-          <div className="flex flex-col items-center text-center gap-1 py-2 border-x border-white/8">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="9" cy="7" r="3" stroke="#f59e0b" strokeWidth="1.5"/>
-              <circle cx="15" cy="7" r="3" stroke="#f59e0b" strokeWidth="1.5"/>
-              <path d="M3 19c0-3.314 2.686-6 6-6h6c3.314 0 6 2.686 6 6" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <span className="text-[11px] font-bold text-amber-400">Lokale installateurs</span>
-            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">o.b.v. uw aanvraag</span>
-          </div>
-          {/* Geen koopplicht */}
-          <div className="flex flex-col items-center text-center gap-1 py-2">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" stroke="#f59e0b" strokeWidth="1.5"/>
-              <path d="M12 7v5l3 3" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="text-[11px] font-bold text-white/80">Vrijblijvend</span>
-            <span className="text-[9px] font-mono text-white/35 uppercase tracking-wide">geen koopplicht</span>
-          </div>
-        </div>
-      </div>
+            <ul className="mt-4 space-y-2.5">
+              {[
+                { label: 'ROI-berekening', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}/jaar` : '—', done: !!state.roiResult },
+                { label: 'ISDE subsidie check', value: isde ? `€${isde.bedragEur.toLocaleString('nl-NL')}` : '—', done: !!isde },
+                { label: 'Netcongestie analyse', value: state.netcongestie?.status ?? '—', done: !!state.netcongestie },
+                { label: 'Installateur advies', value: 'Na uw aanvraag', done: true },
+                { label: '2027 urgentie tijdlijn', value: 'Inbegrepen', done: true },
+              ].map(({ label, value, done }) => (
+                <li key={label} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-xs">
+                  <span className="flex min-w-0 items-start gap-2 text-ink-muted">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      className={done ? 'mt-0.5 shrink-0 text-trust-dark' : 'mt-0.5 shrink-0 text-ink-muted/35'}
+                      aria-hidden="true"
+                    >
+                      <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {label}
+                  </span>
+                  <span className="max-w-32 text-right font-semibold text-ink">{value}</span>
+                </li>
+              ))}
+            </ul>
 
-      {/* Kwalificatievragen */}
-      <div className="space-y-3">
-        <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-sans text-white/50 uppercase tracking-widest">Bent u eigenaar van de woning?</p>
-          <div className="grid grid-cols-2 gap-2">
-            {([true, false] as const).map((val) => (
-              <button
-                key={String(val)}
-                type="button"
-                onClick={() => { setForm(f => ({ ...f, isEigenaar: val })); dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: val }) }}
-                className={[
-                  'py-2.5 rounded-lg text-sm font-sans border transition-all',
-                  form.isEigenaar === val
-                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-400 font-semibold'
-                    : 'bg-slate-800/40 border-white/8 text-white/40 hover:border-white/20 hover:text-white/60',
-                ].join(' ')}
-              >
-                {val ? 'Ja, eigenaar' : 'Nee, huurder'}
-              </button>
-            ))}
-          </div>
-        </div>
+            {(state.adres || state.healthScore) && (
+              <dl className="mt-4 grid gap-3 border-t border-trust/20 pt-4 sm:grid-cols-2">
+                {state.adres && (
+                  <div className="min-w-0 sm:col-span-2">
+                    <dt className="text-xs text-ink-muted">Adres</dt>
+                    <dd className="truncate text-sm font-semibold text-ink">{state.adres}</dd>
+                  </div>
+                )}
+                {state.healthScore && (
+                  <div>
+                    <dt className="text-xs text-ink-muted">Score</dt>
+                    <dd className="text-sm font-bold text-trust-dark">{state.healthScore.score}/100</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+          </FunnelCard>
 
-        {panelenAntwoordLocked ? (
-          <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-sans text-white/50 uppercase tracking-widest">Zonnepanelen (stap 2)</p>
-            <p className="text-sm font-sans text-white/75 leading-relaxed">
-              {state.heeft_panelen
-                ? <>U gaf aan <strong className="text-amber-400">wél panelen</strong> te hebben — <strong className="text-amber-400">{state.huidige_panelen_aantal}</strong> stuks.</>
-                : <>U gaf aan <strong className="text-amber-400">nog geen panelen</strong> te hebben.</>}
+          {isde && <IsdeSummaryCard {...isde} />}
+
+          <FunnelCard className="py-4">
+            <FunnelTrustLine items={['Beveiligd', 'Lokale installateurs', 'Vrijblijvend']} />
+            <p className="mt-3 text-center text-xs text-ink-muted">
+              SSL- en AVG-bewust verwerkt, zonder koopplicht. Uw aanvraag wordt gekoppeld aan gecertificeerde installateurs in {regio}.
             </p>
+          </FunnelCard>
+        </div>
+
+        <div className="min-w-0 space-y-4">
+          <FunnelCard>
+            <h3 className="font-heading text-lg font-bold text-ink">Controleer uw situatie</h3>
+            <p className="mt-1 text-sm text-ink-muted">Uw eerdere antwoorden staan alvast klaar voor het rapport.</p>
+
+            <div className="mt-4 space-y-4">
+              <fieldset>
+                <legend className="text-sm font-semibold text-ink">Bent u eigenaar van de woning?</legend>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {([true, false] as const).map((val) => (
+                    <FunnelChoiceCard
+                      key={String(val)}
+                      selected={form.isEigenaar === val}
+                      onClick={() => {
+                        setForm(f => ({ ...f, isEigenaar: val }))
+                        dispatch({ type: 'SET_IS_EIGENAAR', is_eigenaar: val })
+                      }}
+                    >
+                      {val ? 'Ja, eigenaar' : 'Nee, huurder'}
+                    </FunnelChoiceCard>
+                  ))}
+                </div>
+              </fieldset>
+
+              {panelenAntwoordLocked ? (
+                <div className="rounded-xl border border-ink/10 bg-mist p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Zonnepanelen (stap 2)</p>
+                  <p className="mt-2 text-sm leading-6 text-ink">
+                    {state.heeft_panelen
+                      ? <>U gaf aan <strong>wél panelen</strong> te hebben — <strong>{state.huidige_panelen_aantal}</strong> stuks.</>
+                      : <>U gaf aan <strong>nog geen panelen</strong> te hebben.</>}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditPanelen(true)
+                      setForm(f => ({
+                        ...f,
+                        heeftPanelen: state.heeft_panelen,
+                        huidigePanelenAantal: state.huidige_panelen_aantal ? String(state.huidige_panelen_aantal) : '',
+                      }))
+                    }}
+                    className="mt-2 rounded-md text-sm font-semibold text-trust-dark underline underline-offset-2 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-trust/35"
+                  >
+                    Wijzigen (wordt ook opgeslagen in uw rapport)
+                  </button>
+                </div>
+              ) : (
+                <fieldset>
+                  <legend className="text-sm font-semibold text-ink">Heeft u al zonnepanelen?</legend>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {([false, true] as const).map((val) => (
+                      <FunnelChoiceCard
+                        key={String(val)}
+                        selected={form.heeftPanelen === val}
+                        onClick={() => {
+                          setForm(f => ({
+                            ...f,
+                            heeftPanelen: val,
+                            huidigePanelenAantal: val ? f.huidigePanelenAantal : '',
+                          }))
+                          dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
+                          if (!val) dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: null })
+                          setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
+                        }}
+                      >
+                        {val ? 'Ja, ik heb panelen' : 'Nee, nog geen panelen'}
+                      </FunnelChoiceCard>
+                    ))}
+                  </div>
+                  {form.heeftPanelen === true && (
+                    <FunnelField
+                      className="mt-3"
+                      htmlFor="huidige-panelen-aantal"
+                      label="Hoeveel panelen liggen er nu?"
+                      error={errors.huidigePanelenAantal}
+                    >
+                      <input
+                        id="huidige-panelen-aantal"
+                        type="number"
+                        min={1}
+                        max={200}
+                        inputMode="numeric"
+                        value={form.huidigePanelenAantal}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^\d]/g, '')
+                          setForm(f => ({ ...f, huidigePanelenAantal: value }))
+                          const parsed = value ? Number(value) : null
+                          dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: parsed && parsed > 0 ? parsed : null })
+                          setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
+                        }}
+                        placeholder="Bijv. 10"
+                        aria-invalid={!!errors.huidigePanelenAantal}
+                        className={[inputBase, errors.huidigePanelenAantal ? 'border-danger' : 'border-ink/15'].join(' ')}
+                      />
+                    </FunnelField>
+                  )}
+                </fieldset>
+              )}
+
+              <fieldset>
+                <legend className="text-sm font-semibold text-ink">
+                  Hoeveel personen wonen hier? <span className="font-normal text-ink-muted">(optioneel)</span>
+                </legend>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {([
+                    { val: 1 as const, label: '1 persoon' },
+                    { val: 2 as const, label: '2 personen' },
+                    { val: 3 as const, label: '3+ personen' },
+                  ]).map(({ val, label }) => (
+                    <FunnelChoiceCard
+                      key={val}
+                      selected={state.huishouden_grootte === val}
+                      onClick={() => dispatch({ type: 'SET_HUISHOUDEN', grootte: state.huishouden_grootte === val ? null : val })}
+                      className="px-2"
+                    >
+                      {label}
+                    </FunnelChoiceCard>
+                  ))}
+                </div>
+              </fieldset>
+            </div>
+          </FunnelCard>
+
+          <FunnelCard surface="mist" className="p-0 sm:p-0">
             <button
               type="button"
-              onClick={() => {
-                setEditPanelen(true)
-                setForm(f => ({
-                  ...f,
-                  heeftPanelen: state.heeft_panelen,
-                  huidigePanelenAantal: state.huidige_panelen_aantal ? String(state.huidige_panelen_aantal) : '',
-                }))
-              }}
-              className="text-xs font-mono text-amber-400/80 hover:text-amber-300 underline underline-offset-2"
+              onClick={() => setWatGebeurtOpen(o => !o)}
+              aria-expanded={watGebeurtOpen}
+              aria-controls="lead-next-steps"
+              className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-trust-dark focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-trust/35"
             >
-              Wijzigen (wordt ook opgeslagen in uw rapport)
+              <span>Wat gebeurt er na uw aanvraag?</span>
+              <svg width="12" height="12" viewBox="0 0 10 10" fill="none" aria-hidden="true" className={`shrink-0 transition-transform ${watGebeurtOpen ? 'rotate-180' : ''}`}>
+                <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
-          </div>
-        ) : (
-          <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-sans text-white/50 uppercase tracking-widest">Heeft u al zonnepanelen?</p>
-            <div className="grid grid-cols-2 gap-2">
-              {([false, true] as const).map((val) => (
-                <button
-                  key={String(val)}
-                  type="button"
-                  onClick={() => {
-                    setForm(f => ({
-                      ...f,
-                      heeftPanelen: val,
-                      huidigePanelenAantal: val ? f.huidigePanelenAantal : '',
-                    }))
-                    dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
-                    if (!val) dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: null })
-                    setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
-                  }}
-                  className={[
-                    'py-2.5 rounded-lg text-sm font-sans border transition-all',
-                    form.heeftPanelen === val
-                      ? 'bg-amber-500/15 border-amber-500/60 text-amber-400 font-semibold'
-                      : 'bg-slate-800/40 border-white/8 text-white/40 hover:border-white/20 hover:text-white/60',
-                  ].join(' ')}
-                >
-                  {val ? 'Ja, ik heb panelen' : 'Nee, nog geen panelen'}
-                </button>
-              ))}
-            </div>
-            {form.heeftPanelen === true && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="huidige-panelen-aantal">
-                  Hoeveel panelen liggen er nu?
-                </label>
-                <input
-                  id="huidige-panelen-aantal"
-                  type="number"
-                  min={1}
-                  max={200}
-                  inputMode="numeric"
-                  value={form.huidigePanelenAantal}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^\d]/g, '')
-                    setForm(f => ({ ...f, huidigePanelenAantal: value }))
-                    const parsed = value ? Number(value) : null
-                    dispatch({ type: 'SET_HUIDIGE_PANELEN_AANTAL', huidige_panelen_aantal: parsed && parsed > 0 ? parsed : null })
-                    setErrors(er => ({ ...er, huidigePanelenAantal: undefined }))
-                  }}
-                  placeholder="Bijv. 10"
-                  className={[inputBase, errors.huidigePanelenAantal ? 'border-red-400' : 'border-white/10'].join(' ')}
-                />
-                {errors.huidigePanelenAantal && <p className="text-xs font-sans text-red-400">{errors.huidigePanelenAantal}</p>}
-              </div>
+            {watGebeurtOpen && (
+              <ol id="lead-next-steps" className="space-y-3 border-t border-ink/10 px-4 py-4">
+                {[
+                  'Uw aanvraag wordt doorgestuurd naar gecertificeerde installateurs in uw regio',
+                  'Een adviseur neemt naar aanleiding van uw aanvraag contact met u op',
+                  'U ontvangt een vrijblijvende offerte op maat — geen verplichtingen',
+                ].map((tekst, i) => (
+                  <li key={tekst} className="flex gap-3 text-sm leading-5 text-ink-muted">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-trust/15 text-xs font-bold text-trust-dark">{i + 1}</span>
+                    <span>{tekst}</span>
+                  </li>
+                ))}
+              </ol>
             )}
-          </div>
-        )}
+          </FunnelCard>
 
-        {/* Huishoudensgrootte */}
-        <div className="bg-slate-900/40 border border-white/8 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-sans text-white/50 uppercase tracking-widest">
-            Hoeveel personen in uw woning? <span className="normal-case text-white/30">(optioneel)</span>
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {([
-              { val: 1 as const, label: '1 persoon' },
-              { val: 2 as const, label: '2 personen' },
-              { val: 3 as const, label: '3+ personen' },
-            ]).map(({ val, label }) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => dispatch({ type: 'SET_HUISHOUDEN', grootte: state.huishouden_grootte === val ? null : val })}
-                className={[
-                  'py-2.5 rounded-lg text-sm font-sans border transition-all',
-                  state.huishouden_grootte === val
-                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-400 font-semibold'
-                    : 'bg-slate-800/40 border-white/8 text-white/40 hover:border-white/20 hover:text-white/60',
-                ].join(' ')}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <FunnelCard>
+              <h3 className="font-heading text-lg font-bold text-ink">Waar mogen we uw rapport klaarzetten?</h3>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">Alle velden hieronder zijn nodig om uw aanvraag veilig te verwerken.</p>
 
-      {/* Wat gebeurt er na uw aanvraag? */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setWatGebeurtOpen(o => !o)}
-          className="flex items-center gap-1.5 text-xs font-mono text-amber-400/70 hover:text-amber-400 transition-colors cursor-pointer"
-        >
-          <span>Wat gebeurt er na uw aanvraag?</span>
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true" className={`transition-transform ${watGebeurtOpen ? 'rotate-180' : ''}`}>
-            <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        {watGebeurtOpen && (
-          <div className="bg-slate-950/40 border border-white/8 rounded-xl p-4 mt-2 space-y-3">
-            {[
-              'Uw aanvraag wordt doorgestuurd naar gecertificeerde installateurs in uw regio',
-              'Een adviseur neemt naar aanleiding van uw aanvraag contact met u op',
-              'U ontvangt een vrijblijvende offerte op maat — geen verplichtingen',
-            ].map((tekst, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="w-5 h-5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</div>
-                <span className="text-xs font-mono text-white/50">{tekst}</span>
+              <div className="mt-5 space-y-4">
+                <FunnelField htmlFor="lead-naam" label="Voor- en achternaam *" error={errors.naam}>
+                  <input
+                    id="lead-naam"
+                    type="text"
+                    value={form.naam}
+                    autoComplete="name"
+                    onChange={(e) => { setForm(f => ({ ...f, naam: e.target.value })); setErrors(er => ({ ...er, naam: undefined })) }}
+                    placeholder="Jan de Vries"
+                    disabled={loading}
+                    aria-invalid={!!errors.naam}
+                    className={[inputBase, errors.naam ? 'border-danger' : 'border-ink/15'].join(' ')}
+                  />
+                </FunnelField>
+
+                <FunnelField htmlFor="lead-email" label="E-mailadres *" error={errors.email}>
+                  <input
+                    id="lead-email"
+                    type="email"
+                    value={form.email}
+                    autoComplete="email"
+                    onChange={(e) => { setForm(f => ({ ...f, email: e.target.value })); setErrors(er => ({ ...er, email: undefined })) }}
+                    placeholder="jan@voorbeeld.nl"
+                    disabled={loading}
+                    aria-invalid={!!errors.email}
+                    className={[inputBase, errors.email ? 'border-danger' : 'border-ink/15'].join(' ')}
+                  />
+                </FunnelField>
+
+                <FunnelField
+                  htmlFor="lead-telefoon"
+                  label="Telefoonnummer *"
+                  hint={form.telefoon && validatePhone(form.telefoon, form.countryCode) ? 'Nummer is geldig' : undefined}
+                  error={errors.telefoon}
+                >
+                  <div className={[
+                    'flex min-w-0 overflow-hidden rounded-xl border bg-paper transition-shadow focus-within:ring-3 focus-within:ring-trust/35',
+                    errors.telefoon ? 'border-danger' : 'border-ink/15',
+                  ].join(' ')}>
+                    <select
+                      value={form.countryCode}
+                      onChange={(e) => { setForm(f => ({ ...f, countryCode: e.target.value as CountryCode, telefoon: '' })); setErrors(er => ({ ...er, telefoon: undefined })) }}
+                      disabled={loading}
+                      className="shrink-0 border-r border-ink/10 bg-mist px-3 py-3 text-base text-ink focus-visible:outline-none sm:text-sm"
+                      aria-label="Landcode"
+                    >
+                      {COUNTRIES.map(c => (
+                        <option key={c.code} value={c.code}>{c.label} {c.code}</option>
+                      ))}
+                    </select>
+                    <input
+                      id="lead-telefoon"
+                      type="tel"
+                      value={form.telefoon}
+                      autoComplete="tel"
+                      onChange={(e) => { setForm(f => ({ ...f, telefoon: e.target.value })); setErrors(er => ({ ...er, telefoon: undefined })) }}
+                      placeholder={form.countryCode === '+31' ? '06 12345678' : form.countryCode === '+32' ? '0478 123456' : '015 12345678'}
+                      disabled={loading}
+                      aria-invalid={!!errors.telefoon}
+                      className="min-w-0 flex-1 bg-paper px-4 py-3 text-base text-ink placeholder:text-ink-muted/60 focus-visible:outline-none sm:text-sm"
+                    />
+                  </div>
+                  {!errors.telefoon && form.telefoon && validatePhone(form.telefoon, form.countryCode) && (
+                    <p className="text-xs text-trust-dark">Geldig nummer — wordt opgeslagen als {normalizePhone(form.telefoon, form.countryCode)}</p>
+                  )}
+                </FunnelField>
+
+                <FunnelNotice title="Waarom vragen we dit?">
+                  Uw e-mailadres is nodig voor de rapportlink. Met uw telefoonnummer kan een gecertificeerde energie-expert uw aanvraag en advies valideren.
+                </FunnelNotice>
+
+                <div className="space-y-2 rounded-xl border border-trust/25 bg-trust/8 p-4">
+                  <label className="group flex cursor-pointer items-start gap-3" htmlFor="lead-gdpr">
+                    <span className="relative mt-0.5 shrink-0">
+                      <input
+                        id="lead-gdpr"
+                        type="checkbox"
+                        checked={form.gdprConsent}
+                        onChange={(e) => { setForm(f => ({ ...f, gdprConsent: e.target.checked })); setErrors(er => ({ ...er, gdprConsent: undefined })) }}
+                        className="peer sr-only"
+                        disabled={loading}
+                      />
+                      <span className={[
+                        'flex size-5 items-center justify-center rounded border-2 transition-colors peer-focus-visible:ring-3 peer-focus-visible:ring-trust/40',
+                        form.gdprConsent
+                          ? 'border-trust bg-trust'
+                          : errors.gdprConsent
+                            ? 'border-danger bg-paper'
+                            : 'border-ink/25 bg-paper group-hover:border-trust',
+                      ].join(' ')}>
+                        {form.gdprConsent && (
+                          <svg className="size-full text-evergreen-950" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M3 8l3 3 7-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </span>
+                    </span>
+                    <span className="text-xs leading-relaxed text-ink-muted">
+                      Ja, stuur mij het gratis PDF-rapport. Ik geef toestemming om mijn scandata te laten valideren door een gecertificeerde energie-expert van SaldeerScan.nl in mijn regio.{' '}
+                      <a href="/privacy" className="font-semibold text-trust-dark underline underline-offset-2 hover:text-evergreen-900" target="_blank" rel="noopener noreferrer">Privacyverklaring →</a>
+                    </span>
+                  </label>
+                  {errors.gdprConsent && <p className="pl-8 text-xs text-danger" role="alert">{errors.gdprConsent}</p>}
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </FunnelCard>
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        {/* Naam */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="lead-naam">Voor- en achternaam *</label>
-          <input
-            id="lead-naam" type="text" value={form.naam} autoComplete="name"
-            onChange={(e) => { setForm(f => ({ ...f, naam: e.target.value })); setErrors(er => ({ ...er, naam: undefined })) }}
-            placeholder="Jan de Vries" disabled={loading}
-            className={[inputBase, errors.naam ? 'border-red-400' : 'border-white/10'].join(' ')}
-          />
-          {errors.naam && <p className="text-xs font-sans text-red-400">{errors.naam}</p>}
-        </div>
+            {(errors.submit || submitError) && (
+              <FunnelNotice variant="danger">
+                {errors.submit ?? submitError}
+              </FunnelNotice>
+            )}
 
-        {/* Email */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="lead-email">E-mailadres *</label>
-          <input
-            id="lead-email" type="email" value={form.email} autoComplete="email"
-            onChange={(e) => { setForm(f => ({ ...f, email: e.target.value })); setErrors(er => ({ ...er, email: undefined })) }}
-            placeholder="jan@voorbeeld.nl" disabled={loading}
-            className={[inputBase, errors.email ? 'border-red-400' : 'border-white/10'].join(' ')}
-          />
-          {errors.email && <p className="text-xs font-sans text-red-400">{errors.email}</p>}
-        </div>
-
-        {/* Telefoon met landselector */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-sans text-white/50 uppercase tracking-widest" htmlFor="lead-telefoon">Telefoonnummer *</label>
-          <div className={['flex rounded-lg border overflow-hidden transition-colors min-w-0', errors.telefoon ? 'border-red-400' : 'border-white/10'].join(' ')}>
-            <select
-              value={form.countryCode}
-              onChange={(e) => { setForm(f => ({ ...f, countryCode: e.target.value as CountryCode, telefoon: '' })); setErrors(er => ({ ...er, telefoon: undefined })) }}
-              disabled={loading}
-              className="bg-slate-800/80 text-white/70 text-base sm:text-sm font-sans px-3 py-3 border-r border-white/10 focus:outline-none focus:ring-0 shrink-0"
-              aria-label="Landcode"
-            >
-              {COUNTRIES.map(c => (
-                <option key={c.code} value={c.code}>{c.label} {c.code}</option>
-              ))}
-            </select>
-            <input
-              id="lead-telefoon" type="tel" value={form.telefoon} autoComplete="tel"
-              onChange={(e) => { setForm(f => ({ ...f, telefoon: e.target.value })); setErrors(er => ({ ...er, telefoon: undefined })) }}
-              placeholder={form.countryCode === '+31' ? '06 12345678' : form.countryCode === '+32' ? '0478 123456' : '015 12345678'}
-              disabled={loading}
-              className="flex-1 min-w-0 bg-slate-900/60 px-4 py-3 text-white placeholder:text-white/30 font-mono text-base sm:text-sm focus:outline-none"
+            <FunnelActions
+              sticky
+              secondary={(
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: 'SET_STEP', step: 5 })}
+                  disabled={loading}
+                  className={funnelSecondaryButtonClass}
+                >
+                  ← Terug
+                </button>
+              )}
+              primary={(
+                <button type="submit" disabled={loading} className={`w-full ${funnelPrimaryButtonClass}`}>
+                  {loading ? (
+                    <>
+                      <span className="size-4 animate-spin rounded-full border-2 border-evergreen-950 border-t-transparent" aria-hidden="true" />
+                      Indienen...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+                        <path d="M5.5 5h5M5.5 7.5h5M5.5 10h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                      </svg>
+                      Stuur mij het gratis PDF-rapport
+                      <span aria-hidden="true">→</span>
+                    </>
+                  )}
+                </button>
+              )}
             />
-          </div>
-          {errors.telefoon
-            ? <p className="text-xs font-sans text-red-400">{errors.telefoon}</p>
-            : form.telefoon && validatePhone(form.telefoon, form.countryCode)
-              ? <p className="text-xs font-sans text-emerald-400">Geldig nummer — wordt opgeslagen als {normalizePhone(form.telefoon, form.countryCode)}</p>
-              : null
-          }
+
+            <FunnelTrustLine items={['Vrijblijvend advies', 'Geen verplichtingen', 'Gratis']} />
+            <p className="text-center text-xs leading-5 text-ink-muted">
+              Uw data wordt beveiligd verwerkt en gevalideerd door een gecertificeerde expert in {regio} voor een definitieve 2027-check.
+            </p>
+          </form>
         </div>
-
-        <div className="border border-amber-500/30 bg-amber-950/10 rounded-xl p-3 space-y-2">
-          <label className="flex items-start gap-3 cursor-pointer group" htmlFor="lead-gdpr">
-            <div className="relative mt-0.5 shrink-0">
-              <input id="lead-gdpr" type="checkbox" checked={form.gdprConsent}
-                onChange={(e) => { setForm(f => ({ ...f, gdprConsent: e.target.checked })); setErrors(er => ({ ...er, gdprConsent: undefined })) }}
-                className="sr-only peer" disabled={loading} />
-              <div className={['w-4 h-4 rounded border-2 transition-colors peer-focus:ring-2 peer-focus:ring-amber-500/40',
-                form.gdprConsent ? 'bg-amber-500 border-amber-500' : errors.gdprConsent ? 'bg-transparent border-red-400' : 'bg-transparent border-white/20 group-hover:border-amber-500',
-              ].join(' ')}>
-                {form.gdprConsent && (
-                  <svg className="w-full h-full text-slate-950" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 8l3 3 7-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </div>
-            </div>
-            <span className="text-xs font-sans text-white/50 leading-relaxed">
-              Ja, stuur mij het gratis PDF-rapport. Ik geef toestemming om mijn scandata te laten valideren door een gecertificeerde energie-expert van SaldeerScan.nl in mijn regio.{' '}
-              <a href="/privacy" className="text-amber-400 hover:text-amber-300 underline" target="_blank" rel="noopener noreferrer">Privacyverklaring →</a>
-            </span>
-          </label>
-          {errors.gdprConsent && <p className="text-xs font-sans text-red-400 pl-7">{errors.gdprConsent}</p>}
-        </div>
-
-        {(errors.submit || submitError) && (
-          <div className="bg-red-950/40 border border-red-700 rounded-xl px-3 py-2">
-            <p className="text-xs font-mono text-red-400">{errors.submit ?? submitError}</p>
-          </div>
-        )}
-
-        <button type="submit" disabled={loading}
-          className={`w-full font-mono text-sm py-3.5 px-6 flex items-center justify-center gap-2 ${amberBtnCls}`}>
-          {loading ? (
-            <><div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />Indienen...</>
-          ) : (
-            <>
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-                <path d="M5.5 5h5M5.5 7.5h5M5.5 10h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              Stuur mij het gratis PDF-rapport
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </>
-          )}
-        </button>
-
-        <p className="text-[10px] font-mono text-center flex items-center justify-center gap-2 flex-wrap">
-          <span className="text-amber-400/60 font-bold">Vrijblijvend advies</span>
-          <span className="text-white/20">·</span>
-          <span className="text-white/30">Geen verplichtingen</span>
-          <span className="text-white/20">·</span>
-          <span className="text-white/30">Gratis</span>
-        </p>
-        <p className="text-[10px] font-mono text-white/20 text-center">
-          Uw data wordt beveiligd verwerkt en gevalideerd door een gecertificeerde expert in {regio} voor een definitieve 2027-check.
-        </p>
-      </form>
-
-      <button onClick={() => dispatch({ type: 'SET_STEP', step: 5 })} disabled={loading}
-        className="w-full bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 text-white/50 text-sm py-2.5 px-4 rounded-full transition-colors">
-        ← Terug
-      </button>
-    </div>
+      </div>
+    </FunnelStageShell>
   )
 }

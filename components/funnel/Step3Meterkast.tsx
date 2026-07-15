@@ -1,46 +1,55 @@
 'use client'
 
 import { useState, type Dispatch } from 'react'
-import type { FunnelState, FunnelAction, MeterkastAnalyse } from './types'
 import type { FunnelTracker } from '@/lib/analytics'
 import { PhotoUpload } from './PhotoUpload'
-import { StepHeader } from './StepHeader'
+import { TechnicalStageChecklist } from './TechnicalStageChecklist'
+import type { FunnelAction, FunnelState, MeterkastAnalyse } from './types'
+import {
+  FunnelActions,
+  funnelPrimaryButtonClass,
+  funnelSecondaryButtonClass,
+  funnelTextButtonClass,
+} from './ui/FunnelActions'
+import { FunnelCard } from './ui/FunnelCard'
+import { FunnelChoiceCard } from './ui/FunnelChoiceCard'
+import { FunnelNotice } from './ui/FunnelNotice'
+import { FunnelStageShell } from './ui/FunnelStageShell'
 
 function FallbackMeterkast({ onComplete }: { onComplete: (data: MeterkastAnalyse) => void }) {
   const [fase, setFase] = useState<'1-fase' | '3-fase' | null>(null)
   const [groepen, setGroepen] = useState<number | null>(null)
 
   return (
-    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
-      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Snel invullen</div>
+    <FunnelCard surface="mist" className="space-y-5">
+      <div>
+        <p className="text-sm font-semibold text-ink">Snel handmatig invullen</p>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">
+          Geen foto bij de hand? Met deze twee antwoorden kunnen we uw advies toch verfijnen.
+        </p>
+      </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-mono text-white/50">Wat voor aansluiting heeft u?</p>
-        <div className="flex gap-2">
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-ink">Wat voor aansluiting heeft u?</legend>
+        <div className="grid grid-cols-2 gap-2">
           {(['1-fase', '3-fase'] as const).map(f => (
-            <button key={f} type="button" onClick={() => setFase(f)}
-              className={['flex-1 py-2 rounded-lg text-xs font-mono border transition-colors',
-                fase === f ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-800/50 text-white/50 border-white/10 hover:border-amber-500/40'
-              ].join(' ')}>
+            <FunnelChoiceCard key={f} selected={fase === f} onClick={() => setFase(f)}>
               {f}
-            </button>
+            </FunnelChoiceCard>
           ))}
         </div>
-      </div>
+      </fieldset>
 
-      <div className="space-y-2">
-        <p className="text-xs font-mono text-white/50">Hoeveel vrije groepen heeft uw meterkast?</p>
-        <div className="flex gap-2">
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-ink">Hoeveel vrije groepen heeft uw meterkast?</legend>
+        <div className="grid grid-cols-4 gap-2">
           {[0, 1, 2, 4].map(n => (
-            <button key={n} type="button" onClick={() => setGroepen(n)}
-              className={['flex-1 py-2 rounded-lg text-xs font-mono border transition-colors',
-                groepen === n ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-800/50 text-white/50 border-white/10 hover:border-amber-500/40'
-              ].join(' ')}>
+            <FunnelChoiceCard key={n} selected={groepen === n} onClick={() => setGroepen(n)}>
               {n === 4 ? '4+' : n}
-            </button>
+            </FunnelChoiceCard>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       <button
         type="button"
@@ -56,11 +65,11 @@ function FallbackMeterkast({ onComplete }: { onComplete: (data: MeterkastAnalyse
             opmerkingen: ['Handmatig ingevuld — geen foto-analyse uitgevoerd'],
           })
         }}
-        className="w-full py-2.5 bg-amber-500 text-slate-950 rounded-full text-xs font-mono font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+        className={`w-full ${funnelPrimaryButtonClass}`}
       >
         Doorgaan
       </button>
-    </div>
+    </FunnelCard>
   )
 }
 
@@ -70,67 +79,49 @@ interface Step3MeterkastProps {
   trackFunnel: FunnelTracker
 }
 
-const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
-
 function MeterkastResultaat({ analyse }: { analyse: MeterkastAnalyse }) {
   return (
-    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-3">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-        <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">Analyse compleet</span>
+    <FunnelCard className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="size-2 rounded-full bg-trust" />
+        <span className="text-xs font-semibold text-trust-dark">Meterkastcheck afgerond</span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
-          <div className="text-[10px] font-mono text-white/40 mb-1">Merk</div>
-          <div className="font-mono font-semibold text-sm text-amber-400">{analyse.merk ?? 'Onbekend'}</div>
-        </div>
-        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
-          <div className="text-[10px] font-mono text-white/40 mb-1">3-fase</div>
-          <div className={`font-mono font-semibold text-sm flex items-center gap-1 ${analyse.drieFase ? 'text-emerald-400' : 'text-red-400'}`}>
-            {analyse.drieFase ? (
-              <><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Ja</>
-            ) : (
-              <><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>Nee</>
-            )}
+
+      <dl className="grid grid-cols-2 gap-3">
+        {[
+          ['Merk', analyse.merk ?? 'Onbekend'],
+          ['3-fase', analyse.drieFase ? 'Ja' : 'Nee'],
+          ['Vrije groepen', String(analyse.vrijeGroepen)],
+          ['Max. vermogen', analyse.maxVermogenKw !== null ? `${analyse.maxVermogenKw} kW` : '—'],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-ink/10 bg-mist p-3">
+            <dt className="text-xs text-ink-muted">{label}</dt>
+            <dd className="mt-1 text-sm font-semibold text-ink">{value}</dd>
           </div>
-        </div>
-        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
-          <div className="text-[10px] font-mono text-white/40 mb-1">Vrije groepen</div>
-          <div className="font-mono font-semibold text-sm text-amber-400">{String(analyse.vrijeGroepen)}</div>
-        </div>
-        <div className="bg-slate-900/60 border border-white/10 rounded-md p-3">
-          <div className="text-[10px] font-mono text-white/40 mb-1">Max vermogen</div>
-          <div className="font-mono font-semibold text-sm text-amber-400">{analyse.maxVermogenKw !== null ? `${analyse.maxVermogenKw} kW` : '—'}</div>
-        </div>
-      </div>
-      <div className={`flex items-center gap-3 rounded-lg px-4 py-3 ${analyse.geschikt ? 'bg-emerald-950/30 border border-emerald-700/50' : 'bg-red-950/40 border border-red-700/50'}`}>
-        <svg width="24" height="24" viewBox="0 0 14 14" fill="none" aria-hidden="true" className={analyse.geschikt ? 'text-emerald-400' : 'text-red-400'}>
-          {analyse.geschikt ? (
-            <path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          ) : (
-            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          )}
-        </svg>
-        <div>
-          <div className={`font-mono font-bold text-sm ${analyse.geschikt ? 'text-emerald-400' : 'text-red-400'}`}>
-            {analyse.geschikt ? 'Geschikt voor installatie' : 'Niet direct geschikt'}
-          </div>
-          {!analyse.geschikt && <div className="text-xs text-white/40 font-mono mt-0.5">Installateur advies nodig</div>}
-        </div>
-      </div>
+        ))}
+      </dl>
+
+      <FunnelNotice
+        variant={analyse.geschikt ? 'success' : 'danger'}
+        title={analyse.geschikt ? 'Geschikt voor installatie' : 'Niet direct geschikt'}
+      >
+        {!analyse.geschikt && 'Een installateur kan beoordelen welke aanpassing nodig is.'}
+      </FunnelNotice>
+
       {analyse.opmerkingen.length > 0 && (
         <div>
-          <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-2">Opmerkingen</div>
-          <ul className="space-y-1">
-            {analyse.opmerkingen.map((o, i) => (
-              <li key={i} className="text-xs font-mono text-white/50 flex items-start gap-1.5">
-                <span className="text-amber-400 shrink-0 mt-0.5">›</span>{o}
+          <p className="text-xs font-semibold text-ink">Opmerkingen</p>
+          <ul className="mt-2 space-y-1.5">
+            {analyse.opmerkingen.map((opmerking, index) => (
+              <li key={index} className="flex items-start gap-2 text-xs leading-5 text-ink-muted">
+                <span className="mt-0.5 text-trust-dark" aria-hidden="true">›</span>
+                {opmerking}
               </li>
             ))}
           </ul>
         </div>
       )}
-    </div>
+    </FunnelCard>
   )
 }
 
@@ -139,33 +130,35 @@ export function Step3Meterkast({ state, dispatch, trackFunnel }: Step3MeterkastP
   const [showFallback, setShowFallback] = useState(false)
 
   return (
-    <div className="p-6 space-y-6">
-      <StepHeader stap="Stap 3 — Meterkast scan" title="Meterkast analyse" subtitle="AI-scan bepaalt geschiktheid voor zonnepanelen & batterij" />
+    <FunnelStageShell
+      eyebrow="Stadium 3 van 4 · Verfijn uw advies"
+      title="Meterkast analyseren"
+      description="Optioneel: hiermee zien we of uw aansluiting direct geschikt lijkt voor zonnepanelen en een thuisbatterij."
+    >
+      <TechnicalStageChecklist state={state} dispatch={dispatch} trackFunnel={trackFunnel} />
+
       {!analyse && (
-        <div className="bg-amber-950/30 border border-amber-500/30 rounded-lg px-4 py-3 flex items-start gap-2.5">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-amber-400 shrink-0 mt-0.5">
-            <circle cx="8" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
-            <path d="M6.5 11h3M7 12.5h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
-          <div className="text-xs text-amber-300 leading-relaxed" style={{ fontFamily: 'var(--font-sans)' }}>
-            <span className="font-bold">Tip:</span> Open de kast volledig, sta ~1 meter ervoor en zorg voor verlichting. Alle groepen moeten zichtbaar zijn.
-          </div>
-        </div>
+        <FunnelNotice variant="info" title="Zo maakt u een bruikbare foto">
+          Open de kast volledig, sta ongeveer één meter ervoor en zorg dat alle groepen goed verlicht en zichtbaar zijn.
+        </FunnelNotice>
       )}
+
       {!analyse && !showFallback && (
-        <PhotoUpload visionType="meterkast" onAnalysed={(r) => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: r as MeterkastAnalyse })}
+        <PhotoUpload
+          visionType="meterkast"
+          onAnalysed={(result) => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: result as MeterkastAnalyse })}
           trackFunnel={trackFunnel}
-          title="Foto van uw meterkast" description="Maak een foto van uw open meterkast, inclusief alle groepen zichtbaar" />
+          title="Foto van uw meterkast"
+          description="Maak een foto van uw open meterkast waarop alle groepen zichtbaar zijn."
+        />
       )}
+
       {!analyse && !showFallback && (
-        <button
-          type="button"
-          onClick={() => setShowFallback(true)}
-          className="w-full py-2.5 text-xs font-mono border border-amber-500/30 text-amber-400/70 rounded-xl hover:border-amber-500/60 hover:text-amber-400 transition-colors"
-        >
+        <button type="button" onClick={() => setShowFallback(true)} className={`w-full ${funnelTextButtonClass}`}>
           Geen foto? Vul handmatig in
         </button>
       )}
+
       {!analyse && showFallback && (
         <FallbackMeterkast
           onComplete={(data) => {
@@ -175,26 +168,43 @@ export function Step3Meterkast({ state, dispatch, trackFunnel }: Step3MeterkastP
           }}
         />
       )}
+
       {analyse && (
         <div className="space-y-3">
           <MeterkastResultaat analyse={analyse} />
-          <button onClick={() => { dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null }); setShowFallback(false) }}
-            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-xs py-2 px-4 rounded-lg transition-colors">
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null })
+              setShowFallback(false)
+            }}
+            className={`w-full ${funnelTextButtonClass}`}
+          >
             Andere foto uploaden
           </button>
         </div>
       )}
-      <div className="flex gap-3">
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 2 })}
-          className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm py-3 px-4 rounded-full transition-colors">← Terug</button>
-        <button onClick={() => {
-          if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Meterkast' })
-          dispatch({ type: 'SET_STEP', step: 4 })
-        }}
-          className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}>
-          {analyse ? 'Plaatsing scannen →' : 'Overslaan →'}
-        </button>
-      </div>
-    </div>
+
+      <FunnelActions
+        sticky
+        secondary={(
+          <button type="button" onClick={() => dispatch({ type: 'SET_STEP', step: 2 })} className={funnelSecondaryButtonClass}>
+            ← Terug
+          </button>
+        )}
+        primary={(
+          <button
+            type="button"
+            onClick={() => {
+              if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Meterkast' })
+              dispatch({ type: 'SET_STEP', step: 4 })
+            }}
+            className={funnelPrimaryButtonClass}
+          >
+            {analyse ? 'Volgende check: plaatsing' : 'Overslaan →'}
+          </button>
+        )}
+      />
+    </FunnelStageShell>
   )
 }

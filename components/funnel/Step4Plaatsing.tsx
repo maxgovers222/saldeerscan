@@ -1,35 +1,51 @@
 'use client'
 
 import { useState, type Dispatch } from 'react'
-import type { FunnelState, FunnelAction, PlaatsingsAnalyse } from './types'
 import type { FunnelTracker } from '@/lib/analytics'
 import { PhotoUpload } from './PhotoUpload'
-import { StepHeader } from './StepHeader'
+import { TechnicalStageChecklist } from './TechnicalStageChecklist'
+import type { FunnelAction, FunnelState, PlaatsingsAnalyse } from './types'
+import {
+  FunnelActions,
+  funnelPrimaryButtonClass,
+  funnelSecondaryButtonClass,
+  funnelTextButtonClass,
+} from './ui/FunnelActions'
+import { FunnelCard } from './ui/FunnelCard'
+import { FunnelChoiceCard } from './ui/FunnelChoiceCard'
+import { FunnelNotice } from './ui/FunnelNotice'
+import { FunnelStageShell } from './ui/FunnelStageShell'
 
 function FallbackPlaatsing({ onComplete }: { onComplete: (data: PlaatsingsAnalyse) => void }) {
   return (
-    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
-      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Kies uw voorkeurlocatie</div>
+    <FunnelCard surface="mist" className="space-y-4">
+      <div>
+        <p className="text-sm font-semibold text-ink">Kies uw voorkeurlocatie</p>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">
+          We gebruiken uw keuze als eerste indicatie. Een installateur controleert de plek altijd definitief.
+        </p>
+      </div>
       <div className="grid grid-cols-2 gap-2">
-        {([
+        {[
           { label: 'Garage', score: 9 },
           { label: 'Bijkeuken', score: 8 },
           { label: 'Kelder', score: 7 },
           { label: 'Anders', score: 6 },
-        ]).map(({ label, score }) => (
-          <button key={label} type="button"
+        ].map(({ label, score }) => (
+          <FunnelChoiceCard
+            key={label}
             onClick={() => onComplete({
               nenCompliant: score >= 8,
               risicoItems: [],
               aanbevelingen: ['Handmatig ingevuld — installateur verifieert locatie'],
               geschiktheidScore: score,
             })}
-            className="py-3 rounded-lg text-xs font-mono border bg-slate-800/50 text-white/60 border-white/10 hover:border-amber-500/40 hover:text-amber-400 transition-colors">
+          >
             {label}
-          </button>
+          </FunnelChoiceCard>
         ))}
       </div>
-    </div>
+    </FunnelCard>
   )
 }
 
@@ -39,56 +55,56 @@ interface Step4PlaatsingProps {
   trackFunnel: FunnelTracker
 }
 
-const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
-
 function PlaatsingResultaat({ analyse }: { analyse: PlaatsingsAnalyse }) {
-  const scoreColor = analyse.geschiktheidScore >= 8 ? 'text-emerald-400' : analyse.geschiktheidScore >= 5 ? 'text-amber-400' : 'text-red-400'
   return (
-    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-        <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">Analyse compleet</span>
+    <FunnelCard className="space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="size-2 rounded-full bg-trust" />
+        <span className="text-xs font-semibold text-trust-dark">Plaatsingscheck afgerond</span>
       </div>
-      <div className="flex items-center gap-4">
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border flex-1 ${analyse.nenCompliant ? 'bg-emerald-950/30 border-emerald-700/50' : 'bg-red-950/40 border-red-700/50'}`}>
-          <span className={`font-mono font-bold text-sm flex items-center gap-1 ${analyse.nenCompliant ? 'text-emerald-400' : 'text-red-400'}`}>
-            {analyse.nenCompliant ? (
-              <><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>NEN Compliant</>
-            ) : (
-              <><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>NEN Non-compliant</>
-            )}
-          </span>
-        </div>
-        <div className="bg-slate-900/60 border border-white/10 rounded-lg p-3 text-center min-w-20">
-          <div className="text-[10px] font-mono text-white/40 mb-1">Score</div>
-          <div className={`font-mono font-bold text-xl ${scoreColor}`}>{analyse.geschiktheidScore}/10</div>
+
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <FunnelNotice
+          variant={analyse.nenCompliant ? 'success' : 'danger'}
+          title={analyse.nenCompliant ? 'Voldoet aan de belangrijkste aandachtspunten' : 'Extra beoordeling nodig'}
+        >
+          {analyse.nenCompliant
+            ? 'De gekozen plek lijkt op basis van deze check passend.'
+            : 'Een installateur moet de locatie nader beoordelen.'}
+        </FunnelNotice>
+        <div className="rounded-xl border border-ink/10 bg-mist px-5 py-3 text-center">
+          <p className="text-xs text-ink-muted">Score</p>
+          <p className="mt-1 text-xl font-bold text-ink">{analyse.geschiktheidScore}/10</p>
         </div>
       </div>
+
       {analyse.risicoItems.length > 0 && (
         <div>
-          <div className="text-[10px] font-mono text-red-400 uppercase tracking-widest mb-2">Risico items</div>
-          <ul className="space-y-1">
-            {analyse.risicoItems.map((item, i) => (
-              <li key={i} className="flex items-start gap-1.5 text-xs font-mono text-red-400">
-                <span className="text-red-500 shrink-0 mt-0.5">!</span>{item}
+          <p className="text-xs font-semibold text-danger">Aandachtspunten</p>
+          <ul className="mt-2 space-y-1.5">
+            {analyse.risicoItems.map((item, index) => (
+              <li key={index} className="flex items-start gap-2 text-xs leading-5 text-danger">
+                <span aria-hidden="true">!</span>{item}
               </li>
             ))}
           </ul>
         </div>
       )}
+
       {analyse.aanbevelingen.length > 0 && (
         <div>
-          <div className="text-[10px] font-mono text-amber-400 uppercase tracking-widest mb-2">Aanbevelingen</div>
-          <ul className="space-y-1">
-            {analyse.aanbevelingen.map((a, i) => (
-              <li key={i} className="flex items-start gap-1.5 text-xs font-mono text-white/50">
-                <span className="text-amber-400 shrink-0 mt-0.5">›</span>{a}
+          <p className="text-xs font-semibold text-ink">Aanbevelingen</p>
+          <ul className="mt-2 space-y-1.5">
+            {analyse.aanbevelingen.map((aanbeveling, index) => (
+              <li key={index} className="flex items-start gap-2 text-xs leading-5 text-ink-muted">
+                <span className="mt-0.5 text-trust-dark" aria-hidden="true">›</span>
+                {aanbeveling}
               </li>
             ))}
           </ul>
         </div>
       )}
-    </div>
+    </FunnelCard>
   )
 }
 
@@ -97,43 +113,51 @@ export function Step4Plaatsing({ state, dispatch, trackFunnel }: Step4PlaatsingP
   const [showFallback, setShowFallback] = useState(false)
 
   return (
-    <div className="p-6 space-y-6">
-      <StepHeader stap="Stap 4 — Plaatsingslocatie" title="Locatie beoordeling" subtitle="NEN 2078:2023 brandveiligheidscheck voor batterijplaatsing" />
-      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-3">
-        <div className="text-xs font-semibold text-white/50 mb-1.5">NEN 2078:2023 vereisten</div>
-        <ul className="space-y-1">
-          {['Min. 50 cm afstand tot brandbare materialen', 'Adequate ventilatie aanwezig', 'Geen waterleiding of gas in nabijheid', 'Stabiele temperatuur (geen directe zon)'].map((req, i) => (
-            <li key={i} className="text-xs text-white/40 flex items-center gap-1.5" style={{ fontFamily: 'var(--font-sans)' }}>
-              <span className="text-white/10">○</span> {req}
+    <FunnelStageShell
+      eyebrow="Stadium 3 van 4 · Verfijn uw advies"
+      title="Plaatsingsplek beoordelen"
+      description="Optioneel: een foto helpt om de aandachtspunten uit NEN 2078:2023 rond een batterij of omvormer eerder te herkennen."
+    >
+      <TechnicalStageChecklist state={state} dispatch={dispatch} trackFunnel={trackFunnel} />
+
+      <FunnelCard surface="mist" className="space-y-2">
+        <p className="text-sm font-semibold text-ink">NEN 2078:2023 vereisten</p>
+        <ul className="grid gap-1.5 text-xs leading-5 text-ink-muted sm:grid-cols-2">
+          {[
+            'Min. 50 cm afstand tot brandbare materialen',
+            'Adequate ventilatie aanwezig',
+            'Geen waterleiding of gas in nabijheid',
+            'Stabiele temperatuur (geen directe zon)',
+          ].map((requirement) => (
+            <li key={requirement} className="flex items-start gap-2">
+              <span className="text-trust-dark" aria-hidden="true">○</span>{requirement}
             </li>
           ))}
         </ul>
-      </div>
+      </FunnelCard>
+
       {!analyse && (
-        <div className="bg-amber-950/30 border border-amber-500/30 rounded-lg px-4 py-3 flex items-start gap-2.5">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-amber-400 shrink-0 mt-0.5">
-            <circle cx="8" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
-            <path d="M6.5 11h3M7 12.5h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
-          <div className="text-xs text-amber-300 leading-relaxed" style={{ fontFamily: 'var(--font-sans)' }}>
-            <span className="font-bold">Tip:</span> Maak een overzichtsfoto van de ruimte (garage, bijkeuken). Zorg dat ventilatie en nabijgelegen leidingen zichtbaar zijn.
-          </div>
-        </div>
+        <FunnelNotice variant="info" title="Zo maakt u een bruikbare foto">
+          Maak een overzichtsfoto van de ruimte en zorg dat ventilatie en nabijgelegen leidingen zichtbaar zijn.
+        </FunnelNotice>
       )}
+
       {!analyse && !showFallback && (
-        <PhotoUpload visionType="plaatsingslocatie" onAnalysed={(r) => dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: r as PlaatsingsAnalyse })}
+        <PhotoUpload
+          visionType="plaatsingslocatie"
+          onAnalysed={(result) => dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: result as PlaatsingsAnalyse })}
           trackFunnel={trackFunnel}
-          title="Foto van plaatsingslocatie" description="Foto van de ruimte waar de batterij of omvormer geplaatst wordt (garage, meterkast, bijkeuken)" />
+          title="Foto van de plaatsingsplek"
+          description="Maak een overzichtsfoto van de ruimte waar de batterij of omvormer geplaatst wordt."
+        />
       )}
+
       {!analyse && !showFallback && (
-        <button
-          type="button"
-          onClick={() => setShowFallback(true)}
-          className="w-full py-2.5 text-xs font-mono border border-amber-500/30 text-amber-400/70 rounded-xl hover:border-amber-500/60 hover:text-amber-400 transition-colors"
-        >
+        <button type="button" onClick={() => setShowFallback(true)} className={`w-full ${funnelTextButtonClass}`}>
           Geen foto? Kies voorkeurlocatie
         </button>
       )}
+
       {!analyse && showFallback && (
         <FallbackPlaatsing
           onComplete={(data) => {
@@ -143,26 +167,43 @@ export function Step4Plaatsing({ state, dispatch, trackFunnel }: Step4PlaatsingP
           }}
         />
       )}
+
       {analyse && (
         <div className="space-y-3">
           <PlaatsingResultaat analyse={analyse} />
-          <button onClick={() => { dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: null }); setShowFallback(false) }}
-            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-xs py-2 px-4 rounded-lg transition-colors">
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({ type: 'SET_PLAATSING', plaatsingsAnalyse: null })
+              setShowFallback(false)
+            }}
+            className={`w-full ${funnelTextButtonClass}`}
+          >
             Andere foto uploaden
           </button>
         </div>
       )}
-      <div className="flex gap-3">
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 3 })}
-          className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm py-3 px-4 rounded-full transition-colors">← Terug</button>
-        <button onClick={() => {
-          if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Plaatsingslocatie' })
-          dispatch({ type: 'SET_STEP', step: 5 })
-        }}
-          className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}>
-          {analyse ? 'Omvormer scannen →' : 'Overslaan →'}
-        </button>
-      </div>
-    </div>
+
+      <FunnelActions
+        sticky
+        secondary={(
+          <button type="button" onClick={() => dispatch({ type: 'SET_STEP', step: 3 })} className={funnelSecondaryButtonClass}>
+            ← Terug
+          </button>
+        )}
+        primary={(
+          <button
+            type="button"
+            onClick={() => {
+              if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Plaatsingslocatie' })
+              dispatch({ type: 'SET_STEP', step: 5 })
+            }}
+            className={funnelPrimaryButtonClass}
+          >
+            {analyse ? 'Volgende check: omvormer' : 'Overslaan →'}
+          </button>
+        )}
+      />
+    </FunnelStageShell>
   )
 }
