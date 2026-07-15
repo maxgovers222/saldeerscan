@@ -3,15 +3,17 @@
 import { useState, useEffect, useRef, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, ROIResult } from './types'
 import { Shock2027Banner } from './Shock2027Banner'
-import { StepHeader } from './StepHeader'
 import { schatVerbruik } from '@/lib/roi'
+import { FunnelActions, funnelPrimaryButtonClass, funnelSecondaryButtonClass, funnelTextButtonClass } from './ui/FunnelActions'
+import { FunnelCard } from './ui/FunnelCard'
+import { FunnelChoiceCard } from './ui/FunnelChoiceCard'
+import { FunnelNotice } from './ui/FunnelNotice'
+import { FunnelStageShell } from './ui/FunnelStageShell'
 
 interface Step2ROIProps {
   state: FunnelState
   dispatch: Dispatch<FunnelAction>
 }
-
-const amberBtnCls = 'bg-amber-500 text-slate-950 font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
 
 const PANEEL_TYPES = [
   { label: 'Standaard (330 kWh/jaar)', kwhPerPaneel: 330 },
@@ -25,39 +27,39 @@ function ScenarioCard({ scenario, variant, recommended }: {
   recommended?: boolean
 }) {
   const borderClass = recommended
-    ? 'border-emerald-500/50 ring-2 ring-emerald-500/20'
-    : variant === 'amber' ? 'border-amber-500/50'
-    : variant === 'emerald' ? 'border-emerald-500/50'
-    : 'border-red-700/40'
-  const labelClass = variant === 'amber' ? 'text-amber-400' : variant === 'emerald' ? 'text-emerald-400' : 'text-red-400'
-  const bgClass = variant === 'red' ? 'bg-red-950/20' : 'bg-slate-900/40'
+    ? 'border-trust/45 ring-2 ring-trust/15'
+    : variant === 'amber' ? 'border-action/35'
+    : variant === 'emerald' ? 'border-trust/30'
+    : 'border-danger/25'
+  const labelClass = variant === 'amber' ? 'text-warning' : variant === 'emerald' ? 'text-trust-dark' : 'text-danger'
+  const bgClass = variant === 'red' ? 'bg-danger/5' : 'bg-paper'
 
   return (
     <div className={`${bgClass} border ${borderClass} rounded-xl p-4 ${variant === 'red' ? 'opacity-70' : ''} relative`}>
       {recommended && (
-        <span className="absolute -top-2.5 left-4 text-[10px] font-bold font-mono bg-emerald-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
+        <span className="absolute -top-2.5 left-4 rounded-full bg-trust px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
           Aanbevolen
         </span>
       )}
       <div className={`text-[10px] font-mono uppercase tracking-widest mb-1 ${labelClass}`}>{scenario.naam}</div>
-      <p className="text-xs text-white/40 mb-3 font-mono">{scenario.beschrijving}</p>
+      <p className="mb-3 text-xs text-ink-muted">{scenario.beschrijving}</p>
       <div className="space-y-2">
         <div className="flex justify-between items-baseline">
-          <span className="text-xs text-white/40 font-mono">Besparing/jaar</span>
+          <span className="text-xs text-ink-muted">Besparing/jaar</span>
           <span className={`font-mono font-bold text-lg ${labelClass}`}>€{scenario.besparingJaarEur.toLocaleString('nl-NL')}</span>
         </div>
         <div className="flex justify-between items-baseline">
-          <span className="text-xs text-white/40 font-mono">Investering</span>
-          <span className="font-mono text-white/60 text-sm">€{scenario.investeringEur.toLocaleString('nl-NL')}</span>
+          <span className="text-xs text-ink-muted">Investering</span>
+          <span className="font-mono text-sm text-ink">€{scenario.investeringEur.toLocaleString('nl-NL')}</span>
         </div>
         <div className="flex justify-between items-baseline">
-          <span className="text-xs text-white/40 font-mono">Terugverdientijd</span>
-          <span className="font-mono text-white/60 text-sm">{scenario.terugverdientijdJaar >= 99 ? '—' : `${scenario.terugverdientijdJaar} jaar`}</span>
+          <span className="text-xs text-ink-muted">Terugverdientijd</span>
+          <span className="font-mono text-sm text-ink">{scenario.terugverdientijdJaar >= 99 ? '—' : `${scenario.terugverdientijdJaar} jaar`}</span>
         </div>
       </div>
       {variant === 'red' && (
-        <div className="mt-3 pt-3 border-t border-red-700/30">
-          <span className="text-[10px] font-mono text-red-400 uppercase tracking-widest">Saldering vervalt 1 jan 2027</span>
+        <div className="mt-3 border-t border-danger/20 pt-3">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-danger">Saldering vervalt 1 jan 2027</span>
         </div>
       )}
     </div>
@@ -71,18 +73,18 @@ function SliderInput({ label, value, onChange, min, max, step, unit, note }: {
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <label className="text-xs font-mono text-white/40 uppercase tracking-widest">{label}</label>
-        <span className="font-mono font-bold text-amber-400 text-sm">{value.toLocaleString('nl-NL')} {unit}</span>
+        <label className="text-xs font-semibold uppercase tracking-widest text-ink-muted">{label}</label>
+        <span className="font-mono text-sm font-bold text-trust-dark">{value.toLocaleString('nl-NL')} {unit}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         aria-label={label} aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} aria-valuetext={`${value} ${unit}`}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-ink/10 accent-trust
           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500
+          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-trust
           [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2
-          [&::-webkit-slider-thumb]:border-amber-400 accent-amber-500" />
-      <div className="flex justify-between text-[10px] font-mono text-white/30">
+          [&::-webkit-slider-thumb]:border-trust" />
+      <div className="flex justify-between text-[10px] text-ink-muted">
         <span>{min.toLocaleString('nl-NL')} {unit}</span>
         {note && <span className="italic">{note}</span>}
         <span>{max.toLocaleString('nl-NL')} {unit}</span>
@@ -169,21 +171,23 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
   const roi = localRoi
 
   return (
-    <div className="p-6 space-y-6">
-      <StepHeader stap="Stap 2 — ROI berekening" title="Uw besparingsanalyse" subtitle="Eerst uw huidige situatie, daarna parameters voor de berekening" />
+    <FunnelStageShell
+      eyebrow="Stadium 2 van 4 · Uw situatie"
+      title="Uw besparingsanalyse"
+      description="Bevestig uw huidige situatie. We gebruiken deze invoer om uw persoonlijke 2027-impact opnieuw te berekenen."
+    >
 
-      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-4">
-        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Huidige situatie</div>
-        <p className="text-xs text-white/55 font-sans leading-relaxed">
+      <FunnelCard surface="mist" className="space-y-4">
+        <div className="text-xs font-semibold uppercase tracking-widest text-trust-dark">Huidige situatie</div>
+        <p className="text-sm leading-6 text-ink-muted">
           Dit is leidend voor het advies: met bestaande panelen verschuift de nadruk naar batterij en optimalisatie (niet naar nieuwe panelen als primaire stap).
         </p>
-        <p id="st2-panelen-label" className="text-xs font-mono text-white/65 uppercase tracking-widest">Heeft u nu al zonnepanelen?</p>
+        <p id="st2-panelen-label" className="text-sm font-semibold text-ink">Heeft u nu al zonnepanelen?</p>
         <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="st2-panelen-label">
           {([false, true] as const).map((val) => (
-            <button
+            <FunnelChoiceCard
               key={String(val)}
-              type="button"
-              aria-pressed={state.heeft_panelen === val}
+              selected={state.heeft_panelen === val}
               onClick={() => {
                 dispatch({ type: 'SET_HEEFT_PANELEN', heeft_panelen: val })
                 if (!val) {
@@ -191,20 +195,14 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
                   setPanelen(Math.max(1, aanbevolenPanelen))
                 }
               }}
-              className={[
-                'py-2.5 rounded-lg text-sm font-sans border transition-all',
-                state.heeft_panelen === val
-                  ? 'bg-amber-500/15 border-amber-500/60 text-amber-400 font-semibold'
-                  : 'bg-slate-800/40 border-white/8 text-white/40 hover:border-white/20 hover:text-white/60',
-              ].join(' ')}
             >
               {val ? 'Ja, ik heb panelen' : 'Nee, nog geen panelen'}
-            </button>
+            </FunnelChoiceCard>
           ))}
         </div>
         {state.heeft_panelen === true && (
           <div className="space-y-1.5">
-            <label className="text-xs font-mono text-white/40 uppercase tracking-widest" htmlFor="st2-huidige-panelen">
+            <label className="text-sm font-semibold text-ink" htmlFor="st2-huidige-panelen">
               Hoeveel panelen liggen er nu op uw dak?
             </label>
             <input
@@ -224,14 +222,21 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
                 if (n && n > 0 && n <= 200) setPanelen(n)
               }}
               placeholder="Bijv. 10"
-              className="w-full min-w-0 bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/80 font-mono text-base sm:text-sm focus:outline-none focus:border-amber-500/50"
+              className="w-full min-w-0 rounded-xl border border-ink/15 bg-white px-4 py-3 font-mono text-base text-ink shadow-sm focus:border-trust focus:outline-none focus-visible:ring-3 focus-visible:ring-trust/35 sm:text-sm"
             />
           </div>
         )}
-      </div>
+      </FunnelCard>
 
-      <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4 space-y-5">
-        <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Parameters</div>
+      <details className="group rounded-2xl border border-ink/10 bg-paper">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-sm font-semibold text-ink sm:px-5">
+          <span>
+            Berekening aanpassen
+            <span className="mt-0.5 block text-xs font-normal text-ink-muted">Verbruik, dak, panelen en dakrichting</span>
+          </span>
+          <span className="text-trust-dark transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+        </summary>
+        <div className="space-y-5 border-t border-ink/10 px-4 py-5 sm:px-5">
         <SliderInput label="Huidig verbruik" value={verbruik} onChange={(v) => {
           setVerbruik(v)
           dispatch({ type: 'SET_VERBRUIK_BRON', bron: 'gebruiker' })
@@ -252,14 +257,14 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <label className="text-xs font-mono text-white/65 uppercase tracking-widest" htmlFor="st2-paneeltype">Paneeltype</label>
-            <span className="font-mono text-amber-400 text-sm">{kwhPerPaneel} kWh/paneel</span>
+            <label className="text-xs font-semibold uppercase tracking-widest text-ink-muted" htmlFor="st2-paneeltype">Paneeltype</label>
+            <span className="font-mono text-sm text-trust-dark">{kwhPerPaneel} kWh/paneel</span>
           </div>
           <select
             id="st2-paneeltype"
             value={kwhPerPaneel}
             onChange={(e) => setKwhPerPaneel(Number(e.target.value))}
-            className="w-full min-w-0 bg-slate-950/60 border border-white/10 rounded-xl px-4 py-2.5 text-white/70 font-mono text-base sm:text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
+            className="w-full min-w-0 cursor-pointer rounded-xl border border-ink/15 bg-white px-4 py-3 font-mono text-base text-ink focus:border-trust focus:outline-none focus-visible:ring-3 focus-visible:ring-trust/35 sm:text-sm"
           >
             {PANEEL_TYPES.map((t) => (
               <option key={t.kwhPerPaneel} value={t.kwhPerPaneel}>{t.label}</option>
@@ -269,104 +274,91 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
 
         {/* Dakrichting */}
         <div className="space-y-2">
-          <p id="st2-dakrichting-label" className="text-xs font-mono text-white/65 uppercase tracking-widest">
+          <p id="st2-dakrichting-label" className="text-xs font-semibold uppercase tracking-widest text-ink-muted">
             Dakrichting <span className="normal-case">(optioneel)</span>
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-labelledby="st2-dakrichting-label">
             {(['Zuid', 'Oost/West', 'Noord'] as const).map(richting => (
-              <button
+              <FunnelChoiceCard
                 key={richting}
                 type="button"
-                aria-pressed={state.dakrichting === richting}
+                selected={state.dakrichting === richting}
                 onClick={() => dispatch({ type: 'SET_DAKRICHTING', dakrichting: state.dakrichting === richting ? null : richting })}
-                className={[
-                  'py-2.5 px-1.5 rounded-lg text-xs font-sans leading-tight text-center whitespace-nowrap border transition-colors min-w-0',
-                  state.dakrichting === richting
-                    ? 'bg-amber-500 text-slate-950 border-amber-500'
-                    : 'bg-slate-800/50 text-white/50 border-white/10 hover:border-amber-500/40',
-                ].join(' ')}
+                className="min-w-0 whitespace-nowrap px-1.5 text-center text-xs leading-tight"
               >
                 {richting}
-              </button>
+              </FunnelChoiceCard>
             ))}
-            <button
-              type="button"
-              aria-pressed={state.dakrichting === null}
+            <FunnelChoiceCard
+              selected={state.dakrichting === null}
               onClick={() => dispatch({ type: 'SET_DAKRICHTING', dakrichting: null })}
-              className={[
-                'py-2.5 px-1.5 rounded-lg text-xs font-sans leading-tight text-center whitespace-nowrap border transition-colors min-w-0',
-                state.dakrichting === null
-                  ? 'bg-slate-700 text-white border-slate-500'
-                  : 'bg-slate-800/50 text-white/30 border-white/10 hover:border-white/30',
-              ].join(' ')}
+              className="min-w-0 whitespace-nowrap px-1.5 text-center text-xs leading-tight"
             >
               Onbekend
-            </button>
+            </FunnelChoiceCard>
           </div>
           {state.dakrichting === 'Noord' && (
-            <p className="text-[10px] font-mono text-amber-400/80">Noord-dak levert ~57% minder op. Batterij is extra waardevol.</p>
+            <p className="text-xs text-warning">Noord-dak levert ~57% minder op. Batterij is extra waardevol.</p>
           )}
           {state.dakrichting === 'Zuid' && (
-            <p className="text-[10px] font-mono text-emerald-400/80">Zuid-dak: optimale opbrengst (+23% t.o.v. gemiddeld).</p>
+            <p className="text-xs text-trust-dark">Zuid-dak: optimale opbrengst (+23% t.o.v. gemiddeld).</p>
           )}
         </div>
-      </div>
+        </div>
+      </details>
 
       {roiError && (
-        <div className="flex items-start gap-2 bg-red-950/40 border border-red-700 rounded-lg px-3 py-2" role="alert">
-          <span className="text-red-400 text-xs mt-0.5">!</span>
-          <p className="text-red-400 text-xs font-mono">{roiError}</p>
-        </div>
+        <FunnelNotice variant="danger">{roiError}</FunnelNotice>
       )}
 
       {loading && (
-        <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
-          <div className="w-3 h-3 border border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center gap-2 text-xs font-semibold text-trust-dark" role="status" aria-live="polite">
+          <div className="h-3 w-3 animate-spin rounded-full border border-trust border-t-transparent" aria-hidden="true" />
           Herberekenen...
         </div>
       )}
 
       {panelen === 0 ? (
-        <div className="bg-slate-900/40 border border-amber-500/30 rounded-xl p-4 space-y-3">
-          <div className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">Advies op basis van uw situatie</div>
+        <FunnelCard surface="trust" className="space-y-3">
+          <div className="text-xs font-semibold uppercase tracking-widest text-trust-dark">Advies op basis van uw situatie</div>
           {state.heeft_panelen === true ? (
             <>
-              <p className="text-sm font-mono text-white/70 leading-relaxed">
-                U heeft al panelen: de grootste hefboom richting 2027 is doorgaans <span className="text-amber-400 font-bold">thuisbatterij + slim verbruik</span>.
+              <p className="text-sm leading-6 text-ink-muted">
+                U heeft al panelen: de grootste hefboom richting 2027 is doorgaans <span className="font-bold text-ink">thuisbatterij + slim verbruik</span>.
                 Optioneel kunt u uitbreiden met extra panelen tot ongeveer{' '}
-                <span className="text-amber-400 font-bold">{aanbevolenPanelen}</span> op dit dakmodel.
+                <span className="font-bold text-ink">{aanbevolenPanelen}</span> op dit dakmodel.
               </p>
               <button
                 type="button"
                 onClick={() => setPanelen(Math.max(1, state.huidige_panelen_aantal ?? aanbevolenPanelen))}
-                className="text-xs font-mono text-amber-400 underline underline-offset-2 hover:text-amber-300"
+                className={funnelTextButtonClass}
               >
                 Gebruik mijn huidige aantal / advies →
               </button>
             </>
           ) : (
             <>
-              <p className="text-sm font-mono text-white/70 leading-relaxed">
+              <p className="text-sm leading-6 text-ink-muted">
                 Op basis van uw verbruik van{' '}
-                <span className="text-amber-400 font-bold">{verbruik.toLocaleString('nl-NL')} kWh/jaar</span>{' '}
-                en <span className="text-amber-400 font-bold">{dakOpp} m²</span> dakoppervlak
+                <span className="font-bold text-ink">{verbruik.toLocaleString('nl-NL')} kWh/jaar</span>{' '}
+                en <span className="font-bold text-ink">{dakOpp} m²</span> dakoppervlak
                 adviseren wij{' '}
-                <span className="text-amber-400 font-bold">{aanbevolenPanelen} zonnepanelen</span> als instap-scenario.
+                <span className="font-bold text-ink">{aanbevolenPanelen} zonnepanelen</span> als instap-scenario.
               </p>
               <button
                 type="button"
                 onClick={() => setPanelen(aanbevolenPanelen)}
-                className="text-xs font-mono text-amber-400 underline underline-offset-2 hover:text-amber-300"
+                className={funnelTextButtonClass}
               >
                 Gebruik aanbevolen aantal →
               </button>
             </>
           )}
-        </div>
+        </FunnelCard>
       ) : roi && (
         <>
           <div>
-            <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">Scenario Vergelijking</div>
+            <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-muted">Scenariovergelijking</div>
             <div className="space-y-4">
               <ScenarioCard scenario={roi.scenarioNu} variant="amber" />
               <ScenarioCard scenario={roi.scenarioMetBatterij} variant="emerald" recommended />
@@ -374,7 +366,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
             </div>
           </div>
           <div>
-            <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">2027 Urgentie</div>
+            <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-muted">2027 Urgentie</div>
             <Shock2027Banner shock={roi.shockEffect2027} besparingNu={roi.scenarioNu.besparingJaarEur} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -383,10 +375,10 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
               { label: 'Productie', value: roi.productieKwh.toLocaleString('nl-NL'), unit: 'kWh/jaar' },
               { label: 'Eigengebruik', value: `${roi.eigenGebruikPct}%`, unit: 'van prod.' },
             ].map((s) => (
-              <div key={s.label} className="bg-slate-900/40 border border-white/10 rounded-xl p-3 text-center">
-                <div className="text-[10px] font-mono text-white/40 mb-1">{s.label}</div>
-                <div className="font-mono font-bold text-amber-400">{s.value}</div>
-                <div className="text-[10px] font-mono text-white/30">{s.unit}</div>
+              <div key={s.label} className="rounded-xl border border-ink/10 bg-mist p-3 text-center">
+                <div className="mb-1 text-xs font-semibold text-ink-muted">{s.label}</div>
+                <div className="font-mono font-bold text-trust-dark">{s.value}</div>
+                <div className="text-xs text-ink-muted">{s.unit}</div>
               </div>
             ))}
           </div>
@@ -394,27 +386,30 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
       )}
 
       {!state.bagData && (
-        <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3">
-          <p className="text-xs font-mono text-amber-300">Ga terug naar stap 1 om een adres op te zoeken</p>
-        </div>
+        <FunnelNotice variant="warning">Ga terug naar stadium 1 om een adres op te zoeken.</FunnelNotice>
       )}
 
-      <div className="flex gap-3">
-        <button onClick={() => dispatch({ type: 'SET_STEP', step: 1 })}
-          className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-sm py-3 px-4 rounded-full transition-colors">← Terug</button>
-        <button
-          onClick={() => dispatch({ type: 'SET_STEP', step: 3 })}
-          disabled={
-            state.heeft_panelen === null
-            || (state.heeft_panelen === true && (!state.huidige_panelen_aantal || state.huidige_panelen_aantal < 1))
-            || !roi
-            || panelen === 0
-          }
-          className={`flex-[2] text-sm py-3 px-6 ${amberBtnCls}`}
-        >
-          Meterkast scannen →
-        </button>
-      </div>
-    </div>
+      <FunnelActions
+        secondary={(
+          <button onClick={() => dispatch({ type: 'SET_STEP', step: 1 })} className={funnelSecondaryButtonClass}>
+            ← Terug
+          </button>
+        )}
+        primary={(
+          <button
+            onClick={() => dispatch({ type: 'SET_STEP', step: 3 })}
+            disabled={
+              state.heeft_panelen === null
+              || (state.heeft_panelen === true && (!state.huidige_panelen_aantal || state.huidige_panelen_aantal < 1))
+              || !roi
+              || panelen === 0
+            }
+            className={funnelPrimaryButtonClass}
+          >
+            Verfijn mijn advies
+          </button>
+        )}
+      />
+    </FunnelStageShell>
   )
 }

@@ -77,7 +77,8 @@ test.describe('Step 6 — Lead formulier validatie', () => {
   })
 
   test('Stap 6 is geladen', async ({ page }) => {
-    await expect(page.getByText('Stap 6 — Uw rapport')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole('progressbar', { name: /Stadium 4 van 4: Ontvang uw rapport/ })).toBeVisible({ timeout: 8000 })
+    await expect(page.getByRole('heading', { name: /gratis PDF-rapport/i })).toBeVisible()
   })
 
   test('Submit knop dient niet in zonder naam', async ({ page }) => {

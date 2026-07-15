@@ -1,65 +1,79 @@
-'use client'
+import { visualStageForStep } from './funnel-state'
 
 interface FunnelProgressProps {
   currentStep: 1 | 2 | 3 | 4 | 5 | 6
 }
 
-const STEPS = [
-  { label: 'Adres', num: 1 },
-  { label: 'Besparing', num: 2 },
-  { label: 'Meterkast', num: 3 },
-  { label: 'Plaatsing', num: 4 },
-  { label: 'Omvormer', num: 5 },
-  { label: 'Aanvraag', num: 6 },
+const STAGES = [
+  {
+    label: 'Uw woning',
+    description: 'Adres en woninggegevens',
+  },
+  {
+    label: 'Uw situatie',
+    description: 'Verbruik en besparing',
+  },
+  {
+    label: 'Verfijn uw advies',
+    description: 'Optionele technische checks',
+  },
+  {
+    label: 'Ontvang uw rapport',
+    description: 'Persoonlijk resultaat',
+  },
 ] as const
 
-const AMBER = '#f59e0b'
-const AMBER_DARK = '#b45309'
-
 export function FunnelProgress({ currentStep }: FunnelProgressProps) {
+  const currentStage = visualStageForStep(currentStep)
+  const active = STAGES[currentStage - 1]
+
   return (
-    <div className="w-full" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={6} aria-label={`Stap ${currentStep} van 6`}>
-      <div className="h-1 rounded-full mb-4 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-        <div
-          className="h-full transition-all duration-500 ease-out rounded-full"
-          style={{ width: `${((currentStep - 1) / 5) * 100}%`, background: `linear-gradient(90deg, ${AMBER_DARK}, ${AMBER})` }}
-        />
+    <div
+      className="w-full"
+      data-testid="funnel-stage-progress"
+      role="progressbar"
+      aria-valuenow={currentStage}
+      aria-valuemin={1}
+      aria-valuemax={4}
+      aria-label={`Stadium ${currentStage} van 4: ${active.label}`}
+    >
+      <div className="mb-4 flex items-end justify-between gap-4 sm:hidden">
+        <div>
+          <p className="text-xs font-semibold text-trust">Stadium {currentStage} van 4</p>
+          <p className="mt-1 font-heading text-lg font-bold text-white">{active.label}</p>
+          <p className="mt-0.5 text-sm text-white/65">{active.description}</p>
+        </div>
+        <span className="shrink-0 font-mono text-sm font-bold text-trust">
+          {Math.round((currentStage / 4) * 100)}%
+        </span>
       </div>
 
-      <div className="flex justify-between">
-        {STEPS.map(({ label, num }) => {
-          const isCompleted = num < currentStep
-          const isActive = num === currentStep
+      <div className="mb-5 grid grid-cols-4 gap-2" aria-hidden="true">
+        {STAGES.map((stage, index) => {
+          const stageNumber = index + 1
+          const completed = stageNumber < currentStage
+          const activeStage = stageNumber === currentStage
 
           return (
-            <div key={num} className="flex flex-col items-center gap-1.5">
+            <div key={stage.label} className="min-w-0">
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
-                style={
-                  isCompleted ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 3px rgba(2,6,23,1), 0 0 0 5px ${AMBER}70, 0 0 12px ${AMBER}40` }
-                  : isActive ? { background: AMBER, color: '#020617', boxShadow: `0 0 0 3px rgba(2,6,23,1), 0 0 0 5px ${AMBER}50, 0 0 20px ${AMBER}50` }
-                  : { background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.12)' }
-                }
-              >
-                {isCompleted ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M2 6l2.5 2.5L10 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : <span>{num}</span>}
+                className={[
+                  'h-1.5 rounded-full transition-colors duration-300',
+                  completed || activeStage ? 'bg-trust' : 'bg-white/15',
+                ].join(' ')}
+              />
+              <div className="mt-3 hidden sm:block">
+                <p className={[
+                  'text-xs font-semibold transition-colors',
+                  activeStage ? 'text-trust' : completed ? 'text-white/80' : 'text-white/65',
+                ].join(' ')}>
+                  {stageNumber}. {stage.label}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-white/65">{stage.description}</p>
               </div>
-              <span className="text-[10px] hidden sm:block transition-colors duration-300"
-                style={{ fontFamily: 'var(--font-sans)', color: isActive ? AMBER : isCompleted ? AMBER : 'rgba(255,255,255,0.65)', fontWeight: isActive ? 600 : 400 }}>
-                {label}
-              </span>
             </div>
           )
         })}
-      </div>
-
-      <div className="mt-2 text-center sm:hidden">
-        <span className="text-xs" style={{ color: AMBER, fontFamily: 'var(--font-sans)' }}>
-          Stap {currentStep}/6 — {STEPS[currentStep - 1].label}
-        </span>
       </div>
     </div>
   )

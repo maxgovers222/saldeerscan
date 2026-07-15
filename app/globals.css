@@ -68,24 +68,24 @@
 }
 
 :root {
-  --background: #f3f7f5;
-  --foreground: #10231d;
-  --card: #fbfdfc;
-  --card-foreground: #10231d;
-  --popover: #fbfdfc;
-  --popover-foreground: #10231d;
-  --primary: #ffb020;
-  --primary-foreground: #06130f;
+  --background: var(--color-mist);
+  --foreground: var(--color-ink);
+  --card: var(--color-paper);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-action);
+  --primary-foreground: var(--color-evergreen-950);
   --secondary: #e6efeb;
-  --secondary-foreground: #10231d;
+  --secondary-foreground: var(--color-ink);
   --muted: #eaf1ee;
-  --muted-foreground: #5a6d66;
+  --muted-foreground: var(--color-ink-muted);
   --accent: #dff6ec;
   --accent-foreground: #075c3e;
-  --destructive: #dc2626;
+  --destructive: var(--color-danger);
   --border: #d9e4df;
   --input: #cfded7;
-  --ring: #00b875;
+  --ring: var(--color-trust);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -103,37 +103,37 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.79 0.184 86.047);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: var(--color-evergreen-950);
+  --foreground: var(--color-paper);
+  --card: var(--color-evergreen-900);
+  --card-foreground: var(--color-paper);
+  --popover: var(--color-evergreen-900);
+  --popover-foreground: var(--color-paper);
+  --primary: var(--color-action);
+  --primary-foreground: var(--color-evergreen-950);
+  --secondary: #15342a;
+  --secondary-foreground: var(--color-paper);
+  --muted: #17362c;
+  --muted-foreground: #a6b8b1;
+  --accent: var(--color-trust-dark);
+  --accent-foreground: white;
+  --destructive: var(--color-danger);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.79 0.184 86.047);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: var(--color-trust);
+  --chart-1: var(--color-trust);
+  --chart-2: var(--color-action);
+  --chart-3: var(--color-trust-dark);
+  --chart-4: var(--color-warning);
+  --chart-5: var(--color-danger);
+  --sidebar: var(--color-evergreen-900);
+  --sidebar-foreground: var(--color-paper);
+  --sidebar-primary: var(--color-action);
+  --sidebar-primary-foreground: var(--color-evergreen-950);
+  --sidebar-accent: #15342a;
+  --sidebar-accent-foreground: var(--color-paper);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: var(--color-trust);
 }
 
 @layer base {
@@ -161,7 +161,7 @@
     font-family: var(--font-family-heading);
   }
   :focus-visible {
-    outline: 3px solid color-mix(in srgb, #00b875 45%, transparent);
+    outline: 3px solid color-mix(in srgb, var(--color-trust) 45%, transparent);
     outline-offset: 3px;
   }
 }
@@ -178,44 +178,6 @@
 @keyframes scan-line {
   0% { top: 0%; }
   100% { top: 100%; }
-}
-
-/* ── Command Center (funnel /check pagina) ── */
-.bg-command-center {
-  background-color: #020617;
-  background-image:
-    radial-gradient(circle at 50% 0%, rgba(30, 58, 95, 0.35) 0%, transparent 60%),
-    linear-gradient(rgba(30, 41, 59, 0.6) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(30, 41, 59, 0.6) 1px, transparent 1px);
-  background-size: 100% 100%, 40px 40px, 40px 40px;
-}
-
-.glass-card {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.glass-card-inner {
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* Homepage glassmorphism cards (on navy bg) */
-.glass-card-navy {
-  background: rgba(2, 6, 23, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.amber-glow:focus {
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 0 20px rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.6);
-  outline: none;
 }
 
 /*

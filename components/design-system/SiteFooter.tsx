@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BrandMark } from './BrandMark'
+import { BrandLockup } from './BrandLockup'
 import { Container } from './Container'
 
 export function SiteFooter() {
@@ -8,8 +8,7 @@ export function SiteFooter() {
       <Container className="grid gap-8 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
           <Link href="/" className="inline-flex items-center gap-3" aria-label="Naar de homepage">
-            <BrandMark className="size-8 rounded-lg" />
-            <span className="font-heading font-bold">SaldeerScan.nl</span>
+            <BrandLockup tone="dark" markClassName="size-8 rounded-lg" wordmarkClassName="text-base" />
           </Link>
           <p className="mt-3 max-w-sm text-sm leading-6 text-white/50">
             Gratis energieanalyse voor Nederlandse woningeigenaren.

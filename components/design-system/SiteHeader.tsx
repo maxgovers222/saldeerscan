@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BrandMark } from './BrandMark'
+import { BrandLockup } from './BrandLockup'
 import { Container } from './Container'
 import { PrimaryAction } from './PrimaryAction'
 
@@ -30,17 +30,11 @@ export function SiteHeader({
           className={`flex items-center justify-between gap-3 ${compact ? 'min-h-14' : 'min-h-16'}`}
         >
           <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="SaldeerScan.nl">
-            <BrandMark className={compact ? 'size-8 rounded-lg' : undefined} />
-            <span className="min-w-0">
-              <span className="block truncate font-heading text-base font-bold tracking-tight sm:text-lg">
-                SaldeerScan<span className={dark ? 'text-trust' : 'text-trust-dark'}>.nl</span>
-              </span>
-              {contextLabel && (
-                <span className={dark ? 'block truncate text-xs text-white/55' : 'block truncate text-xs text-ink-muted'}>
-                  {contextLabel}
-                </span>
-              )}
-            </span>
+            <BrandLockup
+              tone={dark ? 'dark' : 'light'}
+              contextLabel={contextLabel}
+              markClassName={compact ? 'size-8 rounded-lg' : undefined}
+            />
           </Link>
           <div className="flex shrink-0 items-center gap-4">
             <Link

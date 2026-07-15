@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react'
+import { BRAND_MARK_GEOMETRY } from '@/lib/brand-colors'
 import { cn } from '@/lib/utils'
 
-export function BrandMark({ className }: { className?: string }) {
+export function BrandMark({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       aria-hidden="true"
@@ -8,17 +10,18 @@ export function BrandMark({ className }: { className?: string }) {
         'grid size-9 shrink-0 place-items-center rounded-xl bg-trust text-white',
         className,
       )}
+      {...props}
     >
-      <svg viewBox="0 0 18 18" fill="none" className="size-5">
+      <svg viewBox={BRAND_MARK_GEOMETRY.viewBox} fill="none" className="size-5">
         <path
-          d="M9 2 15.5 6v7L9 17l-6.5-4V6L9 2Z"
+          d={BRAND_MARK_GEOMETRY.outerPath}
           fill="currentColor"
-          fillOpacity=".25"
+          fillOpacity={BRAND_MARK_GEOMETRY.outerFillOpacity}
           stroke="currentColor"
-          strokeWidth="1.3"
+          strokeWidth={BRAND_MARK_GEOMETRY.outerStrokeWidth}
           strokeLinejoin="round"
         />
-        <path d="m9 6.5 3 2V12l-3 2-3-2V8.5l3-2Z" fill="currentColor" />
+        <path d={BRAND_MARK_GEOMETRY.innerPath} fill="currentColor" />
       </svg>
     </span>
   )

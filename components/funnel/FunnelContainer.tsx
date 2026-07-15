@@ -527,9 +527,9 @@ export function FunnelContainer({ urlParams }: {
           )}
         </div>
       ) : (
-        <div className="md:max-w-xl md:mx-auto min-w-0">
+        <div className={`${state.step === 6 ? 'md:max-w-4xl' : 'md:max-w-xl'} min-w-0 md:mx-auto`}>
           <FunnelProgress currentStep={state.step} />
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-2xl overflow-hidden min-w-0">
+          <div className="min-w-0 overflow-hidden rounded-3xl border border-ink/10 bg-paper shadow-[0_18px_60px_rgba(6,19,15,0.12)]">
             {state.step === 1 && <Step1Adres state={state} dispatch={trackingDispatch} trackFunnel={trackFunnel} />}
             {state.step === 2 && <Step2ROI state={state} dispatch={trackingDispatch} />}
             {state.step === 3 && <Step3Meterkast state={state} dispatch={trackingDispatch} trackFunnel={trackFunnel} />}

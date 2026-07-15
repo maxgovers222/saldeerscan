@@ -3,8 +3,11 @@
 import { useState, useEffect, useRef, useCallback, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction } from './types'
 import type { FunnelTracker } from '@/lib/analytics'
-import { StepHeader } from './StepHeader'
 import { AnalysisLoading } from './AnalysisLoading'
+import { funnelPrimaryButtonClass } from './ui/FunnelActions'
+import { FunnelCard } from './ui/FunnelCard'
+import { FunnelNotice } from './ui/FunnelNotice'
+import { FunnelStageShell } from './ui/FunnelStageShell'
 
 interface Step1AdresProps {
   state: FunnelState
@@ -12,14 +15,12 @@ interface Step1AdresProps {
   trackFunnel: FunnelTracker
 }
 
-const amberBtnCls = 'bg-[#f59e0b] text-slate-950 font-bold rounded-full transition-all duration-200 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100'
-
 function HealthScoreGauge({ score, label }: { score: number; label: string }) {
   const colorClass =
-    score >= 75 ? 'text-emerald-400' :
-    score >= 55 ? 'text-amber-400' :
-    score >= 35 ? 'text-orange-400' :
-    'text-red-400'
+    score >= 75 ? 'text-trust-dark' :
+    score >= 55 ? 'text-warning' :
+    score >= 35 ? 'text-warning' :
+    'text-danger'
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -34,17 +35,17 @@ function NetcongentieBadge({ status, netbeheerder }: { status: 'ROOD' | 'ORANJE'
     ROOD: {
       label: `Net vol (${netbeheerder || 'netbeheerder'}): teruglevering beperkt`,
       subtext: 'Zonne-energie die u teruglevert wordt niet volledig vergoed. Een thuisbatterij is hier extra waardevol.',
-      textClass: 'text-red-400', bgClass: 'bg-red-950/50 border-red-700', dotClass: 'bg-red-500',
+      textClass: 'text-danger', bgClass: 'bg-danger/8 border-danger/25', dotClass: 'bg-danger',
     },
     ORANJE: {
       label: `Druk stroomnet (${netbeheerder || 'netbeheerder'}): piekproductie soms beperkt`,
       subtext: null,
-      textClass: 'text-amber-400', bgClass: 'bg-amber-950/50 border-amber-700', dotClass: 'bg-amber-500',
+      textClass: 'text-warning', bgClass: 'bg-action/10 border-warning/25', dotClass: 'bg-warning',
     },
     GROEN: {
       label: `Vrij stroomnet (${netbeheerder || 'netbeheerder'}): teruglevering onbeperkt`,
       subtext: null,
-      textClass: 'text-emerald-400', bgClass: 'bg-emerald-950/50 border-emerald-700', dotClass: 'bg-emerald-500',
+      textClass: 'text-trust-dark', bgClass: 'bg-trust/10 border-trust/25', dotClass: 'bg-trust',
     },
   }
   const c = config[status]
@@ -53,7 +54,7 @@ function NetcongentieBadge({ status, netbeheerder }: { status: 'ROOD' | 'ORANJE'
       <span className={`w-2 h-2 rounded-full ${c.dotClass} shrink-0 mt-1`} />
       <div>
         <div className={`text-xs font-mono font-semibold ${c.textClass}`}>{c.label}</div>
-        {c.subtext && <div className="text-xs text-white/45 font-mono mt-0.5 leading-relaxed">{c.subtext}</div>}
+        {c.subtext && <div className="mt-0.5 text-xs leading-relaxed text-ink-muted">{c.subtext}</div>}
       </div>
     </div>
   )
@@ -62,10 +63,10 @@ function NetcongentieBadge({ status, netbeheerder }: { status: 'ROOD' | 'ORANJE'
 function LoadingSkeleton() {
   return (
     <div className="space-y-3 animate-pulse">
-      <div className="h-4 bg-white/10 rounded w-3/4" />
-      <div className="h-4 bg-white/10 rounded w-1/2" />
+      <div className="h-4 w-3/4 rounded bg-ink/8" />
+      <div className="h-4 w-1/2 rounded bg-ink/8" />
       <div className="grid grid-cols-2 gap-3">
-        {[...Array(4)].map((_, i) => <div key={i} className="h-16 bg-white/10 rounded" />)}
+        {[...Array(4)].map((_, i) => <div key={i} className="h-16 rounded bg-ink/8" />)}
       </div>
     </div>
   )
@@ -73,12 +74,12 @@ function LoadingSkeleton() {
 
 function DataCard({ label, value, unit }: { label: string; value: string | number | null; unit?: string }) {
   return (
-    <div className="bg-slate-900/40 border border-white/10 rounded-xl p-3">
-      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">{label}</div>
-      <div className="font-mono font-bold text-amber-400 text-lg leading-none">
+    <div className="rounded-xl border border-ink/10 bg-mist p-3">
+      <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">{label}</div>
+      <div className="font-mono text-lg font-bold leading-none text-ink">
         {value !== null && value !== undefined ? (
-          <>{value}{unit && <span className="text-xs text-white/30 ml-1">{unit}</span>}</>
-        ) : <span className="text-white/20">—</span>}
+          <>{value}{unit && <span className="ml-1 text-xs text-ink-muted">{unit}</span>}</>
+        ) : <span className="text-ink-muted/50">—</span>}
       </div>
     </div>
   )
@@ -143,14 +144,15 @@ function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }
           placeholder="Bijv. Prinsengracht 123, Amsterdam"
           disabled={disabled} autoComplete="off"
           className={[
-            'w-full min-w-0 bg-slate-950/60 border rounded-xl px-4 py-3.5 text-white placeholder:text-slate-500 font-mono text-base sm:text-sm transition-all focus:outline-none amber-glow',
-            isSelected ? 'border-emerald-500/50' : 'border-white/10',
+            'w-full min-w-0 rounded-xl border bg-white px-4 py-3.5 pr-10 font-sans text-base text-ink shadow-sm placeholder:text-ink-muted/65 transition',
+            'focus:border-trust focus:outline-none focus-visible:ring-3 focus-visible:ring-trust/35 sm:text-sm',
+            isSelected ? 'border-trust' : 'border-ink/15',
           ].join(' ')}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-          {loading && <div className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />}
+          {loading && <div className="size-3.5 animate-spin rounded-full border-2 border-trust border-t-transparent" />}
           {isSelected && !loading && (
-            <div className="w-4 h-4 bg-emerald-500/80 rounded-full flex items-center justify-center">
+            <div className="flex size-4 items-center justify-center rounded-full bg-trust" data-testid="address-selected">
               <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                 <path d="M1.5 4l2 2 3-3" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -160,12 +162,15 @@ function AddressAutocomplete({ value, onChange, onSelect, isSelected, disabled }
       </div>
 
       {open && suggestions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-900 border border-white/10 rounded-lg shadow-2xl overflow-hidden">
+        <div
+          className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-2xl"
+          data-testid="address-suggestions"
+        >
           {suggestions.map((s) => (
             <button key={s.id} type="button"
               onMouseDown={(e) => { e.preventDefault(); handleSelect(s) }}
-              className="w-full text-left px-4 py-2.5 text-sm font-mono text-white/70 hover:bg-amber-500/10 hover:text-amber-300 transition-colors border-b border-white/5 last:border-0">
-              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-amber-500/60 mr-2 shrink-0 inline-block">
+              className="w-full border-b border-ink/5 px-4 py-3 text-left text-sm text-ink transition-colors last:border-0 hover:bg-trust/10">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="mr-2 inline-block shrink-0 text-trust-dark">
                 <path d="M8 1.5a4.5 4.5 0 014.5 4.5C12.5 10 8 14.5 8 14.5S3.5 10 3.5 6A4.5 4.5 0 018 1.5z" stroke="currentColor" strokeWidth="1.3"/>
                 <circle cx="8" cy="6" r="1.5" fill="currentColor"/>
               </svg>{s.label}
@@ -272,8 +277,11 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
   }
 
   return (
-    <div className="p-7 space-y-6">
-      <StepHeader stap="Stap 1 — Adresverificatie" title="Voer uw adres in" subtitle="Selecteer uw adres voor een nauwkeurige BAG-analyse" />
+    <FunnelStageShell
+      eyebrow="Stadium 1 van 4 · Uw woning"
+      title="Voer uw adres in"
+      description="We controleren uw woninggegevens en het lokale stroomnet. Dit duurt meestal minder dan een minuut."
+    >
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <AddressAutocomplete
@@ -283,20 +291,17 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
         />
 
         {!selectedAdres && inputValue.length >= 3 && (
-          <p className="text-[10px] font-mono text-white/30">
-            <span className="text-amber-500">›</span> Selecteer een adres uit de suggesties om door te gaan
+          <p className="text-xs text-ink-muted">
+            Selecteer een adres uit de suggesties om door te gaan.
           </p>
         )}
 
         {localError && (
-          <div className="flex items-start gap-2 bg-red-950/40 border border-red-700 rounded-lg px-3 py-2" role="alert">
-            <span className="text-red-400 text-xs mt-0.5">!</span>
-            <p className="text-red-400 text-xs font-mono">{localError}</p>
-          </div>
+          <FunnelNotice variant="danger">{localError}</FunnelNotice>
         )}
 
         <button type="submit" disabled={!selectedAdres || localLoading}
-          className={`w-full font-mono text-sm py-3 px-6 ${amberBtnCls}`}>
+          className={`w-full ${funnelPrimaryButtonClass}`}>
           {localLoading ? 'Analyseren...' : 'Adres Analyseren'}
         </button>
       </form>
@@ -305,17 +310,13 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
 
       {hasResults && !localLoading && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-[10px] font-mono text-white/30 tracking-widest uppercase">Scan Resultaat</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-trust-dark">Uw woning is gevonden</p>
 
-          <div className="bg-slate-900/40 border border-white/10 rounded-xl p-3">
-            <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">Geanalyseerd adres</div>
-            <div className="font-mono text-white text-sm">{state.adres}</div>
-            {state.bagData?.postcode && <div className="font-mono text-white/40 text-xs mt-0.5">{state.bagData.postcode}</div>}
-          </div>
+          <FunnelCard surface="trust">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-trust-dark">Geanalyseerd adres</div>
+            <div className="break-words text-sm font-semibold text-ink">{state.adres}</div>
+            {state.bagData?.postcode && <div className="mt-0.5 font-mono text-xs text-ink-muted">{state.bagData.postcode}</div>}
+          </FunnelCard>
 
           <div className="grid grid-cols-2 gap-3">
             <DataCard label="Bouwjaar" value={state.bagData?.bouwjaar ?? null} />
@@ -326,42 +327,40 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
 
           {state.bagData?.woningtype &&
             !['Woning', 'woning', 'residential', 'Appartement', 'appartement'].includes(state.bagData.woningtype) && (
-            <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl p-3">
-              <p className="text-xs font-mono text-amber-300">
-                ⚠ Dit lijkt een kantoor- of bedrijfspand. Onze berekeningen zijn primair voor woningen — de uitkomsten kunnen afwijken van uw werkelijke situatie.
-              </p>
-            </div>
+            <FunnelNotice variant="warning" title="Mogelijk geen woonadres">
+              Dit lijkt een kantoor- of bedrijfspand. Onze berekeningen zijn primair voor woningen; de uitkomsten kunnen afwijken.
+            </FunnelNotice>
           )}
 
           {state.netcongestie && (
             <div>
-              <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Netcongestie</div>
+              <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">Lokaal stroomnet</div>
               <NetcongentieBadge status={state.netcongestie.status} netbeheerder={state.netcongestie.netbeheerder} />
             </div>
           )}
 
           {state.healthScore && (
-            <div className="bg-slate-900/40 border border-white/10 rounded-xl p-4">
-              <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">Energiepotentieel Score</div>
+            <FunnelCard surface="mist">
+              <div className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">Energiepotentieel</div>
               <div className="flex items-center justify-between">
                 <HealthScoreGauge score={state.healthScore.score} label={state.healthScore.label} />
                 <div className="flex-1 ml-4 space-y-1">
                   {state.healthScore.aanbevelingen.slice(0, 2).map((a, i) => (
-                    <p key={i} className="text-xs text-white/40 font-mono leading-relaxed">
-                      <span className="text-amber-400 mr-1">›</span>{a}
+                    <p key={i} className="text-xs leading-relaxed text-ink-muted">
+                      <span className="mr-1 text-trust-dark">✓</span>{a}
                     </p>
                   ))}
                 </div>
               </div>
-            </div>
+            </FunnelCard>
           )}
 
           <button onClick={() => dispatch({ type: 'SET_STEP', step: 2 })}
-            className={`w-full font-mono text-sm py-3 px-6 flex items-center justify-center gap-2 ${amberBtnCls}`}>
-            Bekijk besparingsanalyse <span>→</span>
+            className={`w-full ${funnelPrimaryButtonClass}`}>
+            Bereken mijn 2027-impact <span aria-hidden="true">→</span>
           </button>
         </div>
       )}
-    </div>
+    </FunnelStageShell>
   )
 }
