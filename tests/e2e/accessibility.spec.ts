@@ -127,6 +127,43 @@ test('keuzekaarten hebben state-semantiek en zichtbare focus', async ({ page }) 
   await expect(page.getByRole('button', { name: 'Ja, ik heb panelen' })).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('shock- en resume-oppervlakken behouden WCAG A/AA-contrast', async ({ page }) => {
+  const state = makeFunnelStateFixture({
+    step: 2,
+    leadId: null,
+    reportModel: null,
+  })
+  await page.addInitScript(({ state }) => {
+    localStorage.setItem('wep_funnel_state', JSON.stringify({
+      version: 2,
+      savedAt: Date.now(),
+      state,
+    }))
+  }, { state })
+  await page.goto('/check')
+
+  await expect(page.getByRole('complementary', { name: 'Vorige sessie' })).toBeVisible()
+  let result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze()
+  expect(result.violations.map(({ help, id, nodes }) => ({
+    help,
+    id,
+    nodes: nodes.map(node => node.html),
+  }))).toEqual([])
+
+  await page.getByRole('button', { name: 'Doorgaan', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Financiële impact vanaf 2027' })).toBeVisible()
+  result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze()
+  expect(result.violations.map(({ help, id, nodes }) => ({
+    help,
+    id,
+    nodes: nodes.map(node => node.html),
+  }))).toEqual([])
+})
+
 test('uploadknop is bereikbaar en gelabeld', async ({ page }) => {
   await seedFunnelStep(page, 3)
   const upload = page.getByRole('button', { name: /Foto van uw meterkast/ })

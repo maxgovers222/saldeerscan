@@ -31,13 +31,14 @@ function ScenarioCard({ scenario, variant, recommended }: {
     : variant === 'amber' ? 'border-action/35'
     : variant === 'emerald' ? 'border-trust/30'
     : 'border-danger/25'
-  const labelClass = variant === 'amber' ? 'text-warning' : variant === 'emerald' ? 'text-trust-dark' : 'text-danger'
+  const labelClass = variant === 'emerald' ? 'text-trust-dark' : 'text-ink'
+  const valueClass = variant === 'emerald' ? 'text-trust-dark' : 'text-ink'
   const bgClass = variant === 'red' ? 'bg-danger/5' : 'bg-paper'
 
   return (
-    <div className={`${bgClass} border ${borderClass} rounded-xl p-4 ${variant === 'red' ? 'opacity-70' : ''} relative`}>
+    <div className={`${bgClass} border ${borderClass} relative rounded-xl p-4`}>
       {recommended && (
-        <span className="absolute -top-2.5 left-4 rounded-full bg-trust px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
+        <span className="absolute -top-2.5 left-4 rounded-full bg-trust px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-evergreen-950">
           Aanbevolen
         </span>
       )}
@@ -46,7 +47,7 @@ function ScenarioCard({ scenario, variant, recommended }: {
       <div className="space-y-2">
         <div className="flex justify-between items-baseline">
           <span className="text-xs text-ink-muted">Besparing/jaar</span>
-          <span className={`font-mono font-bold text-lg ${labelClass}`}>€{scenario.besparingJaarEur.toLocaleString('nl-NL')}</span>
+          <span className={`font-mono text-lg font-bold ${valueClass}`}>€{scenario.besparingJaarEur.toLocaleString('nl-NL')}</span>
         </div>
         <div className="flex justify-between items-baseline">
           <span className="text-xs text-ink-muted">Investering</span>
@@ -59,7 +60,7 @@ function ScenarioCard({ scenario, variant, recommended }: {
       </div>
       {variant === 'red' && (
         <div className="mt-3 border-t border-danger/20 pt-3">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-danger">Saldering vervalt 1 jan 2027</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-ink">Saldering vervalt 1 jan 2027</span>
         </div>
       )}
     </div>

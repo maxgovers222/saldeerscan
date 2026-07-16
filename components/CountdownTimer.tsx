@@ -35,9 +35,9 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
   if (compact) {
     const days = mounted && time ? time.d : '--'
     return (
-      <p className="text-center text-xs font-mono text-white/65">
+      <p className="text-center font-mono text-xs text-white/70">
         Nog{' '}
-        <span className="text-amber-400 font-bold">
+        <span className="font-bold text-action">
           {typeof days === 'number' ? days : days}
         </span>
         {' '}dagen — saldering eindigt 1 jan 2027
@@ -47,7 +47,7 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="text-center">
-      <p className="text-xs font-mono text-white/65 uppercase tracking-widest mb-3">
+      <p className="mb-3 font-mono text-xs uppercase tracking-widest text-white/70">
         Salderingsregeling eindigt over
       </p>
       <div className="flex items-center justify-center gap-2 sm:gap-3">
@@ -57,19 +57,19 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
           return (
             <div
               key={key}
-              className="flex flex-col items-center bg-slate-900/60 border border-white/10 rounded-xl px-3 py-3 min-w-[58px] sm:min-w-[68px]"
+              className="flex min-w-[58px] flex-col items-center rounded-xl border border-white/10 bg-evergreen-950 px-3 py-3 sm:min-w-[68px]"
             >
-              <span className="font-mono text-2xl sm:text-3xl font-black text-amber-400 tabular-nums leading-none">
+              <span className="font-mono text-2xl font-black leading-none tabular-nums text-action sm:text-3xl">
                 {display}
               </span>
-              <span className="text-[10px] text-white/65 tracking-widest uppercase mt-1.5 font-mono">
+              <span className="mt-1.5 font-mono text-[10px] uppercase tracking-widest text-white/70">
                 {label}
               </span>
             </div>
           )
         })}
       </div>
-      <p className="text-xs text-white/65 mt-3 font-mono">
+      <p className="mt-3 font-mono text-xs text-white/70">
         Per 1 januari 2027 daalt uw opbrengst van 28% naar 0%
       </p>
     </div>

@@ -102,6 +102,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y poppler-utils
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test tests/e2e/visual-regression.spec.ts --project=chromium
       - uses: actions/upload-artifact@v4

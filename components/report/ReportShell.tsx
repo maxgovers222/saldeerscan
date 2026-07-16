@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { BrandLockup } from '@/components/design-system/BrandLockup'
 import type { NormalizedReport } from '@/lib/report-model'
 
 function formatReportDate(value: string): string {
@@ -23,10 +24,13 @@ export function ReportShell({
       className="min-w-0 overflow-hidden bg-mist text-ink"
     >
       <header className="bg-evergreen-950 px-5 py-7 text-white sm:px-8 sm:py-9">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-action">
-          Persoonlijk 2027-rapport
-        </p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+        <BrandLockup
+          tone="dark"
+          contextLabel="Persoonlijk 2027-rapport"
+          markClassName="size-10"
+          wordmarkClassName="text-lg sm:text-xl"
+        />
+        <h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
           Uw SaldeerScan rapport
         </h1>
         <p className="mt-2 break-words text-sm leading-6 text-white/65">

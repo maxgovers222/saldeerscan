@@ -17,7 +17,7 @@ function StatsLine() {
   if (!count) return null
 
   return (
-    <p className="mb-4 text-center font-mono text-[10px] text-white/35">
+    <p className="mb-4 text-center font-mono text-[10px] text-white/70">
       {count} Nederlanders analyseerden — jij bent op de goede weg
     </p>
   )
@@ -42,7 +42,7 @@ export function CheckPageClient() {
 
 export function CheckPageFallback() {
   return (
-    <div className="min-w-0 py-2 text-center text-sm text-white/55" role="status">
+    <div className="min-w-0 py-2 text-center text-sm text-white/70" role="status">
       Check laden…
     </div>
   )

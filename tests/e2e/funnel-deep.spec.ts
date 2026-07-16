@@ -8,7 +8,7 @@
  *   - localStorage key: 'wep_funnel_state'
  *   - ROI API response: { roi: ROIResult, health: HealthScoreResult }
  *   - Suggest response: Array<{ label: string; id: string }>
- *   - StepHeader stap-prop = "Stap N — Naam"; gebruik step TITLE-tekst voor asserts
+ *   - FunnelStageShell toont klantstadia; gebruik de zichtbare titeltekst voor asserts
  */
 import { test, expect, type Page } from '@playwright/test'
 import { expectedReportFixture } from '../fixtures/report'

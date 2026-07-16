@@ -19,6 +19,7 @@ export type FunnelEventName =
   | 'funnel_session_started'
   | 'funnel_stage_viewed'
   | 'funnel_stage_completed'
+  | 'funnel_validation_failed'
   | 'bag_match_succeeded'
   | 'bag_match_failed'
   | 'technical_scan_completed'
@@ -31,6 +32,7 @@ export type FunnelEventName =
 
 export interface FunnelEventExtra {
   completed_stage?: VisualFunnelStage
+  stage_duration_ms?: number
   reason?: 'not_found' | 'api_error'
   postcode_prefix?: string
   scan_type?: 'Meterkast' | 'Plaatsingslocatie' | 'Omvormer'
@@ -38,6 +40,18 @@ export interface FunnelEventExtra {
   lead_quality_segment?: string
   email_status?: 'pending' | 'sent' | 'failed' | 'not_configured' | 'skipped'
   failure_type?: `http_${number}` | 'network'
+  validation_type?:
+    | 'full_name_required'
+    | 'full_name_format'
+    | 'email_required'
+    | 'email_format'
+    | 'phone_required'
+    | 'phone_format'
+    | 'panel_count'
+    | 'privacy_consent'
+    | 'photo_format_unsupported'
+    | 'photo_too_large'
+    | 'photo_screening_rejected'
 }
 
 export type FunnelTracker = (

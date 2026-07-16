@@ -13,7 +13,11 @@ import { FunnelNotice } from './ui/FunnelNotice'
 import { FunnelStageShell } from './ui/FunnelStageShell'
 import { FunnelTrustLine } from './ui/FunnelTrustLine'
 import type { NormalizedReport, ReportEmailStatus } from '@/lib/report-model'
-import { leadQualitySegment, type FunnelTracker } from '@/lib/analytics'
+import {
+  leadQualitySegment,
+  type FunnelEventExtra,
+  type FunnelTracker,
+} from '@/lib/analytics'
 
 function extractStad(adres?: string): string {
   if (!adres) return 'Nederland'
@@ -160,14 +164,30 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
 
   function validate(): boolean {
     const e: typeof errors = {}
+    const validationFailures: NonNullable<FunnelEventExtra['validation_type']>[] = []
     const naamParts = form.naam.trim().split(/\s+/)
-    if (!form.naam.trim()) e.naam = 'Naam is verplicht'
-    else if (naamParts.length < 2) e.naam = 'Voer uw voor- en achternaam in'
+    if (!form.naam.trim()) {
+      e.naam = 'Naam is verplicht'
+      validationFailures.push('full_name_required')
+    } else if (naamParts.length < 2) {
+      e.naam = 'Voer uw voor- en achternaam in'
+      validationFailures.push('full_name_format')
+    }
     const emailNorm = form.email.trim().toLowerCase()
-    if (!emailNorm) e.email = 'E-mailadres is verplicht'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailNorm)) e.email = 'Voer een geldig e-mailadres in'
-    if (!form.telefoon.trim()) e.telefoon = 'Telefoonnummer is verplicht'
-    else if (!validatePhone(form.telefoon, form.countryCode)) e.telefoon = 'Ongeldig telefoonnummer voor het geselecteerde land'
+    if (!emailNorm) {
+      e.email = 'E-mailadres is verplicht'
+      validationFailures.push('email_required')
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailNorm)) {
+      e.email = 'Voer een geldig e-mailadres in'
+      validationFailures.push('email_format')
+    }
+    if (!form.telefoon.trim()) {
+      e.telefoon = 'Telefoonnummer is verplicht'
+      validationFailures.push('phone_required')
+    } else if (!validatePhone(form.telefoon, form.countryCode)) {
+      e.telefoon = 'Ongeldig telefoonnummer voor het geselecteerde land'
+      validationFailures.push('phone_format')
+    }
     const hp = panelenAntwoordLocked ? state.heeft_panelen : form.heeftPanelen
     if (hp === true) {
       const aantal = panelenAntwoordLocked
@@ -175,10 +195,17 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
         : Number(form.huidigePanelenAantal)
       if (aantal === null || aantal === undefined || !Number.isInteger(aantal) || aantal <= 0 || aantal > 200) {
         e.huidigePanelenAantal = 'Voer een geldig aantal panelen in (1-200)'
+        validationFailures.push('panel_count')
       }
     }
-    if (!form.gdprConsent) e.gdprConsent = 'U moet akkoord gaan met de privacyverklaring om door te gaan.'
+    if (!form.gdprConsent) {
+      e.gdprConsent = 'U moet akkoord gaan met de privacyverklaring om door te gaan.'
+      validationFailures.push('privacy_consent')
+    }
     setErrors(e)
+    for (const validationType of new Set(validationFailures)) {
+      trackFunnel('funnel_validation_failed', { validation_type: validationType })
+    }
     return Object.keys(e).length === 0
   }
 

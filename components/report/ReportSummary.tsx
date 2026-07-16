@@ -12,7 +12,7 @@ export function ReportSummary({ report }: { report: NormalizedReport }) {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-3xl border border-action/35 bg-[#fff7e6] p-5 sm:p-7">
+      <div className="rounded-3xl border border-action/35 bg-action/10 p-5 sm:p-7">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warning">
           Mogelijk verlies vanaf 2027
         </p>

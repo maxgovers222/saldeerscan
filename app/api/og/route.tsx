@@ -1,4 +1,6 @@
 import { ImageResponse } from 'next/og'
+import { BrandImageLockup } from '@/components/design-system/BrandImageLockup'
+import { BRAND_COLORS } from '@/lib/brand-colors'
 
 export const runtime = 'edge'
 
@@ -9,10 +11,10 @@ export async function GET(request: Request) {
   const status = searchParams.get('status')
   const type = searchParams.get('type') ?? 'wijk'
 
-  const statusColor =
-    status === 'ROOD' ? '#f87171' :
-    status === 'ORANJE' ? '#fb923c' :
-    status === 'GROEN' ? '#34d399' : null
+  const statusTheme =
+    status === 'ROOD' ? { accent: BRAND_COLORS.danger, ink: BRAND_COLORS.dangerSurface } :
+    status === 'ORANJE' ? { accent: BRAND_COLORS.warning, ink: BRAND_COLORS.warningSurface } :
+    status === 'GROEN' ? { accent: BRAND_COLORS.trust, ink: BRAND_COLORS.onEvergreen } : null
   const statusLabel =
     status === 'ROOD' ? 'Vol stroomnet' :
     status === 'ORANJE' ? 'Druk stroomnet' :
@@ -24,7 +26,7 @@ export async function GET(request: Request) {
         style={{
           width: '1200px',
           height: '630px',
-          background: 'linear-gradient(135deg, #020617 0%, #0f172a 60%, #1e293b 100%)',
+          background: `linear-gradient(135deg, ${BRAND_COLORS.evergreen950} 0%, ${BRAND_COLORS.evergreen900} 72%, ${BRAND_COLORS.trustDark} 160%)`,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -34,21 +36,15 @@ export async function GET(request: Request) {
       >
         {/* Top bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '50%',
-            background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <div style={{ width: '16px', height: '16px', background: '#020617', borderRadius: '2px' }} />
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '20px' }}>SaldeerScan.nl</span>
-          {statusColor && statusLabel && (
+          <BrandImageLockup fontSize={20} markSize={36} />
+          {statusTheme && statusLabel && (
             <div style={{
               marginLeft: 'auto',
               padding: '6px 16px',
               borderRadius: '999px',
-              border: `1px solid ${statusColor}40`,
-              background: `${statusColor}15`,
-              color: statusColor,
+              border: `1px solid ${statusTheme.accent}80`,
+              background: `${statusTheme.accent}26`,
+              color: statusTheme.ink,
               fontSize: '16px',
             }}>
               {statusLabel}
@@ -59,7 +55,8 @@ export async function GET(request: Request) {
         {/* Title */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{
-            color: '#f59e0b',
+            display: 'flex',
+            color: BRAND_COLORS.trust,
             fontSize: '14px',
             textTransform: 'uppercase',
             letterSpacing: '3px',
@@ -67,7 +64,7 @@ export async function GET(request: Request) {
             {type === 'straat' ? 'Straat analyse' : 'Wijk analyse'} · 2027 Saldering
           </div>
           <div style={{
-            color: '#f8fafc',
+            color: BRAND_COLORS.onEvergreen,
             fontSize: titel.length > 50 ? '36px' : '44px',
             fontWeight: 'bold',
             lineHeight: '1.2',
@@ -79,19 +76,19 @@ export async function GET(request: Request) {
 
         {/* Bottom row */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '18px' }}>
+          <div style={{ color: BRAND_COLORS.onEvergreenMuted, fontSize: '18px' }}>
             Gratis zonnepanelen analyse · saldeerscan.nl
           </div>
           {score && (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               padding: '12px 24px',
-              border: '1px solid rgba(245,158,11,0.3)',
+              border: `1px solid ${BRAND_COLORS.action}66`,
               borderRadius: '16px',
-              background: 'rgba(245,158,11,0.08)',
+              background: `${BRAND_COLORS.action}18`,
             }}>
-              <span style={{ color: '#f59e0b', fontSize: '42px', fontWeight: 'bold' }}>{score}</span>
-              <span style={{ color: 'rgba(245,158,11,0.6)', fontSize: '13px' }}>/ 100</span>
+              <span style={{ color: BRAND_COLORS.action, fontSize: '42px', fontWeight: 'bold' }}>{score}</span>
+              <span style={{ color: BRAND_COLORS.actionHover, fontSize: '13px' }}>/ 100</span>
             </div>
           )}
         </div>

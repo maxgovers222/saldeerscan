@@ -6,7 +6,7 @@ on:
       branch:
         description: Branch to update snapshots on
         required: true
-        default: feat/phase-4b-stabilization
+        default: feat/phase-5-complete
         type: string
 
 permissions:
@@ -33,9 +33,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y poppler-utils
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test tests/e2e/visual-regression.spec.ts --project=chromium --update-snapshots
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "test(phase-4b): visual regression baselines (linux)"
+          commit_message: "test(phase-5): visual regression baselines (linux)"
           file_pattern: tests/e2e/__screenshots__/**/*
