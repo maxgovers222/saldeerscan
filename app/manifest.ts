@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { BRAND_COLORS } from "@/lib/brand-colors";
 
 const SITE = "https://saldeerscan.nl";
 
@@ -10,8 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Gratis 2027 saldeercheck voor uw woning met AI-scan en persoonlijk investeringsrapport.",
     start_url: "/",
     display: "standalone",
-    background_color: "#022c22",
-    theme_color: "#022c22",
+    background_color: BRAND_COLORS.evergreen950,
+    theme_color: BRAND_COLORS.evergreen950,
     icons: [
       {
         src: `${SITE}/icon`,

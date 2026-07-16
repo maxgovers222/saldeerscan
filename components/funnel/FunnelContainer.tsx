@@ -35,12 +35,16 @@ import { FunnelProgress } from './FunnelProgress'
 import { Step1Adres } from './Step1Adres'
 import { Step2ROI } from './Step2ROI'
 import { PDFDownloadButton } from './PDFDownloadButton'
+import {
+  funnelPrimaryButtonClass,
+  funnelTextButtonClass,
+} from './ui/FunnelActions'
 
 function StageSkeleton({ label }: { label: string }) {
   return (
     <div className="p-8 text-center" role="status" aria-live="polite">
-      <div className="mx-auto mb-3 size-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" aria-hidden />
-      <p className="text-sm font-mono text-amber-400">{label}...</p>
+      <div className="mx-auto mb-3 size-8 animate-spin rounded-full border-2 border-trust border-t-transparent" aria-hidden />
+      <p className="font-mono text-sm text-ink-muted">{label}...</p>
     </div>
   )
 }
@@ -156,6 +160,7 @@ export function FunnelContainer({ urlParams }: {
   const leadIdParam = urlContext.leadId
   const leadReportTokenParam = urlContext.token
   const visualStage = visualStageForStep(state.step)
+  const stageStartedAtRef = useRef(Date.now())
 
   const trackFunnel = useCallback((
     event: FunnelEventName,
@@ -176,12 +181,19 @@ export function FunnelContainer({ urlParams }: {
     const nextStage = action.type === 'SET_STEP'
       ? visualStageForStep(action.step)
       : currentStage
-    if (
+    const completesForwardStage =
       action.type === 'SET_STEP'
       && action.step > state.step
       && nextStage > currentStage
-    ) {
-      trackFunnel('funnel_stage_completed', { completed_stage: currentStage })
+    const completesFinalStage =
+      action.type === 'SET_LEAD_ID'
+      && !state.leadId
+      && currentStage === 4
+    if (completesForwardStage || completesFinalStage) {
+      trackFunnel('funnel_stage_completed', {
+        completed_stage: currentStage,
+        stage_duration_ms: Math.max(0, Date.now() - stageStartedAtRef.current),
+      })
     }
     dispatch(action)
   }
@@ -212,6 +224,7 @@ export function FunnelContainer({ urlParams }: {
       || lastTrackedStageRef.current === visualStage
     ) return
     lastTrackedStageRef.current = visualStage
+    stageStartedAtRef.current = Date.now()
     trackEvent('funnel_stage_viewed', buildFunnelEventParams({
       sessionId: state.funnelSessionId,
       attribution: state.attribution,
@@ -413,6 +426,9 @@ export function FunnelContainer({ urlParams }: {
           sessionId: state.funnelSessionId,
           attribution: state.attribution,
           stage: visualStageForStep(state.step),
+          extra: {
+            stage_duration_ms: Math.max(0, Date.now() - stageStartedAtRef.current),
+          },
         }))
       }
     }
@@ -464,36 +480,39 @@ export function FunnelContainer({ urlParams }: {
   return (
     <div className="space-y-6 min-w-0 w-full">
       {showResumeBanner && (
-        <div className="md:max-w-xl md:mx-auto rounded-xl border border-amber-500/30 bg-amber-950/30 px-4 py-3 flex flex-wrap items-center justify-between gap-3 min-w-0">
-          <div className="text-sm font-mono text-amber-300 min-w-0 break-words">
-            <span className="font-bold">Vorige sessie gevonden</span> — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
+        <aside
+          aria-label="Vorige sessie"
+          className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-trust/25 bg-paper px-4 py-3 shadow-sm md:mx-auto md:max-w-xl"
+        >
+          <div className="min-w-0 break-words text-sm text-ink-muted">
+            <span className="font-bold text-ink">Vorige sessie gevonden</span> — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex shrink-0 flex-wrap gap-2">
             {urlContext.mode === 'address' ? (
               <>
                 <button onClick={keepCurrentUrlState}
-                  className="text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:opacity-90">
+                  className={funnelPrimaryButtonClass}>
                   Deze link gebruiken
                 </button>
                 <button onClick={resumeSavedState}
-                  className="text-xs font-mono text-amber-400/70 hover:text-amber-300 px-2 py-1.5 transition-colors">
+                  className={funnelTextButtonClass}>
                   Doorgaan met vorige sessie
                 </button>
               </>
             ) : (
               <>
                 <button onClick={resumeSavedState}
-                  className="text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1.5 rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:opacity-90">
+                  className={funnelPrimaryButtonClass}>
                   Doorgaan
                 </button>
                 <button onClick={startOver}
-                  className="text-xs font-mono text-amber-400/70 hover:text-amber-300 px-2 py-1.5 transition-colors">
+                  className={funnelTextButtonClass}>
                   Opnieuw
                 </button>
               </>
             )}
           </div>
-        </div>
+        </aside>
       )}
       {/* ResultsDashboard — een geldig servermodel is leidend, ook na localStorage-herstel. */}
       {state.leadId || reportReady ? (

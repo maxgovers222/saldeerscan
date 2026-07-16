@@ -28,17 +28,16 @@ export function AnalysisLoading({ wijk }: AnalysisLoadingProps) {
   }, [berichten.length])
 
   return (
-    <div className="flex flex-col items-center justify-center gap-5 py-10">
-      {/* Amber spinner */}
-      <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-2 border-white/10" />
-        <div className="absolute inset-0 rounded-full border-2 border-t-amber-500 animate-spin" />
+    <div className="flex flex-col items-center justify-center gap-5 py-10" role="status">
+      <div className="relative size-12" aria-hidden="true">
+        <div className="absolute inset-0 rounded-full border-2 border-ink/10" />
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-trust" />
       </div>
 
       {/* Rotating message */}
       <div className="h-6 flex items-center justify-center" aria-live="polite" aria-atomic="true">
         <p
-          className="text-sm font-mono text-white/70 transition-opacity duration-200"
+          className="font-mono text-sm text-ink-muted transition-opacity duration-200"
           style={{ opacity: visible ? 1 : 0 }}
         >
           {berichten[index]}
@@ -46,12 +45,11 @@ export function AnalysisLoading({ wijk }: AnalysisLoadingProps) {
       </div>
 
       {/* Progress dots */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-1.5" aria-hidden="true">
         {berichten.map((_, i) => (
           <span
             key={i}
-            className="w-1.5 h-1.5 rounded-full transition-colors duration-300"
-            style={{ background: i === index ? '#f59e0b' : 'rgba(255,255,255,0.15)' }}
+            className={`size-1.5 rounded-full transition-colors duration-300 ${i === index ? 'bg-trust' : 'bg-ink/15'}`}
           />
         ))}
       </div>

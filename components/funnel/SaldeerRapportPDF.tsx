@@ -7,64 +7,60 @@ import {
   Text,
   View,
 } from '@react-pdf/renderer'
+import { PdfBrandMark } from '@/components/report/PdfBrandMark'
+import { BRAND_COLORS, BRAND_WORDMARK } from '@/lib/brand-colors'
 import type { NormalizedReport } from '@/lib/report-model'
-
-const colors = {
-  evergreen: '#06130f',
-  evergreenSoft: '#0b211a',
-  action: '#ffb020',
-  mist: '#f3f7f5',
-  paper: '#fbfdfc',
-  ink: '#10231d',
-  muted: '#5a6d66',
-  border: '#d9e4df',
-  success: '#008f5b',
-  warning: '#d97706',
-  danger: '#dc2626',
-}
 
 const S = StyleSheet.create({
   page: {
-    backgroundColor: colors.paper,
-    color: colors.ink,
+    backgroundColor: BRAND_COLORS.paper,
+    color: BRAND_COLORS.ink,
     fontFamily: 'Helvetica',
     fontSize: 9,
     paddingBottom: 48,
   },
   header: {
-    backgroundColor: colors.evergreen,
+    backgroundColor: BRAND_COLORS.evergreen950,
     paddingHorizontal: 34,
     paddingVertical: 24,
   },
+  brandRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 9,
+  },
   brand: {
-    color: colors.action,
+    color: BRAND_COLORS.onEvergreen,
     fontFamily: 'Helvetica-Bold',
     fontSize: 18,
   },
+  brandSuffix: {
+    color: BRAND_COLORS.trust,
+  },
   eyebrow: {
-    color: '#a9bbb4',
+    color: BRAND_COLORS.onEvergreenMuted,
     fontSize: 7,
     letterSpacing: 1.6,
     marginTop: 5,
     textTransform: 'uppercase',
   },
   headerTitle: {
-    color: '#ffffff',
+    color: BRAND_COLORS.onEvergreen,
     fontFamily: 'Helvetica-Bold',
     fontSize: 15,
     marginTop: 11,
   },
   headerMeta: {
-    color: '#a9bbb4',
+    color: BRAND_COLORS.onEvergreenMuted,
     fontSize: 8,
     lineHeight: 1.45,
     marginTop: 4,
   },
   deadline: {
-    backgroundColor: '#fff7e6',
-    borderBottomColor: '#ffcf78',
+    backgroundColor: BRAND_COLORS.warningSurface,
+    borderBottomColor: BRAND_COLORS.warningBorder,
     borderBottomWidth: 1,
-    color: '#7a5510',
+    color: BRAND_COLORS.warningInk,
     flexDirection: 'row',
     gap: 5,
     paddingHorizontal: 34,
@@ -81,21 +77,21 @@ const S = StyleSheet.create({
     marginBottom: 18,
   },
   sectionEyebrow: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     fontSize: 7,
     letterSpacing: 1.4,
     marginBottom: 5,
     textTransform: 'uppercase',
   },
   sectionTitle: {
-    color: colors.ink,
+    color: BRAND_COLORS.ink,
     fontFamily: 'Helvetica-Bold',
     fontSize: 13,
     marginBottom: 9,
   },
   addressCard: {
-    backgroundColor: colors.mist,
-    borderColor: colors.border,
+    backgroundColor: BRAND_COLORS.mist,
+    borderColor: BRAND_COLORS.border,
     borderRadius: 7,
     borderWidth: 1,
     paddingHorizontal: 15,
@@ -106,7 +102,7 @@ const S = StyleSheet.create({
     fontSize: 12,
   },
   muted: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     fontSize: 8,
     lineHeight: 1.45,
     marginTop: 3,
@@ -117,8 +113,8 @@ const S = StyleSheet.create({
     marginBottom: 16,
   },
   metric: {
-    backgroundColor: colors.mist,
-    borderColor: colors.border,
+    backgroundColor: BRAND_COLORS.mist,
+    borderColor: BRAND_COLORS.border,
     borderRadius: 7,
     borderWidth: 1,
     flex: 1,
@@ -127,31 +123,31 @@ const S = StyleSheet.create({
     paddingVertical: 11,
   },
   metricLabel: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     fontSize: 6.5,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   metricValue: {
-    color: colors.ink,
+    color: BRAND_COLORS.ink,
     fontFamily: 'Helvetica-Bold',
     fontSize: 17,
     marginTop: 6,
   },
   metricValuePositive: {
-    color: colors.success,
+    color: BRAND_COLORS.trustDark,
   },
   metricValueDanger: {
-    color: colors.danger,
+    color: BRAND_COLORS.danger,
   },
   metricDetail: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     fontSize: 7,
     marginTop: 3,
   },
   impactBox: {
-    backgroundColor: '#fff3f1',
-    borderColor: '#f4c7c2',
+    backgroundColor: BRAND_COLORS.warningSurface,
+    borderColor: BRAND_COLORS.warningBorder,
     borderRadius: 8,
     borderWidth: 1,
     marginBottom: 16,
@@ -159,19 +155,19 @@ const S = StyleSheet.create({
     paddingVertical: 13,
   },
   impactLabel: {
-    color: colors.danger,
+    color: BRAND_COLORS.warning,
     fontSize: 7,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   impactValue: {
-    color: colors.danger,
+    color: BRAND_COLORS.warning,
     fontFamily: 'Helvetica-Bold',
     fontSize: 23,
     marginTop: 5,
   },
   impactText: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     fontSize: 8,
     lineHeight: 1.45,
     marginTop: 5,
@@ -182,29 +178,29 @@ const S = StyleSheet.create({
   },
   timelineItem: {
     alignItems: 'center',
-    backgroundColor: colors.mist,
-    borderColor: colors.border,
+    backgroundColor: BRAND_COLORS.mist,
+    borderColor: BRAND_COLORS.border,
     borderRadius: 6,
     borderWidth: 1,
     flex: 1,
     paddingVertical: 9,
   },
   timelineItemFinal: {
-    backgroundColor: '#fff3f1',
-    borderColor: '#f4c7c2',
+    backgroundColor: BRAND_COLORS.dangerSurface,
+    borderColor: BRAND_COLORS.dangerBorder,
   },
   timelineYear: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     fontSize: 7,
   },
   timelinePct: {
-    color: colors.ink,
+    color: BRAND_COLORS.ink,
     fontFamily: 'Helvetica-Bold',
     fontSize: 13,
     marginTop: 3,
   },
   timelinePctFinal: {
-    color: colors.danger,
+    color: BRAND_COLORS.danger,
   },
   twoColumn: {
     flexDirection: 'row',
@@ -214,26 +210,26 @@ const S = StyleSheet.create({
     flex: 1,
   },
   card: {
-    backgroundColor: colors.mist,
-    borderColor: colors.border,
+    backgroundColor: BRAND_COLORS.mist,
+    borderColor: BRAND_COLORS.border,
     borderRadius: 7,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   recommendationTitle: {
-    color: colors.success,
+    color: BRAND_COLORS.trustDark,
     fontFamily: 'Helvetica-Bold',
     fontSize: 12,
     marginBottom: 5,
   },
   paragraph: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     fontSize: 8,
     lineHeight: 1.5,
   },
   row: {
-    borderBottomColor: colors.border,
+    borderBottomColor: BRAND_COLORS.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -243,20 +239,20 @@ const S = StyleSheet.create({
     borderBottomWidth: 0,
   },
   rowLabel: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     flex: 1,
     fontSize: 8,
     paddingRight: 10,
   },
   rowValue: {
-    color: colors.ink,
+    color: BRAND_COLORS.ink,
     fontFamily: 'Helvetica-Bold',
     fontSize: 8,
     maxWidth: '55%',
     textAlign: 'right',
   },
   rowValuePositive: {
-    color: colors.success,
+    color: BRAND_COLORS.trustDark,
   },
   gridBadge: {
     alignSelf: 'flex-start',
@@ -268,20 +264,20 @@ const S = StyleSheet.create({
     paddingVertical: 5,
   },
   gridGreen: {
-    backgroundColor: '#e7f8f1',
-    color: colors.success,
+    backgroundColor: BRAND_COLORS.trustSurface,
+    color: BRAND_COLORS.trustDark,
   },
   gridOrange: {
-    backgroundColor: '#fff7e6',
-    color: colors.warning,
+    backgroundColor: BRAND_COLORS.warningSurface,
+    color: BRAND_COLORS.warning,
   },
   gridRed: {
-    backgroundColor: '#fff3f1',
-    color: colors.danger,
+    backgroundColor: BRAND_COLORS.dangerSurface,
+    color: BRAND_COLORS.danger,
   },
   tableHeader: {
-    backgroundColor: colors.evergreenSoft,
-    color: '#ffffff',
+    backgroundColor: BRAND_COLORS.evergreen900,
+    color: BRAND_COLORS.onEvergreen,
     flexDirection: 'row',
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -291,27 +287,27 @@ const S = StyleSheet.create({
     fontSize: 7,
   },
   tableRow: {
-    borderBottomColor: colors.border,
+    borderBottomColor: BRAND_COLORS.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   scenarioName: {
-    color: colors.ink,
+    color: BRAND_COLORS.ink,
     fontFamily: 'Helvetica-Bold',
     fontSize: 7.5,
     width: '28%',
   },
   scenarioValue: {
-    color: colors.ink,
+    color: BRAND_COLORS.ink,
     fontSize: 7.5,
     textAlign: 'right',
     width: '24%',
   },
   technicalCard: {
-    backgroundColor: colors.mist,
-    borderColor: colors.border,
+    backgroundColor: BRAND_COLORS.mist,
+    borderColor: BRAND_COLORS.border,
     borderRadius: 7,
     borderWidth: 1,
     flex: 1,
@@ -320,7 +316,7 @@ const S = StyleSheet.create({
     paddingVertical: 10,
   },
   technicalTitle: {
-    color: colors.ink,
+    color: BRAND_COLORS.ink,
     fontFamily: 'Helvetica-Bold',
     fontSize: 9,
     marginBottom: 5,
@@ -331,22 +327,22 @@ const S = StyleSheet.create({
     marginBottom: 4,
   },
   bullet: {
-    color: colors.action,
+    color: BRAND_COLORS.trustDark,
     fontFamily: 'Helvetica-Bold',
     fontSize: 8,
   },
   bulletText: {
-    color: colors.muted,
+    color: BRAND_COLORS.inkMuted,
     flex: 1,
     fontSize: 8,
     lineHeight: 1.4,
   },
   disclaimer: {
-    backgroundColor: '#fff7e6',
-    borderColor: '#ffcf78',
+    backgroundColor: BRAND_COLORS.warningSurface,
+    borderColor: BRAND_COLORS.warningBorder,
     borderRadius: 7,
     borderWidth: 1,
-    color: '#7a5510',
+    color: BRAND_COLORS.warningInk,
     fontSize: 7.5,
     lineHeight: 1.45,
     paddingHorizontal: 13,
@@ -354,9 +350,9 @@ const S = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    backgroundColor: colors.evergreen,
+    backgroundColor: BRAND_COLORS.evergreen950,
     bottom: 0,
-    color: '#a9bbb4',
+    color: BRAND_COLORS.onEvergreenMuted,
     flexDirection: 'row',
     fontSize: 7,
     justifyContent: 'space-between',
@@ -367,7 +363,7 @@ const S = StyleSheet.create({
     right: 0,
   },
   footerBrand: {
-    color: colors.action,
+    color: BRAND_COLORS.trust,
     fontFamily: 'Helvetica-Bold',
   },
 })
@@ -393,7 +389,13 @@ function Header({ report, subtitle }: { report: NormalizedReport; subtitle: stri
   return (
     <>
       <View style={S.header}>
-        <Text style={S.brand}>SaldeerScan.nl</Text>
+        <View style={S.brandRow}>
+          <PdfBrandMark />
+          <Text style={S.brand}>
+            {BRAND_WORDMARK.name}
+            <Text style={S.brandSuffix}>{BRAND_WORDMARK.suffix}</Text>
+          </Text>
+        </View>
         <Text style={S.eyebrow}>Persoonlijk 2027-rapport</Text>
         <Text style={S.headerTitle}>{subtitle}</Text>
         <Text style={S.headerMeta}>{report.home.address || 'Adres niet beschikbaar'}</Text>

@@ -19,6 +19,7 @@ const canonicalEvents = new Set([
   'funnel_session_started',
   'funnel_stage_viewed',
   'funnel_stage_completed',
+  'funnel_validation_failed',
   'bag_match_succeeded',
   'bag_match_failed',
   'technical_scan_completed',
@@ -31,7 +32,7 @@ const canonicalEvents = new Set([
   'report_reopened',
   'pdf_generation_started',
   'pdf_open_succeeded',
-  'pdf_generation_failed',
+  'pdf_open_failed',
   'web_vital',
 ])
 
@@ -39,6 +40,7 @@ const funnelEvents = new Set([
   'funnel_session_started',
   'funnel_stage_viewed',
   'funnel_stage_completed',
+  'funnel_validation_failed',
   'bag_match_succeeded',
   'bag_match_failed',
   'technical_scan_completed',
@@ -54,6 +56,7 @@ const stageEvents = new Set([
   'funnel_session_started',
   'funnel_stage_viewed',
   'funnel_stage_completed',
+  'funnel_validation_failed',
   'funnel_abandoned',
 ])
 
@@ -215,6 +218,15 @@ test('technical complete and individual skip events preserve the four-stage cont
   await page.goto('/check')
   await resumeSavedFunnel(page)
 
+  await page.getByLabel('Selecteer foto: Foto van uw meterkast').setInputFiles({
+    name: 'meterkast.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('geen afbeelding'),
+  })
+  await expect.poll(() => eventCalls(calls, 'funnel_validation_failed').length).toBe(1)
+  expect(eventCalls(calls, 'funnel_validation_failed')[0][2]?.validation_type)
+    .toBe('photo_format_unsupported')
+
   await page.getByRole('button', { name: 'Geen foto? Vul handmatig in' }).click()
   await page.getByRole('button', { name: '3-fase' }).click()
   await page.getByRole('button', { name: '4+' }).click()
@@ -228,7 +240,10 @@ test('technical complete and individual skip events preserve the four-stage cont
     completion: 'manual',
   })
   expect(eventCalls(calls, 'technical_scan_skipped')).toHaveLength(2)
-  expect(eventCalls(calls, 'funnel_stage_completed').at(-1)?.[2]?.completed_stage).toBe(3)
+  const completedStage = eventCalls(calls, 'funnel_stage_completed').at(-1)?.[2]
+  expect(completedStage?.completed_stage).toBe(3)
+  expect(completedStage?.stage_duration_ms).toEqual(expect.any(Number))
+  expect(Number(completedStage?.stage_duration_ms)).toBeGreaterThanOrEqual(0)
   expectCanonicalEvents(calls)
   expectFunnelContext(calls)
   expectNoPii(calls)
@@ -255,6 +270,7 @@ test('skipping every technical scan emits the module skip and one abandonment', 
   expect(eventCalls(calls, 'technical_scan_skipped')).toHaveLength(3)
   expect(eventCalls(calls, 'technical_module_skipped')).toHaveLength(1)
   expect(eventCalls(calls, 'funnel_abandoned')).toHaveLength(1)
+  expect(eventCalls(calls, 'funnel_abandoned')[0][2]?.stage_duration_ms).toEqual(expect.any(Number))
   expectCanonicalEvents(calls)
   expectFunnelContext(calls)
   expectNoPii(calls)
@@ -289,6 +305,13 @@ test('lead submission reports failure and success without lead contact data', as
   })
   await page.goto('/check')
   await resumeSavedFunnel(page)
+
+  await page.getByRole('button', { name: /Stuur mij het gratis PDF-rapport/ }).click()
+  await expect.poll(() => eventCalls(calls, 'funnel_validation_failed').length).toBe(4)
+  expect(eventCalls(calls, 'funnel_validation_failed').map(([, , params]) => params?.validation_type).sort())
+    .toEqual(['email_required', 'full_name_required', 'phone_required', 'privacy_consent'])
+  expect(eventCalls(calls, 'lead_submit_started')).toHaveLength(0)
+
   await fillLeadForm(page)
 
   await page.getByRole('button', { name: /Stuur mij het gratis PDF-rapport/ }).click()
@@ -303,6 +326,10 @@ test('lead submission reports failure and success without lead contact data', as
     email_status: 'sent',
   })
   expect(eventCalls(calls, 'lead_submit_started')).toHaveLength(2)
+  const finalStageCompletion = eventCalls(calls, 'funnel_stage_completed')
+    .find(([, , params]) => params?.completed_stage === 4)?.[2]
+  expect(finalStageCompletion?.stage_duration_ms).toEqual(expect.any(Number))
+  expect(Number(finalStageCompletion?.stage_duration_ms)).toBeGreaterThanOrEqual(0)
   expectCanonicalEvents(calls)
   expectFunnelContext(calls)
   expectNoPii(calls)
@@ -341,7 +368,7 @@ test('tokenized report hydration and PDF success/failure keep identifiers out of
     URL.createObjectURL = () => { throw new Error('PDF URL rejected') }
   })
   await pdfButton.click()
-  await expect.poll(() => eventCalls(calls, 'pdf_generation_failed').length).toBe(1)
+  await expect.poll(() => eventCalls(calls, 'pdf_open_failed').length).toBe(1)
 
   expect(eventCalls(calls, 'pdf_generation_started')).toHaveLength(2)
   expectCanonicalEvents(calls)

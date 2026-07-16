@@ -12,44 +12,47 @@ export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
   const pct = jaar <= 2025 ? 64 : jaar === 2026 ? 28 : 0
 
   return (
-    <div className="rounded-xl border border-amber-500/25 bg-amber-950/20 p-5 space-y-4">
+    <aside
+      aria-label="Financiële impact vanaf 2027"
+      className="space-y-4 rounded-xl border border-warning/25 bg-action/10 p-5"
+    >
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-white/40 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>
+          <p className="mb-1 text-[10px] uppercase tracking-widest text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
             Besparing nu ({jaar})
           </p>
-          <p className="font-mono font-bold text-amber-400 text-xl">
-            €{besparingNu.toLocaleString('nl-NL')}<span className="text-xs text-white/30">/jaar</span>
+          <p className="font-mono text-xl font-bold text-trust-dark">
+            €{besparingNu.toLocaleString('nl-NL')}<span className="text-xs text-ink-muted">/jaar</span>
           </p>
-          <p className="text-[10px] text-white/30 mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>Saldering: {pct}%</p>
+          <p className="mt-0.5 text-[10px] text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>Saldering: {pct}%</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-white/40 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>
+          <p className="mb-1 text-[10px] uppercase tracking-widest text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
             Verlies vanaf 2027
           </p>
-          <p className="font-mono font-bold text-red-400 text-xl">
-            −€{shock.jaarlijksVerlies.toLocaleString('nl-NL')}<span className="text-xs text-white/30">/jaar</span>
+          <p className="font-mono text-xl font-bold text-danger">
+            −€{shock.jaarlijksVerlies.toLocaleString('nl-NL')}<span className="text-xs text-ink-muted">/jaar</span>
           </p>
-          <p className="text-[10px] text-white/30 mt-0.5" style={{ fontFamily: 'var(--font-sans)' }}>Saldering: 0%</p>
+          <p className="mt-0.5 text-[10px] text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>Saldering: 0%</p>
         </div>
       </div>
 
-      <div className="h-px bg-white/8" />
+      <div className="h-px bg-ink/10" />
 
       <div className="flex items-start gap-2.5">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-amber-400 shrink-0 mt-0.5">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="mt-0.5 shrink-0 text-warning">
           <path d="M8 2L1 14h14L8 2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
           <path d="M8 6v4M8 11.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
         </svg>
         <div>
-          <p className="text-sm text-amber-300/80 leading-relaxed" style={{ fontFamily: 'var(--font-sans)' }}>
+          <p className="text-sm leading-relaxed text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
             Elke maand wachten kost u{' '}
-            <span className="text-amber-400 font-bold">€{shock.maandelijksVerlies.toLocaleString('nl-NL')}</span> extra.{' '}
+            <span className="font-bold text-ink">€{shock.maandelijksVerlies.toLocaleString('nl-NL')}</span> extra.{' '}
             Cumulatief verlies over 5 jaar:{' '}
-            <span className="text-amber-400 font-bold">€{shock.cumulatiefVerlies5Jaar.toLocaleString('nl-NL')}</span>
+            <span className="font-bold text-ink">€{shock.cumulatiefVerlies5Jaar.toLocaleString('nl-NL')}</span>
           </p>
         </div>
       </div>
-    </div>
+    </aside>
   )
 }

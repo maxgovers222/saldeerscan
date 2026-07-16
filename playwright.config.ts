@@ -31,10 +31,23 @@ export default defineConfig({
       use: { ...devices['Pixel 5'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    port: 3000,
-    reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
-  },
+  webServer: [
+    {
+      command: 'node tests/e2e/fixtures/pseo-mock-server.mjs',
+      port: 54329,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: 'npm run dev',
+      port: 3000,
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
+      env: {
+        NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54329',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'playwright-anon-key',
+        SUPABASE_SERVICE_ROLE_KEY: 'playwright-service-role',
+      },
+    },
+  ],
 })

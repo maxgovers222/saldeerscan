@@ -45,9 +45,7 @@ function netShort(status: string | null): string {
   return '—'
 }
 
-/**
- * Server-safe compacte vergelijkingstabel voor interne wijk-lijsten (navy + amber accenten).
- */
+/** Server-safe compacte vergelijkingstabel voor interne wijk-lijsten. */
 export function WijkComparisonTable({
   rows: rowsProp,
   ranked,
@@ -70,26 +68,26 @@ export function WijkComparisonTable({
   return (
     <div className={className}>
       <div className="mb-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-trust">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-trust-dark">
           {title}
         </p>
         {stadContextLabel && (
-          <p className="text-base text-white/55">
+          <p className="text-base text-ink-muted">
             {stadContextLabel}
           </p>
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-evergreen-900/70">
+      <div className="overflow-x-auto rounded-2xl border border-ink/10 bg-paper shadow-sm">
         <table className="w-full min-w-[320px] border-collapse text-left text-base sm:text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-white/65">
+            <tr className="border-b border-ink/10 bg-mist text-xs uppercase tracking-wider text-ink-muted">
               <th className="px-4 py-3 font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
                 Wijk
               </th>
               <th className="px-4 py-3 font-mono font-semibold">Score</th>
               <th className="px-4 py-3 font-mono font-semibold">Bouwjaar</th>
-              <th className="px-4 py-3 font-mono font-semibold text-red-400/90">Verlies ’27</th>
+              <th className="px-4 py-3 font-mono font-semibold text-ink">Verlies ’27</th>
               <th className="hidden px-4 py-3 font-semibold sm:table-cell" style={{ fontFamily: 'var(--font-heading)' }}>
                 Net
               </th>
@@ -97,22 +95,22 @@ export function WijkComparisonTable({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.wijkSlug} className="border-b border-white/5 last:border-0">
+              <tr key={row.wijkSlug} className="border-b border-ink/10 last:border-0">
                 <td className="px-4 py-3">
                   <a
                     href={row.href}
-                    className="inline-flex min-h-11 items-center break-words font-heading font-bold text-white transition-colors hover:text-action"
+                    className="inline-flex min-h-11 items-center break-words font-heading font-bold text-ink transition-colors hover:text-trust-dark"
                   >
                     {row.wijkDisplay}
                   </a>
                 </td>
-                <td className="px-4 py-3 font-mono text-action">
+                <td className="px-4 py-3 font-mono text-trust-dark">
                   {row.score}
-                  <span className="text-white/65">/100</span>
+                  <span className="text-ink-muted">/100</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-white/70">{row.gemBouwjaar ?? '—'}</td>
-                <td className="px-4 py-3 font-mono text-red-400">−€{row.verlies}</td>
-                <td className="hidden px-4 py-3 text-xs text-white/50 sm:table-cell">{row.netLabel}</td>
+                <td className="px-4 py-3 font-mono text-ink-muted">{row.gemBouwjaar ?? '—'}</td>
+                <td className="px-4 py-3 font-mono text-danger">−€{row.verlies}</td>
+                <td className="hidden px-4 py-3 text-xs text-ink-muted sm:table-cell">{row.netLabel}</td>
               </tr>
             ))}
           </tbody>

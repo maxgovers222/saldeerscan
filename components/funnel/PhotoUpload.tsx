@@ -54,10 +54,12 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
   const processFile = useCallback(async (file: File) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
     if (!allowed.includes(file.type)) {
+      trackFunnel('funnel_validation_failed', { validation_type: 'photo_format_unsupported' })
       setError('Alleen afbeeldingen zijn toegestaan (JPEG, PNG, WebP)')
       return
     }
     if (file.size > 10 * 1024 * 1024) {
+      trackFunnel('funnel_validation_failed', { validation_type: 'photo_too_large' })
       setError('Afbeelding is te groot (max 10 MB)')
       return
     }
@@ -77,6 +79,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
         body: JSON.stringify({ type: visionType, imageBase64: dataUrl }),
       })
       if (res.status === 422) {
+        trackFunnel('funnel_validation_failed', { validation_type: 'photo_screening_rejected' })
         const errData = await res.json() as { tip?: string; detail?: string }
         setScreeningError(errData.tip ?? errData.detail ?? `Upload een duidelijke foto van een ${visionType}`)
         return

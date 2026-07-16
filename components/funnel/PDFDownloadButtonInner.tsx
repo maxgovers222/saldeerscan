@@ -2,8 +2,10 @@
 
 import { useCallback, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
+import { primaryActionClassName } from '@/components/design-system/PrimaryAction'
 import { trackEvent } from '@/lib/analytics'
 import type { NormalizedReport } from '@/lib/report-model'
+import { cn } from '@/lib/utils'
 import { SaldeerRapportPDF } from './SaldeerRapportPDF'
 
 export default function PDFDownloadButtonInner({ report }: { report: NormalizedReport }) {
@@ -40,7 +42,7 @@ export default function PDFDownloadButtonInner({ report }: { report: NormalizedR
     } catch {
       setError(true)
       newTab?.close()
-      trackEvent('pdf_generation_failed', { report_version: report.version })
+      trackEvent('pdf_open_failed', { report_version: report.version })
     } finally {
       setLoading(false)
     }
@@ -51,14 +53,16 @@ export default function PDFDownloadButtonInner({ report }: { report: NormalizedR
       type="button"
       onClick={handleDownload}
       disabled={loading}
-      className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-full font-bold text-base transition-all duration-200 bg-amber-500 text-slate-950 shadow-[0_0_35px_rgba(245,158,11,0.5)] hover:scale-[1.02] hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
-      style={{ fontFamily: 'var(--font-heading)' }}
+      className={cn(
+        primaryActionClassName,
+        'w-full gap-3 px-6 py-4 text-base disabled:cursor-wait disabled:opacity-60',
+      )}
     >
       {error ? (
         <span className="text-sm" aria-live="polite">Fout bij genereren - probeer opnieuw</span>
       ) : loading ? (
         <>
-          <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+          <div className="size-4 animate-spin rounded-full border-2 border-evergreen-950 border-t-transparent" />
           PDF wordt opgebouwd...
         </>
       ) : (

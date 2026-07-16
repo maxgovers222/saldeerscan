@@ -9,9 +9,18 @@ export const BRAND_COLORS = {
   paper: '#fbfdfc',
   ink: '#10231d',
   inkMuted: '#5a6d66',
+  border: '#d9e4df',
+  onEvergreen: '#ffffff',
+  onEvergreenMuted: '#a9bbb4',
+  trustSurface: '#e7f8f1',
   success: '#00b875',
   warning: '#d97706',
+  warningSurface: '#fff7e6',
+  warningBorder: '#ffcf78',
+  warningInk: '#7a5510',
   danger: '#dc2626',
+  dangerSurface: '#fff3f1',
+  dangerBorder: '#f4c7c2',
 } as const
 
 export const BRAND_MARK_GEOMETRY = {

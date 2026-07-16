@@ -18,7 +18,7 @@ Bij twijfel: gebruik de skill. Niet gebruiken is nooit de veilige keuze.
 
 # Saldeerscan.nl — pSEO Lead Fabriek
 
-Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.000+ statische pagina's (pSEO op straat- én wijk-niveau) die converteren via een 6-staps funnel naar 'Technisch Dossiers' voor B2B partners (installateurs). Kernurgentie: einde salderen per 1 januari 2027.
+Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.000+ statische pagina's (pSEO op straat- én wijk-niveau) die converteren via vier zichtbare klantstadia naar 'Technisch Dossiers' voor B2B partners (installateurs). De interne funnel-state behoudt stappen 1–6. Kernurgentie: einde salderen per 1 januari 2027.
 
 ## Stack
 
@@ -33,7 +33,7 @@ Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.00
 | Grafieken | Recharts v3 |
 | AI — screening | Gemini 2.5 Flash (`@google/generative-ai`) |
 | AI — diepanalyse | Claude claude-sonnet-4-6 (`@anthropic-ai/sdk`) |
-| Email | Resend (transactioneel, fire-and-forget) |
+| Email | Resend (transactioneel, geawait met persistente afleverstatus) |
 | Rate limiting | Upstash Redis (`@upstash/ratelimit` + `@upstash/redis`) met in-memory fallback voor lokale dev |
 | Error tracking | Sentry (`@sentry/nextjs`) — `sentry.client.config.ts` + `sentry.server.config.ts`, DSN via `NEXT_PUBLIC_SENTRY_DSN` |
 | E2E testen | Playwright (chromium, `tests/e2e/`) |
@@ -45,20 +45,20 @@ Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.00
 app/
   page.tsx                          # Server-composed homepage: HomePage + HomeDiscovery (geen runtime countdown)
   layout.tsx                        # Fonts: Bricolage Grotesque (headings) + DM Sans (body)
-  globals.css                       # Tailwind v4 + design tokens + .glass-card-navy + @media print
+  globals.css                       # Tailwind v4 + customer-first evergreen/trust/action tokens + @media print
   sitemap.ts                        # Gesplitste sitemaps: core + provincies + kennisbank + nieuws + postcodes.xml
   privacy/page.tsx                  # AVG-compliant privacyverklaring (9 secties, volledig ingevuld)
-  icon.tsx                          # Dynamische favicon 32x32 (edge runtime, navy cirkel + amber hexagon)
-  apple-icon.tsx                    # Apple touch icon 180x180 (zelfde stijl)
+  icon.tsx                          # Dynamisch evergreen/trust merkicoon 32x32 (edge runtime)
+  apple-icon.tsx                    # Apple touch icon 180x180 uit dezelfde merkgeometrie
   check/page.tsx                    # Server-composed check-shell met SiteHeader/SiteFooter
   postcode/[code]/page.tsx          # pSEO postcode-pagina 'zonnepanelen 1234 AB' (ISR 30d), via getWijkenByPostcode()
   nieuws/page.tsx                   # Nieuwsoverzicht (lib/nieuws.ts)
   nieuws/[slug]/page.tsx            # Nieuwsartikel detail
   kennisbank/page.tsx               # Kennisbank overzicht
   kennisbank/[slug]/page.tsx        # Kennisbank artikel detail
-  [provincie]/page.tsx              # Provincie overzichtspagina met steden (ISR 30d)
-  [provincie]/[stad]/page.tsx       # Stad overzichtspagina met wijken + urgentie strip (ISR 30d)
-  [provincie]/[stad]/[wijk]/page.tsx          # pSEO wijk-pagina (ISR 30d) + breadcrumb + ranking badge + CountdownTimer
+  [provincie]/page.tsx              # Provincie overzichtspagina met steden (ISR 7d)
+  [provincie]/[stad]/page.tsx       # Stad overzichtspagina met wijken + urgentie strip (ISR 7d)
+  [provincie]/[stad]/[wijk]/page.tsx          # pSEO wijk-pagina (ISR 7d) + breadcrumb + ranking badge + CountdownTimer
   [provincie]/[stad]/[wijk]/[straat]/page.tsx # pSEO adrespagina (ISR 30d)
   api/
     bag/route.ts                    # BAG/PDOK lookup
@@ -76,22 +76,22 @@ app/
 
 components/
   content/                          # ContentIndexShell + ArticleShell/ArticleBody voor kennisbank en nieuws
-  design-system/                    # BrandMark, Container, PageShell, DarkHeroShell, SiteHeader/Footer en PrimaryAction
+  design-system/                    # BrandMark/BrandLockup/BrandImageLockup, shells, SiteHeader/Footer en PrimaryAction
   CountdownTimer.tsx                # Client countdown naar 2027-01-01 voor /check (compact) en wijkroutes
   funnel/
     CheckPageClient.tsx             # Client island voor URL-context en FunnelContainer
-    FunnelContainer.tsx             # useReducer state machine (6 stappen), accepteert urlParams + localStorage persistentie + ?leadId=&token= email-link hydration (server fetch → ResultsDashboard)
+    FunnelContainer.tsx             # useReducer met interne stappen 1–6 en zichtbare stadia 1→1, 2→2, 3–5→3, 6→4; URL/localStorage + tokenrapport-hydratie
     Step1Adres.tsx                  # Auto-zoekt bij mount als FunnelState.adres aanwezig is; AnalysisLoading tijdens fetch
     Step2ROI.tsx … Step6LeadCapture.tsx
     ResultsDashboard.tsx            # Responsive webweergave van NormalizedReport v1; CSS-breakpoints, geen viewport-hook
-    Shock2027Banner.tsx             # 2027 saldering urgentie — amber design (bg-amber-950/20 border-amber-500/25), geen rode kleuren
+    Shock2027Banner.tsx             # 2027-urgentie met semantische warning/danger/trust-rollen binnen het groene merkframe
     PhotoUpload.tsx                 # Dropzone + vision API (geen icon prop, vaste SVG upload icon)
     FunnelProgress.tsx
     AnalysisLoading.tsx             # Labor illusion loader met roterende berichten (BAG / netcapaciteit / ROI)
-    StepHeader.tsx                  # Gedeelde stap-header component — clean design: geen grid/glow, stap-label 'Stap X — Naam' in DM Sans
+    ui/                             # FunnelStageShell, FunnelCard, FunnelNotice, FunnelTrustLine en gedeelde actions
     PDFDownloadButton.tsx           # @react-pdf/renderer v4, dynamic import (ssr:false) — zie PDFDownloadButtonInner
     types.ts                        # Gedeelde funnel types (incl. wijk + stad in FunnelState)
-  report/                           # Gedeelde websecties voor samenvatting, impact, advies, woning en techniek
+  report/                           # Gedeelde websecties + PdfBrandMark; cijfers komen uitsluitend uit NormalizedReport
   pseo/
     PseoPageShell.tsx               # Gedeelde pSEO route-shell met SiteHeader/SiteFooter
     PseoBreadcrumbs.tsx             # Visuele breadcrumbs; route JSON-LD blijft server-side
@@ -121,6 +121,7 @@ lib/
   kennisbank.ts                     # Kennisbank data adapter
   google-indexing.ts                # Google Indexing API helper
   analytics.ts                      # Analytics helpers
+  brand-colors.ts                   # Eén merkbron voor HTML, OG, e-mail en PDF (kleuren, woordmerk, mark-geometrie)
   utils.ts                          # Gedeelde utility functies
   lead-report-token.ts              # HMAC-SHA256 signing/verificatie van `?token=` op rapport-URLs (e-mail + ?leadId= hydration)
   roi-result-guard.ts               # `parseStoredRoi(raw)` — valideert en normaliseert roi_berekening uit DB; retourneert null bij corrupt/incompleet record
@@ -137,7 +138,7 @@ tests/
     wijk-validatie.spec.ts          # Test bekende golden batch wijk + straat URLs (200 status + H1 + JSON-LD)
     funnel-handshake.spec.ts        # Test URL params + countdown timer aanwezig
     funnel-validatie.spec.ts        # Test disabled button, progress bar, homepage CTA
-    funnel-deep.spec.ts             # Diepgaande funnel tests — alle 6 stappen (133 tests)
+    funnel-deep.spec.ts             # Diepgaande funnel tests — interne stappen 1–6 (133 tests)
     funnel-compleet.spec.ts         # Volledige funnel doorloop (5 tests)
     leadid-hydrate.spec.ts          # Email leadId rapport-hydratie: ?leadId= URL laadt ResultsDashboard via mock-API (2 tests)
     step6-validatie.spec.ts         # Step 6 lead capture validatie (naam/email/telefoon)
@@ -239,10 +240,16 @@ Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden
 
 ### Fase 4b stabiliteitsgates
 - **Toegankelijkheid:** `npm run test:a11y` draait axe A/AA plus toetsenbordfocus, skip-link/main, combobox, 200% zoom en reduced-motion op de vaste routefamilies. Axe-issues worden semantisch opgelost; geen algemene excludes.
-- **Visual regression:** `tests/e2e/visual-regression.spec.ts` heeft Win32- en Linux-baselines voor homepage, funnelstap 2 en rapport. De CI-job `visual-e2e` vergelijkt Linux Chromium-snapshots; de dynamische social-proofticker wordt via `data-testid="social-proof-dynamic"` gemaskeerd.
+- **Visual regression:** `tests/e2e/visual-regression.spec.ts` bewaakt 23 oppervlakken: homepage op 360/390/768/1024/1440, alle vier funnelstadia op 390/1440, wijk en straat op 390/1440, web- en PDF-rapport en funnel loading/error/resume. De suite gebruikt vaste tijd, reduced-motion, deterministische server-side pSEO-fixtures en een echte, met Poppler gerasterde eerste PDF-pagina. `snapshotPathTemplate` houdt Win32/Linux apart; `visual-e2e` vergelijkt Linux Chromium en `update-visual-snapshots.yml` regenereert Linux-baselines na een geautoriseerde commit. De social-proofticker wordt gemaskeerd.
 - **Performance:** `npm run test:performance` bouwt productie en start `npm run start` via `playwright.performance.config.ts`. Initiële JavaScript-transferbudgetten zijn **300 KB voor `/`** en **450 KB voor `/check`**; browserrequests naar Mapbox zijn verboden. `@mapbox/search-js-react` en `mapbox-gl` zijn verwijderd. Turbopack `next experimental-analyze` is de bron voor importgrenzen: rapport, PDF, Recharts en technische scanmodules horen niet in de initiële routegraph waar ze niet nodig zijn.
 - **Web Vitals:** `components/WebVitals.tsx` gebruikt `useReportWebVitals` en stuurt `web_vital` via `trackEvent`, uitsluitend met `metric_id`, `metric_name`, `metric_value` en `metric_rating`.
-- **Analyticsprivacy:** conversie-events gebruiken canonieke namen en funnelcontext, maar nooit adres-, contact-, token- of lead-ID-waarden. `report_reopened` bevat alleen `report_version` en `email_status`.
+- **Analyticsprivacy:** conversie-events meten stadium viewed/completed, `stage_duration_ms`, vaste validatiecategorieën, technische checks, lead-submit en PDF-open success/failure. De payload bevat nooit adres, naam, e-mail, telefoon, token of lead-ID. `report_reopened` bevat alleen `report_version` en `email_status`; validatiefouten bevatten uitsluitend een vaste `validation_type` enum.
+
+### Fase 5 merk- en funnelcontract
+- **Eén merkbron:** `lib/brand-colors.ts` levert kleuren, woordmerk en mark-geometrie aan `BrandMark`, `BrandLockup`, `BrandImageLockup`, `PdfBrandMark`, e-mail, PDF, favicon/apple-icon en alle OG-varianten.
+- **Vier klantstadia:** intern blijven funnelstappen 1–6 bestaan; de zichtbare en analytische mapping is **1→1, 2→2, 3–5→3, 6→4**. Technische checks blijven optioneel en het leadformulier sluit stadium 4 af na de eerste succesvolle `SET_LEAD_ID`.
+- **CRO zonder trust-regressie:** funnel, wijk en straat gebruiken evergreen/trust/paper als dominante rollen; action is voor primaire CTA's en warning/danger alleen voor echte urgentie, validatie of netstatus.
+- **Ongewijzigde grenzen:** `roiInput` blijft de serverbron voor ROI, alle rapportkanalen consumeren `NormalizedReport`, `?leadId=` zonder token veroorzaakt geen fetch-loop en pSEO metadata/JSON-LD/ISR/slugs blijven gelijk.
 
 ### Overhaul-migraties (fasen 0–4)
 - `20260710143000_webhook_retry_payload.sql` — **LIVE in productie**; byte-identieke webhookreplay via opgeslagen body/signature.
@@ -301,7 +308,7 @@ Publieke routes combineren een donker evergreen merkframe met rustige `mist`/`pa
 | Lichte pagina en cards | `mist #f3f7f5`, `paper #fbfdfc` |
 | Tekst | `ink #10231d`, `ink-muted #5a6d66` |
 | Semantische statussen | `warning #d97706`, `danger #dc2626`; rood alleen voor echte fout- of netcongestiestatus |
-| Technische funnelvlakken | Bestaande slate/amber detailstijlen blijven lokaal toegestaan binnen het gedeelde merkframe |
+| Technische funnelvlakken | Dezelfde evergreen/trust/mist/paper-rollen; geen lokale legacy navy/slate/amber-campagnestijlen |
 | Print/PDF | `@media print` in globals.css, `.no-print` klasse op interactieve elementen |
 
 Fonts (via `app/layout.tsx`, Next.js Google Fonts):
@@ -392,7 +399,7 @@ SET netcongestie_status = 'ROOD'
 WHERE stad = 'bergen-op-zoom' AND provincie = 'noord-brabant';
 ```
 
-Migraties uitgevoerd t/m `20260422000003_rls.sql`. Aanvullend o.a. `20260502000001_leads_huidige_panelen_aantal.sql` (kolom `huidige_panelen_aantal` op `leads`). Alle tabellen hebben RLS ingeschakeld (apr 2026).
+De schema-baseline en aanvullende lead/pSEO-migraties zijn uitgevoerd; voor de overhaul zijn ook `20260710143000_webhook_retry_payload.sql` en `20260713194917_report_email_delivery.sql` live in productie. Alle productietabellen hebben RLS ingeschakeld.
 
 ## Verificatie checklist
 
@@ -403,18 +410,23 @@ git diff --check
 npm run typecheck
 npm run test:unit
 npm run build
-npm run test:e2e:core
 npm run test:a11y
-npx playwright test tests/e2e/analytics-contract.spec.ts --project=chromium
-npx playwright test --project=chromium
-npx playwright test tests/e2e/funnel-four-stages.spec.ts tests/e2e/report-responsive.spec.ts --project=mobile-chrome
-npx playwright test tests/e2e/visual-regression.spec.ts --project=chromium
 npm run test:performance
+npm run test:e2e:core
+npx playwright test tests/e2e/funnel-four-stages.spec.ts --project=chromium
+npx playwright test tests/e2e/funnel-deep.spec.ts --project=chromium
+npx playwright test tests/e2e/funnel-handshake.spec.ts --project=chromium
+npx playwright test tests/e2e/leadid-hydrate.spec.ts --project=chromium
+npx playwright test tests/e2e/report-responsive.spec.ts --project=mobile-chrome
+npx playwright test tests/e2e/route-shells.spec.ts --project=chromium
+npx playwright test tests/e2e/analytics-contract.spec.ts --project=chromium
+npx playwright test tests/e2e/visual-regression.spec.ts --project=chromium
+npx playwright test --project=chromium # aanvullende brede regressierun
 ```
 
-Verwacht: alles groen; uitsluitend de gedocumenteerde pSEO-route-skip is toegestaan wanneer de lokale seed ontbreekt. Controleer daarnaast handmatig 360/390/768/1024/1440 px voor alle routefamilies, funnelstadia, rapport, privacy, 404 en error fallback.
+Verwacht: alles groen zonder onverwachte skips. De vaste pSEO-routes gebruiken tijdens Playwright een deterministische PostgREST-fixture, dus lokale seeds zijn geen voorwaarde voor de release-gate. Controleer daarnaast handmatig 360/390/768/1024/1440 px voor alle routefamilies, funnelstadia, rapport, privacy, 404 en error fallback.
 
-Laatst volledig geverifieerd op 14 juli 2026: typecheck en build groen; **34 unit**, **18 a11y**, **3 performance**, **9 core-e2e**, **7 analytics-contract**, **8 visual-regression**, **7 mobile-chrome** en **250 Chromium** tests groen, plus 1 verwachte pSEO-skip wegens ontbrekende lokale seed. De responsive route-audit was **20/20 PASS**.
+Laatst volledig geverifieerd op 15 juli 2026: typecheck groen; build **1249 pagina's**; **34 unit**, **19 a11y**, **3 performance**, **9 core-e2e**, **17 funnel-four-stages**, **133 funnel-deep**, **3 handshake**, **3 leadId-hydrate**, **6 report-responsive mobile**, **9 route-shells**, **7 analytics-contract** en **23 Win32 visual-regression** tests groen. Geen skips of failures in de planmatige release-gate. De aanvullende volledige Chromium-run gaf **282 PASS + 1 gedocumenteerde postcode-data-skip**. Linux-visuals worden na commit/push via `update-visual-snapshots.yml` naar 23 baselines gebracht.
 
 - `curl /api/bag?adres=Prinsengracht+123+Amsterdam` → BAG JSON
 - ROI voor 1975 rijtjeshuis (110m²) → €400-800/jaar besparing
@@ -426,10 +438,10 @@ Laatst volledig geverifieerd op 14 juli 2026: typecheck en build groen; **34 uni
 - Step 6 submit → SuccessState toont ResultsDashboard (mobiel: samenvatting + PDF-knop; desktop ≥768px: volledig rapport met ShockChart + ROITijdlijn)
 - PDF-downloadknop op mobiel én desktop → opent PDF in nieuw tabblad (geen afdrukknop meer)
 - Favicon zichtbaar in browsertabblad én als `<link rel="icon">` in page source (niet Vercel logo); Google crawl-update via GSC "Request Indexing" op homepage om favicon in zoekresultaten te versnellen
-- Homepage urgentie strip is amber (niet rood)
+- Homepage-urgentie gebruikt de gedeelde action/warning-rollen; groen blijft het dominante merkframe
 - pSEO straat-route laadt met JSON-LD in `<head>`
-- pSEO wijk-route (`/utrecht/utrecht/leidsche-rijn`) laadt na seed, breadcrumb aanwezig, `Place` schema in `<head>`
-- pSEO wijk-route: "Data Ribbon" toont Grid Status / Gem. Bouwjaar / Energy Score via `LocalStatsRibbon`
+- pSEO wijk-route (`/utrecht/utrecht/leidsche-rijn`) laadt met de deterministische Playwright-fixture, breadcrumb aanwezig, `Place` schema in `<head>`
+- pSEO wijk-route toont lokale kerncijfers, conversiekaart en grafiek in evergreen/trust/paper zonder horizontale overflow
 - Provincie pagina (`/noord-holland`) → grid van alle steden + sectie urgente wijken; klik op stad → `pseo_second_click` GA4 event
 - Stad pagina (`/noord-holland/amsterdam`) → grid van alle wijken; CTA heeft geen `[CONVERSIE]` placeholder
 - Postcode pagina (`/postcode/1012`) → sticky nav met logo + "Gratis check" knop + `CollectionPage` JSON-LD bij aanwezige data
@@ -438,7 +450,7 @@ Laatst volledig geverifieerd op 14 juli 2026: typecheck en build groen; **34 uni
 - Lead zonder `gdpr_consent` → webhook nooit verstuurd
 - `/sitemap/noord-holland.xml` → Noord-Holland URLs incl. provincie + stad URLs
 - Vision: verkeerde foto → 422 screening error, juiste foto → analyse JSON
-- `npx playwright test --project=chromium` → **250 groen + maximaal 1 gedocumenteerde pSEO-skip** als lokale seed ontbreekt; `playwright.config` start `npm run dev` met `webServer.timeout` 180s voor trage cold starts
+- `npx playwright test --project=chromium` gebruikt een lokale PostgREST-fixture voor vaste pSEO-routes; `playwright.config` start die fixture en `npm run dev` met `webServer.timeout` 180s voor trage cold starts
 - `/postcode/1234` → postcode-pagina laadt met wijken in omgeving
 - Rapportlink: `GET /api/leads/{uuid}?token=…` met geldige token → JSON; zonder token (zonder legacy-env) → 401; te veel requests zelfde IP → 429 op report-read namespace
 - Na geslaagde lead-submit: browser-URL wordt `/check?leadId=…&token=…` (bookmark/herlaad); POST JSON bevat `reportToken`
@@ -447,7 +459,7 @@ Laatst volledig geverifieerd op 14 juli 2026: typecheck en build groen; **34 uni
 ## Customer-first UI overhaul — voortgang
 
 **Handoff overhaul 0–4b:** `docs/superpowers/HANDOFF-2026-07-10-customer-first-ui-overhaul.md`  
-**Handoff fase 5 (hervatten):** `docs/superpowers/HANDOFF-2026-07-14-phase-5-brand-funnel-cro.md`  
+**Handoff fase 5:** `docs/superpowers/HANDOFF-2026-07-14-phase-5-brand-funnel-cro.md`
 **Codex prompts:** `docs/superpowers/CODEX-PROMPTS.md`  
 **Design spec:** `docs/superpowers/specs/2026-07-10-customer-first-ui-overhaul-design.md`  
 **Vorige chat:** transcript `827f96be-974a-4a0c-9d2a-8e76dc979a14`
@@ -460,13 +472,14 @@ Laatst volledig geverifieerd op 14 juli 2026: typecheck en build groen; **34 uni
 | 3 Rapportketen | **LIVE** (PR #4) | `feat/phase-3-report-chain`, gemerged | `docs/superpowers/plans/2026-07-10-report-chain.md` |
 | 4a Route-uitrol | **LIVE** (PR #5) | `feat/phase-4-route-rollout`, gemerged | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
 | 4b Stabilisatie | **LIVE** (PR #7, jul 2026) | gemerged naar `master` | `docs/superpowers/plans/2026-07-10-route-rollout-stabilization.md` |
-| 5 Brand + funnel CRO | **Gepland** (jul 2026) | `feat/phase-5a-brand-pdf` … `5d` | `docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md` |
+| 5b Funnel CRO | **LIVE** (PR #8, jul 2026) | gemerged naar `master` | `docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md` |
+| 5 compleet: merk + pSEO + meting | **Lokaal geverifieerd** (15 jul 2026) | `feat/phase-5-complete`, niet gecommit; Linux-baselines volgen na commit-autorisatie | `docs/superpowers/plans/2026-07-14-brand-unification-funnel-cro.md` |
 
 ### Fase 1 design-systemcontract
 
 - **Semantische kleuren (`app/globals.css`)** — `evergreen-950 #06130f`, `evergreen-900 #0b211a`, `trust #00b875`, `trust-dark #007a4e`, `action #ffb020`, `action-hover #ffc04d`, `mist #f3f7f5`, `paper #fbfdfc`, `ink #10231d`, `ink-muted #5a6d66`, `success #00b875`, `warning #d97706`, `danger #dc2626`.
 - **Fonts** — `next/font` zet Bricolage Grotesque op `--font-bricolage` (koppen/kerngetallen) en DM Sans op `--font-dm-sans` (body/formulieren).
-- **Gedeelde Server Components** — `components/design-system/`: `BrandMark`, `Container`, `PageShell`, `DarkHeroShell`, `ContentSection`, `SiteHeader`, `SiteFooter`, `PrimaryAction`.
+- **Gedeelde merkcomponenten** — `BrandMark`/`BrandLockup` voor HTML, `BrandImageLockup` voor Satori/OG en `PdfBrandMark` voor React-PDF delen `lib/brand-colors.ts`; shells, header/footer en actions gebruiken dezelfde tokens.
 - **Conversiecontext** — `lib/conversion-context.ts` bouwt en parseert `landing_path`, `pseo_level`, `provincie`, `stad`, `wijk`, `straat`, `postcode`. Primaire provincie-, stad-, wijk-, straat- en postcode-CTA's bewaren deze velden richting `/check`; de checkpagina toont de lokale context alleen ter presentatie.
 - **Homepagegrens** — `app/page.tsx` en `components/home/HomePage.tsx` zijn server-composed. Alleen `AddressAutocomplete` en `SocialProofTicker` zijn client islands; discoveryqueries blijven server-side.
 - **pSEO-invarianten** — metadata, canonicals, JSON-LD-structuren, ISR-waarden, routeslugs en interne hublinks zijn bewust behouden; alleen conversiehrefs en styling zijn aangepast.

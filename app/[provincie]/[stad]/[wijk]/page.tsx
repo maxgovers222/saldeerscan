@@ -66,7 +66,7 @@ function renderBold(text: string) {
   const parts = text.split('**')
   return parts.map((part, i) =>
     i % 2 === 1
-      ? <strong key={i} className="text-white font-semibold">{part}</strong>
+      ? <strong key={i} className="font-semibold text-ink">{part}</strong>
       : part
   )
 }
@@ -85,13 +85,6 @@ function splitContent(tekst: string | null): { analyse: string[]; netwerk: strin
   const mid = Math.ceil(paras.length / 2)
   return { analyse: paras.slice(0, mid), netwerk: paras.slice(mid) }
 }
-
-// ── Palette & shared styles ───────────────────────────────────────────────────
-
-const G     = '#00aa65'
-const AMBER = '#f59e0b'
-const N1    = '#020617'
-const N2    = '#0f172a'
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -130,9 +123,9 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
   const netNarrative = netcongestieNarrative(page.netcongestieStatus, wijkDisplay)
   const netConfig = {
-    ROOD:   { cls: 'bg-red-950/50 border-red-700 text-red-400' },
-    ORANJE: { cls: 'bg-amber-950/50 border-amber-700 text-amber-400' },
-    GROEN:  { cls: 'bg-emerald-950/50 border-emerald-700 text-emerald-400' },
+    ROOD:   { cls: 'border-danger/25 bg-danger/10 text-ink' },
+    ORANJE: { cls: 'border-warning/25 bg-warning/10 text-ink' },
+    GROEN:  { cls: 'border-trust/25 bg-trust/10 text-trust-dark' },
   }
   const netStatus = toStatus(page.netcongestieStatus)
 
@@ -203,46 +196,46 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
         placeholder={`Uw adres in ${wijkDisplay}`}
       />
 
-      <section className="py-20 px-6" style={{ background: N2 }}>
+      <section className="bg-mist px-6 py-16 sm:py-20">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+            <p className="mb-3 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">
               2027 Urgentie
             </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
               Besparing per jaar<br />in {wijkDisplay}
             </h2>
           </div>
 
-          <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 sm:p-8">
+          <div className="rounded-2xl border border-ink/10 bg-paper p-6 shadow-sm sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: G, fontFamily: 'var(--font-heading)' }}>Salderingsafbouw</p>
-                <h3 className="text-lg font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+                <p className="mb-1 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">Salderingsafbouw</p>
+                <h3 className="font-heading text-lg font-extrabold tracking-tight text-ink">
                   Wat kost wachten u in {wijkDisplay}?
                 </h3>
               </div>
-              <div className="bg-red-950/50 border border-red-700/60 rounded-xl px-4 py-3 shrink-0 text-right">
-                <p className="text-xs font-semibold uppercase tracking-widest text-red-300 mb-0.5" style={{ fontFamily: 'var(--font-heading)' }}>Verlies vanaf 2027</p>
-                <p className="text-xl font-extrabold text-red-400" style={{ fontFamily: 'var(--font-heading)' }}>
-                  −€{verlies}<span className="text-xs font-normal text-red-300">/jaar</span>
+              <div className="shrink-0 rounded-xl border border-danger/25 bg-paper px-4 py-3 text-right">
+                <p className="mb-0.5 font-heading text-xs font-semibold uppercase tracking-widest text-danger">Verlies vanaf 2027</p>
+                <p className="font-heading text-xl font-extrabold text-danger">
+                  −€{verlies}<span className="text-xs font-normal">/jaar</span>
                 </p>
               </div>
             </div>
 
             <WijkSaldeerChart besparing={besparing} wijk={wijkDisplay} />
 
-            <div className="mt-4 flex items-start gap-2 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="text-amber-400 shrink-0 mt-0.5">
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-warning/25 bg-warning/10 px-4 py-3">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="mt-0.5 shrink-0 text-warning">
                 <path d="M9 1.5L4 9h5L6 14.5l7-8.5H8z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
               </svg>
-              <p className="text-sm text-amber-300/80 leading-relaxed">
-                <span className="font-bold text-amber-400">Shock 2027:</span>{' '}
-                Verlies door saldering in {wijkDisplay}: <span className="font-bold text-amber-400">€{verlies} per jaar</span> vanaf 1 januari 2027 voor woningen zonder batterijopslag.
+              <p className="text-sm leading-relaxed text-ink-muted">
+                <span className="font-bold text-ink">Shock 2027:</span>{' '}
+                Verlies door saldering in {wijkDisplay}: <span className="font-bold text-ink">€{verlies} per jaar</span> vanaf 1 januari 2027 voor woningen zonder batterijopslag.
               </p>
             </div>
 
-            <div className="mt-8">
+            <div className="mt-8 rounded-2xl bg-evergreen-900 px-4 py-6">
               <CountdownTimer />
             </div>
           </div>
@@ -250,13 +243,13 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
       </section>
 
       {/* ── 2-koloms content ────────────────────────────────────── */}
-      <section className="py-20 px-6" style={{ background: N1 }}>
+      <section className="bg-paper px-6 py-16 sm:py-20">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+            <p className="mb-3 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">
               Wijkanalyse
             </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
               Energieprofiel {wijkDisplay}
             </h2>
           </div>
@@ -265,32 +258,32 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
             {/* Links: analyse tekst (2/3 breed) */}
             <div className="lg:col-span-2 space-y-6">
               {analyse.length > 0 && (
-                <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 sm:p-7 transition-all hover:border-white/20">
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+                <div className="rounded-2xl border border-trust/20 bg-trust/5 p-6 sm:p-7">
+                  <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">
                     Bouwtechnische analyse
                   </p>
-                  <h3 className="font-extrabold text-lg mb-5 text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.01em' }}>
+                  <h3 className="mb-5 font-heading text-lg font-extrabold tracking-tight text-ink">
                     Woningkenmerken &amp; zonnepotentieel
                   </h3>
                   <div className="space-y-4">
                     {analyse.map((para, i) => (
-                      <p key={i} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{renderBold(para)}</p>
+                      <p key={i} className="text-sm leading-relaxed text-ink-muted">{renderBold(para)}</p>
                     ))}
                   </div>
                 </div>
               )}
 
               {netwerk.length > 0 && (
-                <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-6 sm:p-7 transition-all hover:border-white/20">
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+                <div className="rounded-2xl border border-trust/20 bg-trust/5 p-6 sm:p-7">
+                  <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">
                     Netwerkbeperkingen
                   </p>
-                  <h3 className="font-extrabold text-lg mb-5 text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.01em' }}>
+                  <h3 className="mb-5 font-heading text-lg font-extrabold tracking-tight text-ink">
                     Netcapaciteit &amp; batterijopties
                   </h3>
                   <div className="space-y-4">
                     {netwerk.map((para, i) => (
-                      <p key={i} className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{renderBold(para)}</p>
+                      <p key={i} className="text-sm leading-relaxed text-ink-muted">{renderBold(para)}</p>
                     ))}
                   </div>
                 </div>
@@ -304,12 +297,12 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
             {/* Rechts: Quick Facts */}
             <div>
-              <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-5 sticky top-20">
-                <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+              <div className="sticky top-20 rounded-2xl border border-ink/10 bg-mist p-5">
+                <p className="mb-4 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">
                   Quick Facts — {wijkDisplay}
                 </p>
 
-                <div className="space-y-3">
+                <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                   {[
                     { label: 'Gem. bouwjaar', value: page.gemBouwjaar ? `${page.gemBouwjaar}` : '—', sub: 'BAG registratie' },
                     { label: 'Energy Score', value: `${score}/100`, sub: scorelabel },
@@ -319,21 +312,18 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                     ...(page.aantalWoningen ? [{ label: 'Woningen', value: `${page.aantalWoningen.toLocaleString('nl')}`, sub: 'in dit postcodegebied' }] : []),
                     ...(ranking ? [{ label: 'Wijk Ranking', value: ranking.top ? 'Top 10%' : 'Top 25%', sub: 'rendement in ' + stadDisplay }] : []),
                   ].map(({ label, value, sub, danger }) => (
-                    <div key={label} className="flex items-start justify-between gap-2 pb-3 border-b border-white/5 last:border-0 last:pb-0">
-                      <div>
-                        <p className="text-xs font-semibold text-white/50">{label}</p>
-                        <p className="text-xs text-white/65">{sub}</p>
-                      </div>
-                      <span className={`text-sm font-extrabold shrink-0 ${danger ? 'text-red-400' : 'text-amber-400'}`}
-                        style={{ fontFamily: 'var(--font-heading)' }}>
+                    <div key={label} className="rounded-xl border border-ink/10 bg-paper p-3">
+                      <dt className="text-xs font-semibold text-ink-muted">{label}</dt>
+                      <dd className={`mt-1 font-heading text-sm font-extrabold ${danger ? 'text-danger' : 'text-trust-dark'}`}>
                         {value}
-                      </span>
+                      </dd>
+                      <dd className="mt-0.5 text-xs text-ink-muted">{sub}</dd>
                     </div>
                   ))}
-                </div>
+                </dl>
 
                 <WijkCtaButton provincie={provincie} wijk={wijk} stad={stad}
-                  className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-white/60 underline decoration-white/20 underline-offset-4 transition hover:text-white">
+                  className="mt-5 inline-flex min-h-11 items-center rounded-xl border border-trust/30 px-4 text-sm font-semibold text-trust-dark transition hover:border-trust hover:bg-trust/10">
                   Mijn adres scannen →
                 </WijkCtaButton>
               </div>
@@ -344,21 +334,21 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
       {/* ── FAQ ─────────────────────────────────────────────────── */}
       {page.faqItems.length > 0 && (
-        <section className="py-20 px-6" style={{ background: N2 }}>
+        <section className="bg-mist px-6 py-16 sm:py-20">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-14">
-              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+              <p className="mb-3 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">
                 Veelgestelde vragen
               </p>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+              <h2 className="font-heading text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
                 Alles over zonnepanelen<br />in {wijkDisplay}
               </h2>
             </div>
             <div className="space-y-3">
               {page.faqItems.map((faq, i) => (
-                <div key={i} className="bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-5 sm:p-6 transition-all hover:border-white/20">
-                  <h3 className="font-bold text-white mb-2" style={{ fontFamily: 'var(--font-heading)' }}>{faq.vraag}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{faq.antwoord}</p>
+                <div key={i} className="rounded-2xl border border-ink/10 bg-paper p-5 sm:p-6">
+                  <h3 className="mb-2 font-heading font-bold text-ink">{faq.vraag}</h3>
+                  <p className="text-sm leading-relaxed text-ink-muted">{faq.antwoord}</p>
                 </div>
               ))}
             </div>
@@ -367,24 +357,24 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
       )}
 
       {/* ── Bottom CTA ──────────────────────────────────────────── */}
-      <section className="py-20 px-6" style={{ background: N1 }}>
+      <section className="bg-evergreen-900 px-6 py-16 sm:py-20">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+          <h2 className="mb-4 font-heading text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
             Bereken wat {wijkDisplay}<br />
-            <span style={{ color: AMBER }}>u kunt besparen</span>
+            <span className="text-action">u kunt besparen</span>
           </h2>
-          <p className="mb-6 text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          <p className="mb-6 text-base leading-relaxed text-white/65">
             Voer uw adres in voor een analyse op maat — BAG-data, ROI-berekening en ISDE subsidie check in 3 minuten.
           </p>
           <WijkCtaButton
             provincie={provincie}
             stad={stad}
             wijk={wijk}
-            className="inline-flex min-h-11 items-center text-sm font-semibold text-white/65 underline decoration-white/25 underline-offset-4 transition hover:text-white"
+            className="inline-flex min-h-11 items-center rounded-xl bg-action px-5 py-3 font-heading text-sm font-bold text-evergreen-950 shadow-[0_12px_32px_rgba(255,176,32,.22)] transition hover:bg-action-hover"
           >
             Ga naar de persoonlijke adrescheck →
           </WijkCtaButton>
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-5 text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-5 text-sm text-white/65">
             <span className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               BAG-data
@@ -405,11 +395,10 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
       {topStraten.length > 0 && (
         <section
           data-testid="pseo-populaire-straten"
-          className="py-10 px-6 border-t"
-          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+          className="border-t border-ink/10 bg-paper px-6 py-10"
         >
           <div className="max-w-5xl mx-auto">
-            <p className="text-slate-500 text-xs uppercase tracking-wider mb-4">
+            <p className="mb-4 text-xs uppercase tracking-wider text-ink-muted">
               Populaire straten in {toDisplay(wijk)}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -419,9 +408,9 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                   href={`/${provincie}/${stad}/${wijk}/${s.straat}`}
                   data-analytics-event="pseo_second_click"
                   data-analytics-label={`wijk-top-straat:${s.straat}`}
-                  className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-3 transition-all hover:bg-slate-900/60 group"
+                  className="group rounded-xl border border-ink/10 bg-mist p-3 transition hover:border-trust/40 hover:bg-trust/5"
                 >
-                  <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors capitalize" style={{ fontFamily: 'var(--font-heading)' }}>
+                  <p className="font-heading text-sm font-bold capitalize text-ink transition-colors group-hover:text-trust-dark">
                     {toDisplay(s.straat)}
                   </p>
                 </a>
@@ -433,7 +422,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
 
       {comparisonRows.length > 0 && (
-        <section className="py-16 px-6" style={{ background: N1 }}>
+        <section className="bg-mist px-6 py-16">
           <div className="max-w-4xl mx-auto">
             <WijkComparisonTable
               rows={comparisonRows}
@@ -446,27 +435,26 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
       {/* ── Andere wijken in stad ───────────────────────────────── */}
       {relatedWijken.length > 0 && (
-        <section className="py-16 px-6" style={{ background: N2 }}>
+        <section className="bg-paper px-6 py-16">
           <div className="max-w-4xl mx-auto">
             <div className="mb-8">
-              <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: G, fontFamily: 'var(--font-heading)' }}>
+              <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">
                 Interne vergelijking
               </p>
-              <h2 className="text-2xl font-extrabold text-white" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.02em' }}>
+              <h2 className="font-heading text-2xl font-extrabold tracking-tight text-ink">
                 Andere wijken in {stadDisplay}
               </h2>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {relatedWijken.map((w) => {
                 const ws = resolveWijkScore(w.gem_bouwjaar, w.gem_health_score)
-                const net = w.netcongestie_status ? netConfig[w.netcongestie_status as keyof typeof netConfig] : null
                 return (
                   <a key={w.wijk} href={`/${provincie}/${stad}/${w.wijk}`}
                     data-analytics-event="pseo_second_click"
                     data-analytics-label={`wijk-related:${w.wijk}`}
-                    className="bg-slate-900/40 border border-white/10 hover:border-white/20 rounded-xl p-4 transition-all hover:bg-slate-900/60 group">
+                    className="group rounded-xl border border-ink/10 bg-mist p-4 transition hover:border-trust/40 hover:bg-trust/5">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors" style={{ fontFamily: 'var(--font-heading)' }}>
+                      <p className="font-heading text-sm font-bold text-ink transition-colors group-hover:text-trust-dark">
                         {toDisplay(w.wijk)}
                       </p>
                       {w.netcongestie_status && netConfig[w.netcongestie_status as keyof typeof netConfig] && (
@@ -475,7 +463,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                         </span>
                       )}
                     </div>
-                    <p className="text-xs font-mono mt-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                    <p className="mt-1 font-mono text-xs text-ink-muted">
                       Score {ws}/100 {w.gem_bouwjaar ? `· ${w.gem_bouwjaar}` : ''}
                     </p>
                   </a>
@@ -487,9 +475,9 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
       )}
 
       {/* ── Kennisbank interne linking ──────────────────────────── */}
-      <section className="py-10 px-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <section className="border-t border-ink/10 bg-mist px-6 py-10">
         <div className="max-w-5xl mx-auto">
-          <p className="text-slate-400 text-xs uppercase tracking-wider mb-4">Lees ook in de Kennisbank</p>
+          <p className="mb-4 text-xs uppercase tracking-wider text-ink-muted">Lees ook in de Kennisbank</p>
           <div className="flex flex-wrap gap-3">
             {(page.netcongestieStatus === 'ROOD'
               ? [
@@ -506,9 +494,9 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
               <a
                 key={link.slug}
                 href={`/kennisbank/${link.slug}`}
-                className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors text-sm border border-white/10 rounded-lg px-3 py-2 hover:border-amber-500/30"
+                className="flex min-h-11 items-center gap-1.5 rounded-lg border border-ink/10 bg-paper px-3 py-2 text-sm text-ink-muted transition hover:border-trust/40 hover:text-trust-dark"
               >
-                <svg className="w-3.5 h-3.5 text-amber-500/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="size-3.5 shrink-0 text-trust-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
                 {link.titel}
