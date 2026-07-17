@@ -123,10 +123,10 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
     setOptimizing(false)
   }
 
-  if (loading && imageUrl) return <ScanAnimation imageUrl={imageUrl} optimizing={optimizing} />
+  if (loading && imageUrl) return <div className="w-full"><ScanAnimation imageUrl={imageUrl} optimizing={optimizing} /></div>
   if (loading && !imageUrl) {
     return (
-      <div className="rounded-xl border border-trust/25 bg-trust/10 p-8 text-center" role="status" aria-live="polite">
+      <div className="w-full rounded-xl border border-trust/25 bg-trust/10 p-8 text-center" role="status" aria-live="polite">
         <span className="text-sm font-semibold text-trust-dark">Foto wordt voorbereid...</span>
       </div>
     )
@@ -134,7 +134,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
 
   if (!imageUrl) {
     return (
-      <div className="space-y-3">
+      <div className="w-full space-y-3">
         <button
           type="button"
           aria-describedby={`${inputId}-description ${inputId}-requirements`}
@@ -143,7 +143,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           className={[
-            'relative flex min-h-56 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 transition-all duration-200',
+            'relative flex w-full min-h-56 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 transition-all duration-200',
             'focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-trust/40',
             isDragOver
               ? 'scale-[1.01] border-trust bg-trust/10'

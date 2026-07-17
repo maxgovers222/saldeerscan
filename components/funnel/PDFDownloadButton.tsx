@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { useEffect } from 'react'
 import { primaryActionClassName } from '@/components/design-system/PrimaryAction'
 import type { NormalizedReport } from '@/lib/report-model'
 import { cn } from '@/lib/utils'
@@ -19,5 +20,9 @@ const Inner = dynamic(() => import('./PDFDownloadButtonInner'), {
 })
 
 export function PDFDownloadButton({ report }: { report: NormalizedReport }) {
+  useEffect(() => {
+    void import('./PDFDownloadButtonInner')
+  }, [])
+
   return <Inner report={report} />
 }

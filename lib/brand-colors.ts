@@ -36,3 +36,5 @@ export const BRAND_WORDMARK = {
   suffix: '.nl',
   full: 'SaldeerScan.nl',
 } as const
+
+export const BRAND_EMAIL_LOGO_URL = 'https://saldeerscan.nl/apple-icon'

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import {
   BRAND_COLORS,
-  BRAND_MARK_GEOMETRY,
+  BRAND_EMAIL_LOGO_URL,
   BRAND_WORDMARK,
 } from '@/lib/brand-colors'
 import { renderReportEmail } from '@/lib/report-email'
@@ -24,8 +24,7 @@ test('email contains normalized report values and report URL', () => {
   expect(html).toContain('10 kWh batterij')
   expect(html).toContain('https://saldeerscan.nl/check?leadId=1&amp;token=abc')
   expect(html).toContain(`background:${BRAND_COLORS.evergreen950}`)
-  expect(html).toContain(`background:${BRAND_COLORS.trust}`)
-  expect(html).toContain(BRAND_MARK_GEOMETRY.outerPath)
+  expect(html).toContain(BRAND_EMAIL_LOGO_URL)
   expect(html).toContain(BRAND_WORDMARK.name)
   expect(html).toContain(BRAND_WORDMARK.suffix)
 })
@@ -53,7 +52,8 @@ test('email escapes personal and report text', () => {
     reportUrl: 'https://saldeerscan.nl/check',
   })
   expect(html).not.toContain('<script>')
-  expect(html).not.toContain('<img')
+  expect(html).not.toContain('<img src=x onerror=alert(1)>')
   expect(html).toContain('&lt;script&gt;')
   expect(html).toContain('&lt;img')
+  expect(html).toContain(BRAND_EMAIL_LOGO_URL)
 })

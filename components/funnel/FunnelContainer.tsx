@@ -482,31 +482,35 @@ export function FunnelContainer({ urlParams }: {
       {showResumeBanner && (
         <aside
           aria-label="Vorige sessie"
-          className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-trust/25 bg-paper px-4 py-3 shadow-sm md:mx-auto md:max-w-xl"
+          className="flex min-w-0 flex-col gap-3 rounded-2xl border border-trust/25 bg-paper px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between md:mx-auto md:max-w-xl"
         >
-          <div className="min-w-0 break-words text-sm text-ink-muted">
-            <span className="font-bold text-ink">Vorige sessie gevonden</span> — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
+          <div className="min-w-0 text-sm leading-6 text-ink-muted">
+            <span className="font-bold text-ink">Vorige sessie gevonden</span>
+            <span className="block sm:inline">
+              {' '}
+              — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
+            </span>
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+          <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
             {urlContext.mode === 'address' ? (
               <>
                 <button onClick={keepCurrentUrlState}
-                  className={funnelPrimaryButtonClass}>
+                  className={`w-full sm:w-auto ${funnelPrimaryButtonClass}`}>
                   Deze link gebruiken
                 </button>
                 <button onClick={resumeSavedState}
-                  className={funnelTextButtonClass}>
-                  Doorgaan met vorige sessie
+                  className={`w-full sm:w-auto ${funnelTextButtonClass}`}>
+                  Vorige sessie hervatten
                 </button>
               </>
             ) : (
               <>
                 <button onClick={resumeSavedState}
-                  className={funnelPrimaryButtonClass}>
+                  className={`w-full sm:w-auto ${funnelPrimaryButtonClass}`}>
                   Doorgaan
                 </button>
                 <button onClick={startOver}
-                  className={funnelTextButtonClass}>
+                  className={`w-full sm:w-auto ${funnelTextButtonClass}`}>
                   Opnieuw
                 </button>
               </>

@@ -1,6 +1,6 @@
 import {
   BRAND_COLORS,
-  BRAND_MARK_GEOMETRY,
+  BRAND_EMAIL_LOGO_URL,
   BRAND_WORDMARK,
 } from '@/lib/brand-colors'
 import type { NormalizedReport } from '@/lib/report-model'
@@ -50,12 +50,13 @@ export function renderReportEmail(input: {
           <table role="presentation" cellspacing="0" cellpadding="0">
             <tr>
               <td width="40" valign="middle">
-                <div style="width:36px;height:36px;border-radius:10px;background:${BRAND_COLORS.trust};text-align:center;line-height:36px">
-                  <svg aria-hidden="true" width="20" height="20" viewBox="${BRAND_MARK_GEOMETRY.viewBox}" fill="none" style="display:inline-block;vertical-align:middle">
-                    <path d="${BRAND_MARK_GEOMETRY.outerPath}" fill="${BRAND_COLORS.onEvergreen}" fill-opacity="${BRAND_MARK_GEOMETRY.outerFillOpacity}" stroke="${BRAND_COLORS.onEvergreen}" stroke-width="${BRAND_MARK_GEOMETRY.outerStrokeWidth}" stroke-linejoin="round"></path>
-                    <path d="${BRAND_MARK_GEOMETRY.innerPath}" fill="${BRAND_COLORS.onEvergreen}"></path>
-                  </svg>
-                </div>
+                <img
+                  src="${BRAND_EMAIL_LOGO_URL}"
+                  width="36"
+                  height="36"
+                  alt="${BRAND_WORDMARK.full}"
+                  style="display:block;width:36px;height:36px;border-radius:10px"
+                />
               </td>
               <td valign="middle" style="padding-left:10px">
                 <strong style="font-size:20px;color:${BRAND_COLORS.onEvergreen}">${BRAND_WORDMARK.name}<span style="color:${BRAND_COLORS.trust}">${BRAND_WORDMARK.suffix}</span></strong>
