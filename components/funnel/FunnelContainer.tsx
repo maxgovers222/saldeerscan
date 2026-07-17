@@ -488,7 +488,7 @@ export function FunnelContainer({ urlParams }: {
             <span className="font-bold text-ink">Vorige sessie gevonden</span>
             <span className="block sm:inline">
               {' '}
-              — stap {savedState.step}/6 ({savedState.adres || 'adres opgeslagen'})
+              — Stadium {visualStageForStep(savedState.step)} van 4 ({savedState.adres || 'adres opgeslagen'})
             </span>
           </div>
           <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">

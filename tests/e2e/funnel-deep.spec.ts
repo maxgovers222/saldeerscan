@@ -1070,7 +1070,7 @@ test.describe('localStorage persistentie & resume-banner', () => {
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1500)
     await expect(page.locator('text=Vorige sessie gevonden')).toBeVisible({ timeout: 5000 })
-    await expect(page.locator('text=stap 99/6')).not.toBeVisible()
+    await expect(page.locator('text=Stadium 99 van 4')).not.toBeVisible()
   })
 
   test('resume-banner toont stap-nummer en adres', async ({ page }) => {
@@ -1081,7 +1081,7 @@ test.describe('localStorage persistentie & resume-banner', () => {
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1500)
-    await expect(page.locator('text=stap 3/6')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=Stadium 3 van 4')).toBeVisible({ timeout: 5000 })
     await expect(page.locator('text=Keizersgracht 1, Amsterdam')).toBeVisible()
   })
 
