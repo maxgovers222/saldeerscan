@@ -27,6 +27,7 @@ config({ path: resolve(__dir, '..', '.env.local') })
 
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
 
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY      = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -120,9 +121,9 @@ function buildPrompt(e: WijkEntry, aantalWoningen: number | null, score: number)
     : 'een significante woningpopulatie'
 
   const netProfielTekst = {
-    ROOD:   `Het elektriciteitsnet in ${e.wijk} staat onder maximale druk (status ROOD bij Netbeheer NL). Teruglevering van zonne-energie wordt hier al gereguleerd. Een thuisbatterij is voor woningbezitters in deze wijk géén luxe maar een noodzaak om zelf opgewekte stroom maximaal te benutten.`,
-    ORANJE: `Het stroomnet in ${e.wijk} raakt toenemend vol (status ORANJE). Liander/Enexis verwacht hier in de komende jaren beperkingen op teruglevering. Thuisbatterijen worden daardoor steeds relevanter als buffer.`,
-    GROEN:  `De netcapaciteit in ${e.wijk} is momenteel ruim beschikbaar (status GROEN). Dit biedt woningbezitters ideale omstandigheden voor maximale teruglevering — maar ook hier is het zaak vóór 2027 te handelen.`,
+    ROOD:   `De regionale netindicatie in ${e.wijk} staat op ROOD. Dit kan vooral gevolgen hebben voor nieuwe of zwaardere aansluitingen en kan lokaal spanningsproblemen geven. Het bewijst niet dat teruglevering op iedere bestaande woningaansluiting actief wordt beperkt. Een batterij is alleen een optie na een individuele rendementsberekening.`,
+    ORANJE: `De regionale netindicatie in ${e.wijk} staat op ORANJE. Controleer bij een nieuwe of zwaardere aansluiting de actuele informatie van de netbeheerder. Deze status voorspelt geen individuele terugleverbeperking.`,
+    GROEN:  `De regionale netindicatie in ${e.wijk} staat op GROEN. Dit is een momentopname en geen garantie voor onbeperkte teruglevering of toekomstige aansluitcapaciteit.`,
   }[e.netcongestie]
 
   const bouwjaarProfielTekst =
@@ -132,7 +133,7 @@ function buildPrompt(e: WijkEntry, aantalWoningen: number | null, score: number)
       ? `Woningen uit de periode ${e.bouwjaar} in ${e.wijk} hebben doorgaans een goede dakconditie. De groepenkast is meestal al geschikt voor een omvormer, al kan een kleine upgrade wenselijk zijn.`
       : e.bouwjaar >= 1980
       ? `Woningen uit ${e.bouwjaar} in ${e.wijk} vereisen soms een groepenkast-upgrade (€300–€600). Het dak is in de meeste gevallen geschikt voor minimaal 10 zonnepanelen.`
-      : `Woningen uit ${e.bouwjaar} in ${e.wijk} zijn wat ouder. Dakcheck en groepenkast-inspectie zijn standaard aanbevolen. Renovatiesubsidie (ISDE) kan hier een deel van de extra kosten dekken.`
+      : `Woningen uit ${e.bouwjaar} in ${e.wijk} zijn wat ouder. Een dakcheck en groepenkastinspectie zijn aandachtspunten voor de offerte. ISDE geldt niet voor deze controles, zonnepanelen of een thuisbatterij; voor aangewezen isolatiemaatregelen of installaties gelden aparte RVO-voorwaarden.`
 
   const besparingRange = e.bouwjaar >= 2000
     ? '€700–€1.100'
@@ -169,6 +170,9 @@ SCHRIJFINSTRUCTIES:
 5. Geen jargon, geen algemeenheden — iedere alinea moet specifiek voor ${e.wijk} voelen
 6. Sluit af met een urgente maar niet agressieve oproep tot actie richting de gratis SaldeerScan
 
+FEITENKADER:
+${ENERGY_EDITORIAL_GUARDRAILS}
+
 SEO-EISEN:
 - Titel: max 60 tekens, bevat "${e.wijk}", "${e.stad}" en "2027"
 - Meta-description: max 155 tekens, bevat "${e.wijk}" en "saldering"
@@ -179,7 +183,7 @@ FAQ (5 stuks — hyperlocaal, niet generiek):
 - Vraag 1: specifiek over netcongestie ${e.netcongestie} in ${e.wijk}
 - Vraag 2: specifiek over bouwjaar ${e.bouwjaar} en dakgeschiktheid
 - Vraag 3: over de financiële impact van 2027 voor woningen in ${e.stad}
-- Vraag 4: over ISDE-subsidie en de specifieke situatie in ${e.provincie.replace(/-/g, ' ')}
+- Vraag 4: over welke officieel aangewezen woningmaatregelen mogelijk onder ISDE vallen, zonder subsidie voor zonnepanelen, batterij, dakcheck of groepenkast te suggereren
 - Vraag 5: over thuisbatterijen en de lokale netcongestie
 
 Antwoord UITSLUITEND in dit JSON-formaat (geen tekst buiten de JSON):

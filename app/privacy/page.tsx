@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           Privacyverklaring
         </h1>
         <p className="mb-10 text-sm text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
-          Laatste update: april 2026
+          Laatste update: juli 2026
         </p>
 
         <div className="space-y-8 text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
@@ -36,6 +36,9 @@ export default function PrivacyPage() {
             <h2 className="mb-3 text-lg font-bold text-ink" style={{ fontFamily: 'var(--font-heading)' }}>1. Wie zijn wij?</h2>
             <p className="text-sm leading-relaxed">
               SaldeerScan.nl is een online platform dat Nederlandse woningeigenaren helpt de impact van de salderingsafschaffing per 1 januari 2027 inzichtelijk te maken. Wij verwerken persoonsgegevens conform de Algemene Verordening Gegevensbescherming (AVG).
+            </p>
+            <p className="mt-3 text-sm leading-relaxed">
+              Het platform wordt vanuit Nederland beheerd en is bereikbaar via <a href="mailto:info@saldeerscan.nl" className="text-trust-dark underline hover:text-trust">info@saldeerscan.nl</a>. Aanvullende handelsregistergegevens worden hier gepubliceerd zodra deze beschikbaar zijn.
             </p>
           </section>
 
@@ -72,6 +75,9 @@ export default function PrivacyPage() {
             <h2 className="mb-3 text-lg font-bold text-ink" style={{ fontFamily: 'var(--font-heading)' }}>5. Delen met derden</h2>
             <p className="text-sm leading-relaxed">
               Uw gegevens worden uitsluitend gedeeld met installateurs in ons netwerk indien u hier expliciet toestemming voor heeft gegeven. Wij verkopen uw gegevens nooit aan derden. Voor de technische verwerking maken wij gebruik van Supabase (dataopslag) en Resend (e-mail).
+            </p>
+            <p className="mt-3 text-sm leading-relaxed">
+              Bij een doorverwijzing kunnen wij een leadvergoeding van de installateur ontvangen. Lees meer over onze werkwijze op de pagina <a href="/methode" className="text-trust-dark underline hover:text-trust">Methode en transparantie</a>.
             </p>
           </section>
 

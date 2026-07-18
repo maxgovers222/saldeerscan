@@ -21,7 +21,9 @@ export function ReportHomeAndGrid({ report }: { report: NormalizedReport }) {
       )}
       {report.grid.status === 'ROOD' && (
         <ReportAlert title="Netcongestie in uw regio" tone="danger">
-          Teruglevering kan beperkt zijn. Opslag en slim eigen verbruik zijn daarom belangrijker.
+          Dit is een regionale indicatie. Hoge netdruk kan gevolgen hebben voor nieuwe of
+          zwaardere aansluitingen en lokale spanning, maar bewijst niet dat uw bestaande
+          teruglevering actief wordt beperkt.
         </ReportAlert>
       )}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">

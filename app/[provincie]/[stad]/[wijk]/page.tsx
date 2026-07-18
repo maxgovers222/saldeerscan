@@ -110,7 +110,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   const score = resolveWijkScore(page.gemBouwjaar, page.gemHealthScore)
   const { label: scorelabel } = scoreLabel(score)
   const besparing = computeBesparing(page.gemBouwjaar, score)
-  // Verlies = terugleveringsvoordeel dat wegvalt na 2027 (~40% van besparing)
+  // Indicatief verschil vanaf 2027 op basis van het standaardprofiel.
   const verlies = computeVerlies(page.gemBouwjaar, score)
   const ranking = neighborhoodRanking(page.gemBouwjaar, score)
   const { analyse, netwerk } = splitContent(page.hoofdtekst)
@@ -210,13 +210,13 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
           <div className="rounded-2xl border border-ink/10 bg-paper p-6 shadow-sm sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
               <div>
-                <p className="mb-1 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">Salderingsafbouw</p>
+                <p className="mb-1 font-heading text-xs font-semibold uppercase tracking-widest text-trust-dark">Einde salderen</p>
                 <h3 className="font-heading text-lg font-extrabold tracking-tight text-ink">
-                  Wat kost wachten u in {wijkDisplay}?
+                  Wat verandert er in {wijkDisplay}?
                 </h3>
               </div>
               <div className="shrink-0 rounded-xl border border-danger/25 bg-paper px-4 py-3 text-right">
-                <p className="mb-0.5 font-heading text-xs font-semibold uppercase tracking-widest text-danger">Verlies vanaf 2027</p>
+                <p className="mb-0.5 font-heading text-xs font-semibold uppercase tracking-widest text-danger">Geraamd verschil 2027</p>
                 <p className="font-heading text-xl font-extrabold text-danger">
                   −€{verlies}<span className="text-xs font-normal">/jaar</span>
                 </p>
@@ -230,8 +230,8 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                 <path d="M9 1.5L4 9h5L6 14.5l7-8.5H8z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
               </svg>
               <p className="text-sm leading-relaxed text-ink-muted">
-                <span className="font-bold text-ink">Shock 2027:</span>{' '}
-                Verlies door saldering in {wijkDisplay}: <span className="font-bold text-ink">€{verlies} per jaar</span> vanaf 1 januari 2027 voor woningen zonder batterijopslag.
+                <span className="font-bold text-ink">Indicatie vanaf 2027:</span>{' '}
+                geraamd verschil in jaarwaarde in {wijkDisplay}: <span className="font-bold text-ink">€{verlies} per jaar</span>. De uitkomst hangt af van uw eigen verbruik, leverancierstarieven en installatie.
               </p>
             </div>
 
@@ -307,7 +307,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                     { label: 'Gem. bouwjaar', value: page.gemBouwjaar ? `${page.gemBouwjaar}` : '—', sub: 'BAG registratie' },
                     { label: 'Energy Score', value: `${score}/100`, sub: scorelabel },
                     { label: 'Est. besparing', value: `€${besparing}/jr`, sub: 'zonder batterij, 2024' },
-                    { label: 'Verlies 2027', value: `−€${verlies}/jr`, sub: 'bij 0% saldering', danger: true },
+                    { label: 'Verschil 2027', value: `−€${verlies}/jr`, sub: 'indicatief na einde salderen', danger: true },
                     { label: 'Netcongestie', value: page.netcongestieStatus ?? '—', sub: netNarrative.label ?? '' },
                     ...(page.aantalWoningen ? [{ label: 'Woningen', value: `${page.aantalWoningen.toLocaleString('nl')}`, sub: 'in dit postcodegebied' }] : []),
                     ...(ranking ? [{ label: 'Wijk Ranking', value: ranking.top ? 'Top 10%' : 'Top 25%', sub: 'rendement in ' + stadDisplay }] : []),
@@ -364,7 +364,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
             <span className="text-action">u kunt besparen</span>
           </h2>
           <p className="mb-6 text-base leading-relaxed text-white/65">
-            Voer uw adres in voor een analyse op maat — BAG-data, ROI-berekening en ISDE subsidie check in 3 minuten.
+            Voer uw adres in voor een analyse op maat met BAG-data, een indicatieve ROI-berekening en lokale netinformatie.
           </p>
           <WijkCtaButton
             provincie={provincie}

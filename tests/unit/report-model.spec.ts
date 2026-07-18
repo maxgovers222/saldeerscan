@@ -15,8 +15,8 @@ test('builds the new-installation report once', () => {
   expect(report.scenarios.withBattery.besparingJaarEur).toBe(1180)
   expect(report.salderingTimeline).toEqual([
     { year: 2024, compensationPct: 100 },
-    { year: 2025, compensationPct: 64 },
-    { year: 2026, compensationPct: 28 },
+    { year: 2025, compensationPct: 100 },
+    { year: 2026, compensationPct: 100 },
     { year: 2027, compensationPct: 0 },
   ])
   expect(report.recommendation.primarySolution).toBe('Zonnepanelen en thuisbatterij')

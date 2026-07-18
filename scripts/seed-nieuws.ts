@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import * as dotenv from 'dotenv'
+import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
 
 dotenv.config({ path: '.env.local' })
 
@@ -15,7 +16,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
 const NIEUWS_ITEMS = [
-  { slug: 'saldering-afgebouwd-2026-update', titel: 'Saldering naar 28% in 2026: wat betekent dit voor uw zonnepanelen?' },
+  { slug: 'saldering-afgebouwd-2026-update', titel: 'Salderen blijft 100% in 2026 en stopt per 1 januari 2027' },
   { slug: 'netcongestie-kaart-2025', titel: "Nieuwe netcongestiekaart: deze regio's zijn vol" },
   { slug: 'thuisbatterij-subsidie-2025', titel: 'Subsidie thuisbatterij 2025: overzicht en aanvragen' },
   { slug: 'zonnepanelen-prijsdaling-2025', titel: 'Zonnepanelen 30% goedkoper in 2025: beste moment om te kopen?' },
@@ -38,6 +39,8 @@ async function generateAndUpsert(item: typeof NIEUWS_ITEMS[0]): Promise<void> {
 Schrijf een Nederlands nieuwsartikel van ~600 woorden over: "${item.titel}".
 
 Context: SaldeerScan.nl helpt Nederlandse huiseigenaren de impact van het einde van de salderingsregeling op 1 januari 2027 te begrijpen.
+
+${ENERGY_EDITORIAL_GUARDRAILS}
 
 Vereisten:
 - Minimaal 3 ## H2-koppen (markdown)

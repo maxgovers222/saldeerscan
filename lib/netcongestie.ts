@@ -33,11 +33,11 @@ export function getNetbeheerderNaam(postcodePrefix: string): string {
 function getUitleg(status: NetcongestieStatus, netbeheerder: string): string {
   switch (status) {
     case 'ROOD':
-      return `Het stroomnet van ${netbeheerder} in uw regio is vol. Teruglevering van zonne-energie is beperkt. Een thuisbatterij is extra waardevol.`
+      return `De regionale capaciteitsindicatie voor het stroomnet van ${netbeheerder} staat op rood. Dit kan vooral gevolgen hebben voor nieuwe of zwaardere aansluitingen en kan lokaal spanningsproblemen geven. Het betekent niet automatisch dat teruglevering op uw bestaande aansluiting actief wordt beperkt.`
     case 'ORANJE':
-      return `Het stroomnet van ${netbeheerder} staat onder druk. Piekproductie (middag) wordt soms beperkt. Een batterij maximaliseert uw opbrengst.`
+      return `De regionale capaciteitsindicatie voor het stroomnet van ${netbeheerder} staat op oranje. Controleer voor een nieuwe of zwaardere aansluiting altijd de actuele informatie van de netbeheerder. Deze status voorspelt geen individuele terugleverbeperking.`
     case 'GROEN':
-      return `Het stroomnet van ${netbeheerder} heeft voldoende capaciteit in uw regio. Teruglevering is onbeperkt mogelijk.`
+      return `De regionale capaciteitsindicatie voor het stroomnet van ${netbeheerder} staat op groen. Dit is een momentopname en geen garantie voor onbeperkte teruglevering of beschikbare capaciteit voor een nieuwe of zwaardere aansluiting.`
   }
 }
 
@@ -89,7 +89,7 @@ export async function getNetcongestie(postcode: string): Promise<NetcongestieRes
       status,
       netbeheerder,
       uitleg: getUitleg(status, netbeheerder),
-      terugleveringBeperkt: status === 'ROOD',
+      terugleveringBeperkt: false,
       postcodePrefix,
     }
   }
@@ -116,7 +116,7 @@ export async function getNetcongestie(postcode: string): Promise<NetcongestieRes
     status,
     netbeheerder,
     uitleg: getUitleg(status, netbeheerder),
-    terugleveringBeperkt: status === 'ROOD',
+    terugleveringBeperkt: false,
     postcodePrefix,
   }
 }

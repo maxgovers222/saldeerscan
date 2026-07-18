@@ -95,7 +95,7 @@ export async function GET(
           status: report.grid.status,
           netbeheerder: report.grid.operator ?? '',
           uitleg: report.grid.explanation ?? '',
-          terugleveringBeperkt: report.grid.status !== 'GROEN',
+          terugleveringBeperkt: false,
         }
       : null,
     healthScore: report.summary.healthScore === null

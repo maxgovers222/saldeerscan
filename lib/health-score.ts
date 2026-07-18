@@ -65,7 +65,9 @@ export function berekenHealthScore(input: HealthScoreInput): HealthScoreResult {
   if (bouwjaarScore < 20) aanbevelingen.push('Overweeg na-isolatie van dak, muren en vloer')
   if (labelScore < 20) aanbevelingen.push('Verbeter energielabel via warmtepomp of HR-ketel vervanging')
   if (dakScore < 15) aanbevelingen.push('Beperkt dakoppervlak — onderzoek oost/west oriëntatie panelen')
-  if (congestieScore < 15) aanbevelingen.push('Netcongestie in uw regio — thuisbatterij vergroot zelfvoorzienendheid')
+  if (congestieScore < 15) {
+    aanbevelingen.push('Controleer de actuele netsituatie; beoordeel opslag alleen met een individuele rendementsberekening')
+  }
 
   return {
     score,

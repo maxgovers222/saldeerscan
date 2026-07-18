@@ -1,5 +1,12 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { buildArticleSchema } from '@/lib/json-ld'
+import {
+  LIANDER_ARTICLE_CORRECTION,
+  LIANDER_ARTICLE_SLUG,
+  sanitizeGeneratedEnergyCopy,
+  sanitizeStructuredEnergyCopy,
+} from '@/lib/editorial-standards'
 
 export interface NieuwsArticle {
   id: string
@@ -26,7 +33,7 @@ export async function getNieuwsArticle(slug: string): Promise<NieuwsArticle | nu
 
   if (error || !data) return null
 
-  return mapRow(data)
+  return applyNieuwsOverride(mapRow(data))
 }
 
 export async function getLatestNieuws(limit = 10): Promise<NieuwsArticle[]> {
@@ -37,7 +44,7 @@ export async function getLatestNieuws(limit = 10): Promise<NieuwsArticle[]> {
     .order('published_at', { ascending: false })
     .limit(limit)
 
-  return (data ?? []).map(mapRow)
+  return (data ?? []).map(row => applyNieuwsOverride(mapRow(row)))
 }
 
 export async function getAllPublishedNieuws(): Promise<Pick<NieuwsArticle, 'slug' | 'titel' | 'publishedAt' | 'intro'>[]> {
@@ -49,21 +56,29 @@ export async function getAllPublishedNieuws(): Promise<Pick<NieuwsArticle, 'slug
 
   return (data ?? []).map(r => ({
     slug: r.slug,
-    titel: r.titel,
+    titel: r.slug === LIANDER_ARTICLE_SLUG
+      ? LIANDER_ARTICLE_CORRECTION.titel
+      : sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel,
     publishedAt: r.published_at ?? null,
-    intro: r.intro ?? null,
+    intro: r.slug === LIANDER_ARTICLE_SLUG
+      ? LIANDER_ARTICLE_CORRECTION.intro
+      : sanitizeGeneratedEnergyCopy(r.intro ?? null),
   }))
 }
 
 export async function getRecentNieuwsTitles(limit = 20): Promise<string[]> {
   const { data } = await supabaseAdmin
     .from('nieuws_articles')
-    .select('titel')
+    .select('slug, titel')
     .eq('status', 'published')
     .order('published_at', { ascending: false })
     .limit(limit)
 
-  return (data ?? []).map(r => r.titel)
+  return (data ?? []).map(r =>
+    r.slug === LIANDER_ARTICLE_SLUG
+      ? LIANDER_ARTICLE_CORRECTION.titel
+      : sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel
+  )
 }
 
 export async function upsertNieuwsArticle(article: {
@@ -98,18 +113,42 @@ export async function upsertNieuwsArticle(article: {
 }
 
 function mapRow(data: Record<string, unknown>): NieuwsArticle {
+  const faqItems = ((data.faq_items as Array<{ vraag: string; antwoord: string }>) ?? [])
+    .map((faq) => ({
+      vraag: sanitizeGeneratedEnergyCopy(faq.vraag, 'short') ?? faq.vraag,
+      antwoord: sanitizeGeneratedEnergyCopy(faq.antwoord) ?? faq.antwoord,
+    }))
+
   return {
     id: data.id as string,
     slug: data.slug as string,
-    titel: data.titel as string,
-    metaDescription: (data.meta_description as string) ?? null,
-    intro: (data.intro as string) ?? null,
-    hoofdtekst: (data.hoofdtekst as string) ?? null,
-    faqItems: (data.faq_items as Array<{ vraag: string; antwoord: string }>) ?? [],
-    jsonLd: (data.json_ld as Record<string, unknown>) ?? {},
+    titel: sanitizeGeneratedEnergyCopy(data.titel as string, 'short') ?? data.titel as string,
+    metaDescription: sanitizeGeneratedEnergyCopy((data.meta_description as string) ?? null, 'short'),
+    intro: sanitizeGeneratedEnergyCopy((data.intro as string) ?? null),
+    hoofdtekst: sanitizeGeneratedEnergyCopy((data.hoofdtekst as string) ?? null),
+    faqItems,
+    jsonLd: sanitizeStructuredEnergyCopy(data.json_ld ?? {}) as Record<string, unknown>,
     topicSeed: (data.topic_seed as string) ?? null,
     status: (data.status as 'draft' | 'published') ?? 'draft',
     publishedAt: (data.published_at as string) ?? null,
     generatedAt: (data.generated_at as string) ?? null,
+  }
+}
+
+function applyNieuwsOverride(article: NieuwsArticle): NieuwsArticle {
+  if (article.slug !== LIANDER_ARTICLE_SLUG) return article
+
+  return {
+    ...article,
+    ...LIANDER_ARTICLE_CORRECTION,
+    faqItems: [...LIANDER_ARTICLE_CORRECTION.faqItems],
+    jsonLd: buildArticleSchema({
+      slug: article.slug,
+      titel: LIANDER_ARTICLE_CORRECTION.titel,
+      metaDescription: LIANDER_ARTICLE_CORRECTION.metaDescription,
+      publishedAt: article.publishedAt ?? article.generatedAt ?? new Date().toISOString(),
+      type: 'nieuws',
+      faqItems: [...LIANDER_ARTICLE_CORRECTION.faqItems],
+    }),
   }
 }

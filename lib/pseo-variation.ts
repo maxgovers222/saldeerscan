@@ -89,7 +89,7 @@ export function computeBesparing(bouwjaar: number | null, score: number): number
   return Math.round(base * (score / 65))
 }
 
-/** Verlies = terugleveringsvoordeel dat wegvalt na 2027 (~40% van besparing) */
+/** Indicatief verschil in jaarwaarde vanaf 2027 bij het gehanteerde standaardprofiel. */
 export function computeVerlies(bouwjaar: number | null, score: number): number {
   return Math.round(computeBesparing(bouwjaar, score) * 0.4)
 }
@@ -186,16 +186,16 @@ export function renovatieIntelligence(
 
   const items: RenovatieContent[] = [
     {
-      titel: `Moderne nieuwbouw in ${w} — batterij als volgende stap`,
-      tekst: `Moderne woningen in ${w} (bouwjaar ${yr}) zijn energetisch al sterk, maar de afschaffing van saldering per 2027 maakt opslag cruciaal. Overweegt u een thuisbatterij naast uw panelen? Dan kunt u het wegvallen van de salderingsregeling grotendeels compenseren en een netto voordeel van **15–20%** op uw rendement realiseren.`,
+      titel: `Moderne nieuwbouw in ${w} — verbruik als volgende stap`,
+      tekst: `Moderne woningen in ${w} (bouwjaar ${yr}) zijn energetisch vaak al sterk. Na het einde van salderen wordt het belangrijker om opwek en direct eigen verbruik op elkaar af te stemmen. Een thuisbatterij kan een optie zijn, maar rendement hangt af van uw uurlijkse profiel, tarieven en offerte.`,
     },
     {
-      titel: 'Energiezuinige basis, maximaal profiteren',
-      tekst: `Energiezuinige nieuwbouw uit ${yr} in ${w} heeft een solide basis voor zonne-energie. Uw verbruiksprofiel past vaak het best bij een combinatie van panelen én opslag. Met een thuisbatterij is uw netto-rendement ná 2027 naar verwachting **15–20% hoger** dan bij panelen zonder opslag.`,
+      titel: 'Energiezuinige basis, eerst het profiel toetsen',
+      tekst: `Energiezuinige nieuwbouw uit ${yr} in ${w} heeft een solide basis voor zonne-energie. Begin met het afstemmen van panelen en apparaten op uw werkelijke verbruik. Laat apart berekenen of opslag voldoende extra eigen gebruik oplevert om de investering te rechtvaardigen.`,
     },
     {
-      titel: `${w} — optimaliseer uw zonne-installatie ná 2027`,
-      tekst: `Na ${yr} gebouwde woningen in ${w} profiteren maximaal van moderne energietechnologie. Als u al goed geïsoleerd bent, is een thuisbatterij de logische volgende stap. Uw netto-rendement na 2027 ligt dan **15–20% hoger** dan bij een installatie zonder opslag.`,
+      titel: `${w} — optimaliseer uw zonne-installatie na 2027`,
+      tekst: `Na ${yr} gebouwde woningen in ${w} kunnen veel elektrische toepassingen combineren. Slim plannen van verbruik is een eerste stap. Een thuisbatterij is niet automatisch de logische keuze; vergelijk investering, levensduur, tarieven en het verwachte extra eigen gebruik.`,
     },
   ]
   return items[t]
@@ -222,19 +222,19 @@ const NET_COPY: Record<NetcongestieStatus, NetCongestieDef> = {
     label: 'Vol stroomnet',
     dot: '#ef4444',
     narrative: (wijk) =>
-      `Het net rond ${wijk} zit vol: terugleveren is beperkt en thuisbatterijen worden hier vaak het snelst interessant.`,
+      `De regionale netindicatie rond ${wijk} staat op rood. Dat kan vooral gevolgen hebben voor nieuwe of zwaardere aansluitingen en lokale spanning; het bewijst geen actieve terugleverbeperking voor uw woning.`,
   },
   ORANJE: {
     label: 'Druk stroomnet',
     dot: '#f59e0b',
     narrative: (wijk) =>
-      `Het net in ${wijk} is onder druk: planning en opslag zijn hier extra belangrijk voor 2027.`,
+      `De regionale netindicatie in ${wijk} staat op oranje. Controleer de actuele situatie bij de netbeheerder wanneer u een nieuwe of zwaardere aansluiting overweegt.`,
   },
   GROEN: {
     label: 'Vrij stroomnet',
     dot: '#10b981',
     narrative: (wijk) =>
-      `Het net in ${wijk} is ruimer: terugleveren is nu nog relatief soepel — handelen vóór 2027 blijft slim.`,
+      `De regionale netindicatie in ${wijk} staat op groen. Dit is een momentopname, geen garantie voor onbeperkte teruglevering of toekomstige aansluitcapaciteit.`,
   },
 }
 

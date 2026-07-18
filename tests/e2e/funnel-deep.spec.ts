@@ -78,7 +78,7 @@ const MOCK_ROI_RESULT = {
   },
   aanbeveling: 'beide',
   aanbevelingTekst: 'Combinatie panelen + batterij geeft hoogste ROI',
-  isdeSchatting: { bedragEur: 2400, apparaatType: 'Thuisbatterij', vermogenKwp: 3.2 },
+  isdeSchatting: { bedragEur: 0, apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij', vermogenKwp: 3.2 },
 }
 
 const MOCK_HEALTH = {
@@ -839,9 +839,9 @@ test.describe('Stap 6 — Lead formulier', () => {
     await expect(page.locator('text=Netcongestie analyse')).toBeVisible()
   })
 
-  test('ISDE subsidie card aanwezig', async ({ page }) => {
-    await expect(page.locator('text=ISDE Subsidie').first()).toBeVisible({ timeout: 6000 })
-    await expect(page.locator('text=Thuisbatterij').first()).toBeVisible()
+  test('ISDE voor panelen en batterij staat als niet van toepassing', async ({ page }) => {
+    await expect(page.getByText('ISDE panelen/batterij')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Niet van toepassing').first()).toBeVisible()
   })
 
   test('trust signals aanwezig', async ({ page }) => {
@@ -1012,14 +1012,14 @@ test.describe('Stap 6 — Lead formulier', () => {
     await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 12000 })
   })
 
-  test('na submit: ResultsDashboard met salderingsafbouw zichtbaar', async ({ page }) => {
+  test('na submit: ResultsDashboard met einde salderen zichtbaar', async ({ page }) => {
     await page.locator('#lead-naam').fill('Maria van der Berg')
     await page.locator('#lead-email').fill('maria@test.nl')
     await page.locator('#lead-telefoon').fill('0687654321')
     await page.locator('#lead-gdpr').click({ force: true })
     await page.locator('button[type="submit"]').click()
     const desktopReport = page.getByTestId('report-desktop-grid')
-    await expect(desktopReport.getByText('Afbouw saldering')).toBeVisible({ timeout: 12000 })
+    await expect(desktopReport.getByText('Einde salderen')).toBeVisible({ timeout: 12000 })
     await expect(desktopReport.getByText('2024')).toBeVisible()
   })
 
@@ -1169,7 +1169,7 @@ test.describe('ResultsDashboard', () => {
     await expect(page.locator('text=Prinsengracht 263, Amsterdam').last()).toBeVisible({ timeout: 8000 })
   })
 
-  test('salderingsafbouw met 4 jaar-labels', async ({ page }) => {
+  test('salderingstijdlijn met 4 jaar-labels', async ({ page }) => {
     await gotoResults(page)
     const desktopReport = page.getByTestId('report-desktop-grid')
     for (const yr of ['2024', '2025', '2026', '2027']) {

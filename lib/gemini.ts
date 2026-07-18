@@ -1,5 +1,6 @@
 import 'server-only'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { ENERGY_EDITORIAL_GUARDRAILS } from '@/lib/editorial-standards'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
 
@@ -41,7 +42,9 @@ Context:
 - Netcongestie status: ${params.netcongestie}
 - Energie score: ${params.healthScore}/100
 
-Focus op: de specifieke uitdagingen voor ${params.bouwjaar} woningen bij het einde van salderen op 1 januari 2027. Bespreek: isolatie-uitdagingen, zonnepaneel-potentieel, batterijopslag als oplossing voor netcongestie.
+Focus op: de specifieke uitdagingen voor ${params.bouwjaar} woningen bij het einde van salderen op 1 januari 2027. Bespreek isolatie-uitdagingen, zonnepaneelpotentieel en manieren om eigen verbruik te verhogen. Presenteer batterijopslag alleen als optie na een individuele rendementsberekening.
+
+${ENERGY_EDITORIAL_GUARDRAILS}
 
 Schrijf direct voor de huiseigenaar. Gebruik concrete euro-bedragen. Vermijd jargon.
 
@@ -99,9 +102,9 @@ export async function generateWijkContent(params: {
     : 'een aanzienlijke woningpopulatie'
 
   const netTekst = {
-    ROOD:   `Vol stroomnet (ROOD) — thuisbatterij essentieel`,
-    ORANJE: `Toenemende netdruk (ORANJE) — batterijopslag sterk aanbevolen`,
-    GROEN:  `Ruime netcapaciteit (GROEN) — ideaal voor directe teruglevering`,
+    ROOD:   `Hoge regionale netdruk (ROOD) — indicatie, geen vastgestelde individuele terugleverbeperking`,
+    ORANJE: `Regionale netdruk (ORANJE) — controleer actuele aansluitcapaciteit bij de netbeheerder`,
+    GROEN:  `Lagere regionale netdruk (GROEN) — momentopname, geen garantie voor onbeperkte teruglevering`,
   }[params.netcongestie]
 
   const prompt = `Je bent een senior energie-adviseur. Schrijf een technisch-autoritaire analyse van precies 800 woorden voor de wijk ${params.wijk} in ${params.stad} (${params.provincie}).
@@ -111,7 +114,9 @@ Verwerk ALLE van deze lokale feiten:
 - Gemiddeld bouwjaar: ${params.bouwjaar}
 - Netstatus: ${netTekst}
 
-Focus op: financiële urgentie 1 januari 2027 (einde salderingsregeling), concrete euro-bedragen voor ${params.wijk}, bouwjaar-specifieke dakgeschiktheid, netcongestie impact. Schrijf direct voor de huiseigenaar in ${params.wijk}. Geen algemeenheden — elke zin moet specifiek voor ${params.wijk} aanvoelen. Gebruik **dikgedrukte** kernbegrippen via markdown.`
+Focus op: financiële verandering per 1 januari 2027 (einde salderingsregeling), indicatieve euro-bandbreedtes voor ${params.wijk}, bouwjaar-specifieke aandachtspunten en genuanceerde netcongestie-impact. Schrijf direct voor de huiseigenaar in ${params.wijk}. Geen algemeenheden — elke zin moet specifiek voor ${params.wijk} aanvoelen. Gebruik **dikgedrukte** kernbegrippen via markdown.
+
+${ENERGY_EDITORIAL_GUARDRAILS}`
 
   const result = await model.generateContent(prompt)
   return result.response.text().trim()
@@ -136,7 +141,7 @@ const KENNISBANK_TOPICS: Record<string, string> = {
   'energiebelasting-2027-veranderingen': 'Energiebelasting 2027: wat verandert er voor zonnepaneelbezitters?',
   'beste-zonnepanelen-2025': 'Beste zonnepanelen 2025: welk merk en type past bij uw woning?',
   'zonnepanelen-subsidie-nederland': 'Zonnepanelen subsidie Nederland: alle regelingen op een rij',
-  'salderingsregeling-afbouw-2026-2027': 'Salderingsregeling afbouw 2026-2027: stap voor stap uitgelegd',
+  'salderingsregeling-afbouw-2026-2027': 'Salderen blijft 100% in 2026 en stopt per 1 januari 2027',
   'omvormer-kiezen-zonnepanelen': 'Omvormer kiezen voor zonnepanelen: string vs micro vs optimizer',
   'thuisbatterij-saldering-alternatief': 'Thuisbatterij als alternatief voor saldering: rendement en kosten',
   'zonnepanelen-huurhuis-toegestaan': 'Zonnepanelen in een huurhuis: rechten, regels en mogelijkheden',
@@ -155,6 +160,8 @@ export async function generateKennisbankContent(params: {
 Schrijf een uitgebreid kennisbank-artikel van precies 1200 woorden over: "${topicTitle}".
 
 Context: SaldeerScan.nl helpt Nederlandse huiseigenaren de impact van het einde van de salderingsregeling op 1 januari 2027 te begrijpen. Doelgroep: Nederlandse woningbezitters met zonnepanelen of interesse daarin.
+
+${ENERGY_EDITORIAL_GUARDRAILS}
 
 Vereisten:
 - Minimaal 6 ## H2-koppen (markdown, geen #, geen ###)
@@ -225,6 +232,8 @@ export async function generateNieuwsContent(params: {
 Schrijf een actueel nieuwsartikel (${maand} ${jaar}) over: "${params.topicSeed}".
 
 ${recentStr}
+
+${ENERGY_EDITORIAL_GUARDRAILS}
 
 Vereisten:
 - 900 woorden, korte alinea's (max 4 zinnen per alinea)

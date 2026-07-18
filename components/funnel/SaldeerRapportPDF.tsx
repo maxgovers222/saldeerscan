@@ -558,8 +558,8 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
           </View>
 
           <View style={S.section} wrap={false}>
-            <Text style={S.sectionEyebrow}>Salderingsafbouw</Text>
-            <Text style={S.sectionTitle}>Van volledige vergoeding naar nul</Text>
+            <Text style={S.sectionEyebrow}>Einde salderen</Text>
+            <Text style={S.sectionTitle}>100% tot en met 2026, daarna stopt salderen</Text>
             <View style={S.timeline}>
               {report.salderingTimeline.map((item, index) => {
                 const final = index === report.salderingTimeline.length - 1
@@ -595,7 +595,13 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
                 {recommendation.extraAnnualSavingEur !== null && (
                   <DataRow label="Extra besparing opslag" value={`${money(recommendation.extraAnnualSavingEur)}/jaar`} positive />
                 )}
-                <DataRow label="Indicatieve ISDE" value={money(recommendation.isdeAmountEur)} last />
+                <DataRow
+                  label="ISDE zonnepanelen/batterij"
+                  value={recommendation.isdeAmountEur > 0
+                    ? money(recommendation.isdeAmountEur)
+                    : 'Niet van toepassing'}
+                  last
+                />
               </View>
             </View>
 

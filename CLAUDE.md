@@ -47,6 +47,7 @@ app/
   layout.tsx                        # Fonts: Bricolage Grotesque (headings) + DM Sans (body)
   globals.css                       # Tailwind v4 + customer-first evergreen/trust/action tokens + @media print
   sitemap.ts                        # Gesplitste sitemaps: core + provincies + kennisbank + nieuws + postcodes.xml
+  methode/page.tsx                  # Publieke rekenmethode, aannames, beperkingen en verdienmodel
   privacy/page.tsx                  # AVG-compliant privacyverklaring (9 secties, volledig ingevuld)
   icon.tsx                          # Dynamisch evergreen/trust merkicoon 32x32 (edge runtime)
   apple-icon.tsx                    # Apple touch icon 180x180 uit dezelfde merkgeometrie
@@ -106,7 +107,8 @@ components/
 lib/
   bag.ts                            # BAG adapter (Mapbox → PDOK)
   netcongestie.ts                   # Postcode-prefix cache lookup
-  roi.ts                            # ROI algoritme + saldering afbouw 2026→2027
+  roi.ts                            # ROI-algoritme: 100% salderen t/m 2026, einde per 2027
+  editorial-standards.ts            # Feitenkader + correcties voor bestaande en nieuwe AI-content
   report-model.ts                   # NormalizedReport v1 + pure builder vanuit opgeslagen server-lead
   report-email.ts                   # HTML-e-mail vanuit hetzelfde NormalizedReport
   health-score.ts                   # Score 0-100 (bouwjaar/label/dak/congestie)
@@ -181,8 +183,10 @@ De B2B webhook dispatcher in `lib/webhooks.ts` controleert altijd `gdpr_consent 
 - **Retry** (`GET /api/webhooks/retry`, dagelijks 06:00 Vercel Hobby): herlaadt opgeslagen body + actieve partner, verstuurt opnieuw met verse HMAC. Backoff: **24h → 48h → 96h** (past bij dagelijkse cron). Migratie: `20260710143000_webhook_retry_payload.sql`.
 - Legacy deliveries zonder `payload_body` worden éénmalig herbouwd uit de lead-row.
 
-### Saldering afbouw 2027
-`lib/roi.ts` heeft een `SALDERING_SCHEMA` map (2025: 64%, 2026: 28%, 2027: 0%). Het `shockEffect2027` object drijft urgentie in `Shock2027Banner.tsx` én op pSEO-pagina's.
+### Einde salderen per 2027
+`lib/roi.ts` heeft een `SALDERING_SCHEMA` map (2025: 100%, 2026: 100%, 2027: 0%). Salderen blijft volledig mogelijk tot en met 31 december 2026 en stopt per 1 januari 2027 in één keer. De jaarberekening begrenst saldering op de resterende netafname; een productieoverschot en alle teruglevering vanaf 2027 krijgen de leveranciersafhankelijke, indicatief gemodelleerde terugleververgoeding. Zonnepanelen en thuisbatterijen krijgen geen landelijke ISDE.
+
+`lib/editorial-standards.ts` bewaakt hetzelfde feitenkader in Gemini- en seedprompts en neutraliseert gericht verouderde claims uit bestaande Supabase-content bij uitlezen. De vaste Liander-correctie op de bestaande nieuwsslug gaat uitsluitend over wachtlijsten en prioritering voor nieuwe of zwaardere aansluitingen.
 
 ### Rate limiting
 `lib/rate-limit.ts` — **Upstash Redis** sliding window (5 req/IP/uur) via `@upstash/ratelimit`, namespace per route (key = `${pathname}:${ip}`). Redis instantie is lazy-loaded en gecached in module scope. In-memory fallback als `UPSTASH_REDIS_REST_URL` ontbreekt (lokale dev — geen persistentie tussen requests).
@@ -234,9 +238,10 @@ Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden
 `components/funnel/PDFDownloadButton.tsx` laadt `PDFDownloadButtonInner` via `next/dynamic({ ssr: false })`; alleen de inner importeert `@react-pdf/renderer`. Daardoor blijft React-PDF buiten de initiële `/`- en `/check`-chunks. De click-handler opent synchroon een tabblad vóór `pdf().toBlob()` en gebruikt bij een geblokkeerde popup een directe `<a download>`-fallback. De PDF ontvangt hetzelfde `NormalizedReport` en berekent geen commerciële waarden opnieuw.
 
 ### Route-shells en publieke route-invarianten
-- `PageShell` is de basis voor generieke publieke pagina's en privacy; `PseoPageShell` composeert de provincie-, stad-, wijk-, straat- en postcodefamilies; `ContentIndexShell` en `ArticleShell` bedienen kennisbank en nieuws. `/check` is server-composed in `app/check/page.tsx`, met `CheckPageClient` als enige funnel-island.
+- `PageShell` is de basis voor generieke publieke pagina's, `/methode` en privacy; `PseoPageShell` composeert de provincie-, stad-, wijk-, straat- en postcodefamilies; `ContentIndexShell` en `ArticleShell` bedienen kennisbank en nieuws. `/check` is server-composed in `app/check/page.tsx`, met `CheckPageClient` als enige funnel-island.
 - Alle publieke shells gebruiken `SiteHeader` en `SiteFooter`. Fout-, global-error- en 404-states gebruiken dezelfde visuele rollen en behouden een bereikbaar `main`-landmark.
 - pSEO-migraties wijzigen geen metadata, canonicals, JSON-LD, ISR, slugs, interne links of straat-FAQ-filtering. `PseoConversionCard` gebruikt `lib/conversion-context.ts`, zodat lokale context bij `/check` aankomt zonder bron voor serverberekeningen te worden.
+- `/methode` documenteert BAG-/gebruikers-/netinputs, hoofdformules en tarieven, niet-meegenomen factoren, de indicatieve bandbreedte en het consent-afhankelijke leadmodel. Privacy en footer benoemen neutraal dat de site vanuit Nederland wordt beheerd; KvK-gegevens worden gepubliceerd zodra beschikbaar.
 
 ### Fase 4b stabiliteitsgates
 - **Toegankelijkheid:** `npm run test:a11y` draait axe A/AA plus toetsenbordfocus, skip-link/main, combobox, 200% zoom en reduced-motion op de vaste routefamilies. Axe-issues worden semantisch opgelost; geen algemene excludes.
@@ -262,7 +267,7 @@ Homepage-teller verborgen onder 25 leads. Bij ≥25 leads: afgerond naar beneden
 `app/api/roi/route.ts` — bouwjaar validatie: `< 1000 || > 2030` (niet < 1800, want panden zoals Anne Frank Huis zijn 1635). DakOppervlakte max: 5000 m² (niet 500).
 
 ### pSEO content kwaliteit
-`scripts/seed-wijken.ts` — géén template fallback, altijd Gemini. Haalt CBS PDOK WFS data op voor echte `aantalWoningen`. Gemini prompt: 800w hyperlocale content + 5 FAQs. JSON-LD @graph: WebPage + FAQPage. Flags: `--skip-existing`, `--batch=START,END`, `--dry-run`.
+`scripts/seed-wijken.ts` — géén template fallback, altijd Gemini. Haalt CBS PDOK WFS data op voor echte `aantalWoningen`. Gemini prompt: 800w hyperlocale content + 5 FAQs, met het vaste feitenkader uit `lib/editorial-standards.ts`. JSON-LD @graph: WebPage + FAQPage. Flags: `--skip-existing`, `--batch=START,END`, `--dry-run`.
 
 ### Email bevestiging
 `app/api/leads/route.ts` — na succesvolle leadopslag bouwt de server het rapport en rendert `lib/report-email.ts` de HTML uit datzelfde model. De Resend-call is **geawait** en de uitkomst wordt als `report_email_status` opgeslagen vóór het definitieve rapport en de B2B-snapshot worden opgebouwd. FROM-adres: `RESEND_FROM_EMAIL` env var — **geen fallback meer**. Stel in Vercel in als `SaldeerScan <noreply@saldeerscan.nl>`.
@@ -427,6 +432,8 @@ npx playwright test --project=chromium # aanvullende brede regressierun
 Verwacht: alles groen zonder onverwachte skips. De vaste pSEO-routes gebruiken tijdens Playwright een deterministische PostgREST-fixture, dus lokale seeds zijn geen voorwaarde voor de release-gate. Controleer daarnaast handmatig 360/390/768/1024/1440 px voor alle routefamilies, funnelstadia, rapport, privacy, 404 en error fallback.
 
 Laatst volledig geverifieerd op 15 juli 2026: typecheck groen; build **1249 pagina's**; **34 unit**, **19 a11y**, **3 performance**, **9 core-e2e**, **17 funnel-four-stages**, **133 funnel-deep**, **3 handshake**, **3 leadId-hydrate**, **6 report-responsive mobile**, **9 route-shells**, **7 analytics-contract** en **23 Win32 visual-regression** tests groen. Geen skips of failures in de planmatige release-gate. De aanvullende volledige Chromium-run gaf **282 PASS + 1 gedocumenteerde postcode-data-skip**. Linux-visuals worden na commit/push via `update-visual-snapshots.yml` naar 23 baselines gebracht.
+
+Trust-/wetscorrectie lokaal geverifieerd op 18 juli 2026: typecheck groen; **41 unit**, **9 core-e2e**, **3 gerichte funnel-deep** regressietests en de nieuwe `/methode` WCAG A/AA-check groen; productiebuild **1250 pagina's**. Visual baselines zijn in deze wijziging niet opnieuw gegenereerd.
 
 - `curl /api/bag?adres=Prinsengracht+123+Amsterdam` → BAG JSON
 - ROI voor 1975 rijtjeshuis (110m²) → €400-800/jaar besparing

@@ -9,7 +9,7 @@ interface Shock2027BannerProps {
 
 export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
   const jaar = new Date().getFullYear()
-  const pct = jaar <= 2025 ? 64 : jaar === 2026 ? 28 : 0
+  const pct = jaar <= 2026 ? 100 : 0
 
   return (
     <aside
@@ -28,7 +28,7 @@ export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
         </div>
         <div>
           <p className="mb-1 text-[10px] uppercase tracking-widest text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
-            Verlies vanaf 2027
+            Verschil vanaf 2027
           </p>
           <p className="font-mono text-xl font-bold text-danger">
             −€{shock.jaarlijksVerlies.toLocaleString('nl-NL')}<span className="text-xs text-ink-muted">/jaar</span>
@@ -46,9 +46,9 @@ export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
         </svg>
         <div>
           <p className="text-sm leading-relaxed text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
-            Elke maand wachten kost u{' '}
-            <span className="font-bold text-ink">€{shock.maandelijksVerlies.toLocaleString('nl-NL')}</span> extra.{' '}
-            Cumulatief verlies over 5 jaar:{' '}
+            De geraamde jaarwaarde daalt met{' '}
+            <span className="font-bold text-ink">€{shock.maandelijksVerlies.toLocaleString('nl-NL')}</span> per maand.{' '}
+            Geraamd verschil over 5 jaar:{' '}
             <span className="font-bold text-ink">€{shock.cumulatiefVerlies5Jaar.toLocaleString('nl-NL')}</span>
           </p>
         </div>

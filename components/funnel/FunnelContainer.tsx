@@ -93,7 +93,7 @@ function hydrateLegacyReportDisplay(
     aanbevelingTekst: report.recommendation.explanation,
     isdeSchatting: {
       bedragEur: report.recommendation.isdeAmountEur,
-      apparaatType: hasBattery ? 'Thuisbatterij' : 'Zonnepanelen',
+      apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij',
       vermogenKwp: Math.round(report.recommendation.panelCount * 4) / 10,
     },
   }
@@ -111,7 +111,7 @@ function hydrateLegacyReportDisplay(
         status: report.grid.status,
         netbeheerder: report.grid.operator ?? '',
         uitleg: report.grid.explanation ?? '',
-        terugleveringBeperkt: report.grid.status !== 'GROEN',
+        terugleveringBeperkt: false,
       },
     })
   }

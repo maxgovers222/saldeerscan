@@ -7,6 +7,7 @@ import { seedReportState } from './fixtures/report-state'
 const routes = [
   '/',
   '/check',
+  '/methode',
   '/privacy',
   '/kennisbank',
   '/nieuws',

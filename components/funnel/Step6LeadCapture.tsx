@@ -82,29 +82,6 @@ function validatePhone(raw: string, code: CountryCode): boolean {
   return country ? country.regex.test(digits) : digits.length >= 7
 }
 
-function IsdeSummaryCard({ bedragEur, apparaatType, vermogenKwp }: { bedragEur: number; apparaatType: string; vermogenKwp: number }) {
-  if (bedragEur <= 0) return null
-  return (
-    <FunnelCard surface="trust">
-      <p className="text-xs font-semibold uppercase tracking-wider text-trust-dark">ISDE Subsidie Schatting</p>
-      <div className="mt-2 flex flex-wrap items-baseline gap-2">
-        <span className="font-heading text-2xl font-bold text-ink">€{bedragEur.toLocaleString('nl-NL')}</span>
-        <span className="text-xs text-ink-muted">via ISDE-regeling</span>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-trust/20 pt-3">
-        <div>
-          <p className="text-xs text-ink-muted">Apparaat</p>
-          <p className="text-sm font-semibold text-ink">{apparaatType}</p>
-        </div>
-        <div>
-          <p className="text-xs text-ink-muted">Vermogen</p>
-          <p className="text-sm font-semibold text-ink">{vermogenKwp} kWp</p>
-        </div>
-      </div>
-    </FunnelCard>
-  )
-}
-
 function SuccessState({ state }: { state: FunnelState }) {
   if (!state.reportModel) return null
 
@@ -299,7 +276,6 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
 
   if (submitted) return <SuccessState state={state} />
 
-  const isde = state.roiResult?.isdeSchatting
   const regio = state.wijk || (state.bagData ? state.adres.split(',').pop()?.trim() : null) || 'uw regio'
 
   return (
@@ -332,7 +308,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
             <ul className="mt-4 space-y-2.5">
               {[
                 { label: 'ROI-berekening', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}/jaar` : '—', done: !!state.roiResult },
-                { label: 'ISDE subsidie check', value: isde ? `€${isde.bedragEur.toLocaleString('nl-NL')}` : '—', done: !!isde },
+                { label: 'ISDE panelen/batterij', value: 'Niet van toepassing', done: true },
                 { label: 'Netcongestie analyse', value: state.netcongestie?.status ?? '—', done: !!state.netcongestie },
                 { label: 'Installateur advies', value: 'Na uw aanvraag', done: true },
                 { label: '2027 urgentie tijdlijn', value: 'Inbegrepen', done: true },
@@ -373,8 +349,6 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
               </dl>
             )}
           </FunnelCard>
-
-          {isde && <IsdeSummaryCard {...isde} />}
 
           <FunnelCard className="py-4">
             <FunnelTrustLine items={['Beveiligd', 'Lokale installateurs', 'Vrijblijvend']} />

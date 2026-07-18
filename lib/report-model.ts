@@ -209,7 +209,8 @@ export function buildReportModel(
       explanation: existing
         ? 'Behoud uw huidige panelen en laat opslag en slim verbruik beoordelen.'
         : roi.aanbevelingTekst,
-      isdeAmountEur: roi.isdeSchatting.bedragEur,
+      // Zonnepanelen en thuisbatterijen vallen niet onder de landelijke ISDE.
+      isdeAmountEur: 0,
     },
     grid: {
       status: source.netcongestie?.status ?? null,
@@ -253,7 +254,7 @@ export function reportSourceFromStoredLead(
           status: netStatus,
           netbeheerder: typeof lead.netbeheerder === 'string' ? lead.netbeheerder : '',
           uitleg: '',
-          terugleveringBeperkt: netStatus !== 'GROEN',
+          terugleveringBeperkt: false,
         }
       : null,
     healthScore: score === null || healthLabel === null

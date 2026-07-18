@@ -109,7 +109,7 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
               Meest urgente wijken in {provLabel}
             </h2>
             <p className="mt-3 max-w-2xl text-white/55">
-              Wijken met de zwaarste netdruk en hoogst geschat verlies na afbouw saldering — spring direct naar de wijkanalyse.
+              Wijken met de zwaarste netdruk en het hoogste geschatte verschil na het einde van salderen — spring direct naar de wijkanalyse.
             </p>
             <div className="mt-6">
               <PseoCardGrid

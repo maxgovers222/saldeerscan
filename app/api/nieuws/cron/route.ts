@@ -5,13 +5,13 @@ import { getRecentNieuwsTitles, upsertNieuwsArticle } from '@/lib/nieuws'
 
 const NIEUWS_TOPICS = [
   'Netcongestie kaart update: welke Nederlandse regio\'s zijn vol in 2026?',
-  'Salderingsafbouw 2026: hoeveel verlies je per kwartaal?',
+  'Salderen blijft 100% in 2026 en stopt per 1 januari 2027: wat verandert er?',
   'Thuisbatterij prijzen 2026: welke modellen zijn nu rendabel?',
   'SDE++ subsidie 2026: deadline en aanvraagprocedure voor zonnepanelen',
   'Slim energiecontract na 2027: welke opties zijn er voor zonnepaneelbezitters?',
   'Energieprijzen voorjaar 2026: wat betekent dit voor uw zonnepanelen rendement?',
   'Warmtepomp combineren met zonnepanelen: rendement en kosten in 2026',
-  'Nieuwe netcongestie regels Liander: wat verandert er voor particulieren?',
+  'Liander prioriteert schaarse netcapaciteit vanaf 1 juli 2026: gevolgen voor nieuwe en zwaardere huishoudelijke aansluitingen',
   'Zonnepanelen reinigen 2026: wanneer loont het en wat kost het?',
   'Energiecoöperaties als alternatief voor saldering na 2027',
   'Postcoderoos regeling 2026: update voor bewoners zonder eigen dak',

@@ -13,6 +13,9 @@ export function SiteFooter() {
           <p className="mt-3 max-w-sm text-sm leading-6 text-white/50">
             Gratis energieanalyse voor Nederlandse woningeigenaren.
           </p>
+          <p className="mt-2 max-w-sm text-xs leading-5 text-white/45">
+            Beheerd vanuit Nederland. Handelsregistergegevens worden gepubliceerd zodra deze beschikbaar zijn.
+          </p>
           <a
             className="mt-2 inline-block text-sm text-white/60 transition hover:text-white"
             href="mailto:info@saldeerscan.nl"
@@ -25,6 +28,7 @@ export function SiteFooter() {
           <nav aria-label="Voettekstnavigatie" className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-white/55 sm:justify-end">
             <Link href="/kennisbank" className="transition hover:text-white">Kennisbank</Link>
             <Link href="/nieuws" className="transition hover:text-white">Nieuws</Link>
+            <Link href="/methode" className="transition hover:text-white">Methode &amp; transparantie</Link>
             <Link href="/privacy" className="transition hover:text-white">Privacyverklaring</Link>
             <Link href="/check" className="transition hover:text-white">Analyseer uw woning</Link>
           </nav>

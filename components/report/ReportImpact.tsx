@@ -25,7 +25,7 @@ export function ReportImpact({ report }: { report: NormalizedReport }) {
       </div>
 
       <div>
-        <h3 className="font-semibold text-ink">Afbouw saldering</h3>
+        <h3 className="font-semibold text-ink">Einde salderen</h3>
         <div className="mt-3 space-y-2">
           {report.salderingTimeline.map(item => (
             <div key={item.year} className="grid grid-cols-[3rem_1fr_3rem] items-center gap-3">

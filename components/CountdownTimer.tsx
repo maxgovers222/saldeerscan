@@ -70,7 +70,7 @@ export function CountdownTimer({ compact = false }: { compact?: boolean }) {
         })}
       </div>
       <p className="mt-3 font-mono text-xs text-white/70">
-        Per 1 januari 2027 daalt uw opbrengst van 28% naar 0%
+        Tot en met 31 december 2026 kunt u 100% salderen; per 1 januari 2027 stopt de regeling
       </p>
     </div>
   )

@@ -1,17 +1,18 @@
 // lib/roi.ts
 
-// Saldering afbouwschema NL (configurabel)
+// Actuele Nederlandse salderingsregeling:
+// 100% salderen tot en met 31 december 2026, daarna stopt de regeling.
 export const SALDERING_SCHEMA: Record<number, number> = {
-  2025: 0.64,
-  2026: 0.28,  // 72% niet meer vergoed
-  2027: 0.00,  // Volledig einde saldering
+  2025: 1.00,
+  2026: 1.00,
+  2027: 0.00,
 }
 
 export const REFERENCE_BATTERY_CAPACITY_KWH = 10
 
-// Dynamische tarieven 2026
-const LEVERINGSTARIEF = 0.40   // €/kWh inkoop
-const TERUGLEVERTARIEF = 0.09  // €/kWh uitkoop (marktprijs)
+// Indicatieve tarieven. Werkelijke tarieven en terugleverkosten verschillen per leverancier.
+export const LEVERINGSTARIEF = 0.40
+export const TERUGLEVERTARIEF = 0.09
 const KWH_PER_PANEEL = 350     // kWh/jaar per 400Wp paneel NL gemiddeld
 const M2_PER_PANEEL = 4        // m² dakoppervlak per paneel (incl. tussenruimte)
 const DAK_BENUTTING = 0.55     // 55% van dakoppervlak bruikbaar (realistisch: niet alle vlakken zijn zuidgericht)
@@ -60,7 +61,7 @@ export interface ROIResult {
   eigenGebruikPct: number         // % van productie dat direct gebruikt wordt
 
   // Scenario's
-  scenarioNu: ROIScenario         // Panelen nu installeren (2026 saldering 28%)
+  scenarioNu: ROIScenario         // Panelen nu installeren (2026: 100% salderen)
   scenarioMetBatterij: ROIScenario // Panelen + batterij (hogere eigengebruik)
   scenarioWachten: ROIScenario    // Wachten tot 2027 (geen saldering meer)
 
@@ -77,6 +78,24 @@ export interface ROIResult {
     apparaatType: string
     vermogenKwp: number
   }
+}
+
+function berekenJaarwaarde(
+  productieKwh: number,
+  verbruikKwh: number,
+  directEigenGebruikKwh: number,
+  salderingspercentage: number,
+): number {
+  const terugleveringKwh = Math.max(productieKwh - directEigenGebruikKwh, 0)
+  const afnameVanNetKwh = Math.max(verbruikKwh - directEigenGebruikKwh, 0)
+  const gesaldeerdKwh = Math.min(terugleveringKwh, afnameVanNetKwh) * salderingspercentage
+  const vergoedTeruggeleverdKwh = Math.max(terugleveringKwh - gesaldeerdKwh, 0)
+
+  return (
+    directEigenGebruikKwh * LEVERINGSTARIEF +
+    gesaldeerdKwh * LEVERINGSTARIEF +
+    vergoedTeruggeleverdKwh * TERUGLEVERTARIEF
+  )
 }
 
 // Schat jaarverbruik op basis van woonoppervlak en bouwjaar
@@ -107,45 +126,52 @@ export function berekenROI(input: ROIInput): ROIResult {
   const batterijFactor = input.huishouden_grootte ? (EIGENGEBRUIK_BATTERIJ[input.huishouden_grootte] ?? 0.70) : 0.70
 
   const eigenGebruikBasisKwh = Math.min(productieKwh * basisFactor, verbruikKwh)
-  const teruglevering = productieKwh - eigenGebruikBasisKwh
-
   const eigenGebruikBatterijKwh = Math.min(productieKwh * batterijFactor, verbruikKwh)
-  const terugleveringBatterij = productieKwh - eigenGebruikBatterijKwh
 
-  // Scenario A: Nu installeren (2026, 28% saldering)
-  // Saldering: gesalderd deel vergoed tegen LEVERINGSTARIEF, rest tegen marktprijs
-  const besparingNu =
-    eigenGebruikBasisKwh * LEVERINGSTARIEF +
-    teruglevering * saldering2026 * LEVERINGSTARIEF +
-    teruglevering * (1 - saldering2026) * TERUGLEVERTARIEF
+  // Scenario A: in 2026 mag teruglevering nog volledig worden gesaldeerd tegen
+  // de jaarlijkse netafname. Een eventueel overschot krijgt een terugleververgoeding.
+  const besparingNu = berekenJaarwaarde(
+    productieKwh,
+    verbruikKwh,
+    eigenGebruikBasisKwh,
+    saldering2026,
+  )
   const investeringPanelen = aantalPanelen * 350  // ~€350 per paneel geïnstalleerd
 
   // Scenario B: Met batterij (10 kWh, ~€4000)
-  const besparingMetBatterij =
-    eigenGebruikBatterijKwh * LEVERINGSTARIEF +
-    terugleveringBatterij * saldering2026 * LEVERINGSTARIEF +
-    terugleveringBatterij * (1 - saldering2026) * TERUGLEVERTARIEF
+  const besparingMetBatterij = berekenJaarwaarde(
+    productieKwh,
+    verbruikKwh,
+    eigenGebruikBatterijKwh,
+    saldering2026,
+  )
   const investeringMetBatterij = investeringPanelen + 4000
 
-  // Scenario C: Wachten tot 2027 (0% saldering, alleen eigengebruik spaart)
-  const besparingWachten = eigenGebruikBasisKwh * LEVERINGSTARIEF
+  // Scenario C: vanaf 2027 stopt salderen. Teruglevering houdt wel een
+  // leveranciersafhankelijke vergoeding; die is hier indicatief geraamd.
+  const besparingWachten = berekenJaarwaarde(
+    productieKwh,
+    verbruikKwh,
+    eigenGebruikBasisKwh,
+    SALDERING_SCHEMA[2027],
+  )
 
-  // 2027 shock-effect: verlies t.o.v. NU handelen
+  // Verschil in geraamde jaarwaarde door het einde van salderen.
   const jaarlijksVerlies = besparingNu - besparingWachten
   const shockEffect2027: ShockEffect2027 = {
     jaarlijksVerlies: Math.round(jaarlijksVerlies),
     cumulatiefVerlies5Jaar: Math.round(jaarlijksVerlies * 5),
     maandelijksVerlies: Math.round(jaarlijksVerlies / 12),
-    boodschap: `Zonder actie verlies je €${Math.round(jaarlijksVerlies)} per jaar na 1 januari 2027`,
+    boodschap: `Door het einde van salderen daalt de geraamde jaarwaarde met €${Math.round(jaarlijksVerlies)} per jaar vanaf 1 januari 2027`,
   }
 
   // Aanbeveling
   const aanbeveling = besparingMetBatterij > besparingNu * 1.2 ? 'beide' : 'panelen'
 
-  // ISDE schatting (2026 tarieven): batterij €250/kWh subsidie tot max 10 kWh
+  // Zonnepanelen en thuisbatterijen vallen niet onder de landelijke ISDE.
   const isdeSchatting = {
-    bedragEur: aanbeveling === 'beide' ? 2500 : 0,
-    apparaatType: aanbeveling === 'beide' ? 'Thuisbatterij' : 'Zonnepanelen',
+    bedragEur: 0,
+    apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij',
     vermogenKwp: Math.round(aantalPanelen * 0.4 * 10) / 10,  // kWp = panelen × 400Wp
   }
 
@@ -157,7 +183,7 @@ export function berekenROI(input: ROIInput): ROIResult {
 
     scenarioNu: {
       naam: 'Nu installeren',
-      beschrijving: 'Zonnepanelen in 2026 (28% saldering)',
+      beschrijving: 'Zonnepanelen in 2026 (100% salderen t/m 31 december)',
       besparingJaarEur: Math.round(besparingNu),
       investeringEur: investeringPanelen,
       terugverdientijdJaar: Math.round((investeringPanelen / besparingNu) * 10) / 10,
@@ -171,7 +197,7 @@ export function berekenROI(input: ROIInput): ROIResult {
     },
     scenarioWachten: {
       naam: 'Wachten tot 2027',
-      beschrijving: 'Na einde saldering (0% vergoeding teruglevering)',
+      beschrijving: 'Na einde salderen (terugleververgoeding blijft)',
       besparingJaarEur: Math.round(besparingWachten),
       investeringEur: investeringPanelen,
       terugverdientijdJaar: besparingWachten > 0
@@ -182,8 +208,8 @@ export function berekenROI(input: ROIInput): ROIResult {
     shockEffect2027,
     aanbeveling,
     aanbevelingTekst: aanbeveling === 'beide'
-      ? `Met panelen én batterij bespaar je €${Math.round(besparingMetBatterij)}/jaar. De batterij verdient zichzelf terug vóór 2030.`
-      : `Zonnepanelen leveren je €${Math.round(besparingNu)}/jaar op. Installeer vóór 1 jan 2027 om de resterende salderingsvoordelen te benutten.`,
+      ? `Met panelen en batterij is de geraamde besparing €${Math.round(besparingMetBatterij)}/jaar. Laat rendement en dimensionering altijd toetsen met actuele tarieven en een offerte.`
+      : `Zonnepanelen leveren in deze indicatie €${Math.round(besparingNu)}/jaar op. Tot en met 31 december 2026 kunt u jaarlijks salderen; vanaf 2027 tellen vooral direct eigen gebruik en de terugleververgoeding.`,
     isdeSchatting,
   }
 }

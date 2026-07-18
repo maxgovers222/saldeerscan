@@ -1,6 +1,10 @@
 import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import {
+  sanitizeGeneratedEnergyCopy,
+  sanitizeStructuredEnergyCopy,
+} from '@/lib/editorial-standards'
 
 const KENNISBANK_REVALIDATE = 86400
 
@@ -59,9 +63,9 @@ export const getAllPublishedKennisbank = unstable_cache(
 
     return (data ?? []).map(r => ({
       slug: r.slug,
-      titel: r.titel,
+      titel: sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel,
       category: r.category ?? 'algemeen',
-      intro: r.intro ?? null,
+      intro: sanitizeGeneratedEnergyCopy(r.intro ?? null),
       generatedAt: r.generated_at ?? null,
     }))
   },
@@ -84,9 +88,9 @@ export async function getKennisbankSummariesBySlugs(
 
   return (data ?? []).map(r => ({
     slug: r.slug,
-    titel: r.titel,
+    titel: sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel,
     category: r.category ?? 'algemeen',
-    intro: r.intro ?? null,
+    intro: sanitizeGeneratedEnergyCopy(r.intro ?? null),
     generatedAt: r.generated_at ?? null,
   }))
 }
@@ -123,15 +127,21 @@ export async function upsertKennisbankArticle(article: {
 }
 
 function mapRow(data: Record<string, unknown>): KennisbankArticle {
+  const faqItems = ((data.faq_items as Array<{ vraag: string; antwoord: string }>) ?? [])
+    .map((faq) => ({
+      vraag: sanitizeGeneratedEnergyCopy(faq.vraag, 'short') ?? faq.vraag,
+      antwoord: sanitizeGeneratedEnergyCopy(faq.antwoord) ?? faq.antwoord,
+    }))
+
   return {
     id: data.id as string,
     slug: data.slug as string,
-    titel: data.titel as string,
-    metaDescription: (data.meta_description as string) ?? null,
-    intro: (data.intro as string) ?? null,
-    hoofdtekst: (data.hoofdtekst as string) ?? null,
-    faqItems: (data.faq_items as Array<{ vraag: string; antwoord: string }>) ?? [],
-    jsonLd: (data.json_ld as Record<string, unknown>) ?? {},
+    titel: sanitizeGeneratedEnergyCopy(data.titel as string, 'short') ?? data.titel as string,
+    metaDescription: sanitizeGeneratedEnergyCopy((data.meta_description as string) ?? null, 'short'),
+    intro: sanitizeGeneratedEnergyCopy((data.intro as string) ?? null),
+    hoofdtekst: sanitizeGeneratedEnergyCopy((data.hoofdtekst as string) ?? null),
+    faqItems,
+    jsonLd: sanitizeStructuredEnergyCopy(data.json_ld ?? {}) as Record<string, unknown>,
     category: (data.category as KennisbankArticle['category']) ?? 'algemeen',
     relatedSlugs: (data.related_slugs as string[]) ?? [],
     status: (data.status as 'draft' | 'published') ?? 'draft',

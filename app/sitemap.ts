@@ -27,6 +27,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
     return [
       { url: 'https://saldeerscan.nl', lastModified: now, changeFrequency: 'daily' as const, priority: 1 },
       { url: 'https://saldeerscan.nl/check', lastModified: now, changeFrequency: 'daily' as const, priority: 0.95 },
+      { url: 'https://saldeerscan.nl/methode', lastModified: now, changeFrequency: 'monthly' as const, priority: 0.7 },
       { url: 'https://saldeerscan.nl/privacy', lastModified: now, changeFrequency: 'monthly' as const, priority: 0.5 },
       { url: 'https://saldeerscan.nl/kennisbank', lastModified: now, changeFrequency: 'weekly' as const, priority: 0.9 },
       { url: 'https://saldeerscan.nl/nieuws', lastModified: now, changeFrequency: 'daily' as const, priority: 0.9 },

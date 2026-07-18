@@ -23,7 +23,7 @@ export const reportSourceNoPanels = {
     status: 'ROOD',
     netbeheerder: 'Liander',
     uitleg: 'Het stroomnet is vol.',
-    terugleveringBeperkt: true,
+    terugleveringBeperkt: false,
   },
   healthScore: {
     score: 63,
@@ -72,8 +72,8 @@ export const reportSourceNoPanels = {
     aanbeveling: 'beide',
     aanbevelingTekst: 'Panelen en een batterij verdienen nader onderzoek.',
     isdeSchatting: {
-      bedragEur: 2500,
-      apparaatType: 'Thuisbatterij',
+      bedragEur: 0,
+      apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij',
       vermogenKwp: 4,
     },
   },

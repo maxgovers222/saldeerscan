@@ -73,7 +73,7 @@ export const FUNNEL_STATE_STEP6: FunnelState = {
     },
     aanbeveling: 'beide',
     aanbevelingTekst: 'Combinatie geeft hoogste ROI',
-    isdeSchatting: { bedragEur: 2400, apparaatType: 'Thuisbatterij', vermogenKwp: 3.2 },
+    isdeSchatting: { bedragEur: 0, apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij', vermogenKwp: 3.2 },
   },
   reportModel: null,
   meterkastAnalyse: null,

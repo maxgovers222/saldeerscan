@@ -2,6 +2,10 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { rankUrgentWijken, type WijkStadRow, type WijkStadRowWithStad } from '@/lib/pseo-variation'
+import {
+  sanitizeGeneratedEnergyCopy,
+  sanitizeStructuredEnergyCopy,
+} from '@/lib/editorial-standards'
 
 const PSEO_FETCH_REVALIDATE = 604800
 
@@ -30,6 +34,38 @@ export interface PseoPageData {
   generatedAt: string | null
 }
 
+function mapPseoPage(
+  data: Record<string, unknown>,
+  straat: string | null,
+): PseoPageData {
+  const faqItems = ((data.faq_items as Array<{ vraag: string; antwoord: string }>) ?? [])
+    .map((faq) => ({
+      vraag: sanitizeGeneratedEnergyCopy(faq.vraag, 'short') ?? faq.vraag,
+      antwoord: sanitizeGeneratedEnergyCopy(faq.antwoord) ?? faq.antwoord,
+    }))
+
+  return {
+    slug: data.slug as string,
+    provincie: data.provincie as string,
+    stad: data.stad as string,
+    wijk: (data.wijk as string) ?? null,
+    straat,
+    titel: sanitizeGeneratedEnergyCopy((data.titel as string) ?? null, 'short'),
+    metaDescription: sanitizeGeneratedEnergyCopy(
+      (data.meta_description as string) ?? null,
+      'short',
+    ),
+    hoofdtekst: sanitizeGeneratedEnergyCopy((data.hoofdtekst as string) ?? null),
+    faqItems,
+    jsonLd: sanitizeStructuredEnergyCopy(data.json_ld ?? {}) as Record<string, unknown>,
+    gemBouwjaar: (data.gem_bouwjaar as number) ?? null,
+    gemHealthScore: (data.gem_health_score as number) ?? null,
+    netcongestieStatus: (data.netcongestie_status as string) ?? null,
+    aantalWoningen: (data.aantal_woningen as number) ?? null,
+    generatedAt: (data.generated_at as string) ?? null,
+  }
+}
+
 export const getPseoPage = unstable_cache(
   async (params: {
     provincie: string
@@ -48,23 +84,7 @@ export const getPseoPage = unstable_cache(
 
     if (error || !data) return null
 
-    return {
-      slug: data.slug,
-      provincie: data.provincie,
-      stad: data.stad,
-      wijk: data.wijk,
-      straat: data.straat,
-      titel: data.titel,
-      metaDescription: data.meta_description,
-      hoofdtekst: data.hoofdtekst,
-      faqItems: data.faq_items ?? [],
-      jsonLd: data.json_ld ?? {},
-      gemBouwjaar: data.gem_bouwjaar,
-      gemHealthScore: data.gem_health_score,
-      netcongestieStatus: data.netcongestie_status,
-      aantalWoningen: data.aantal_woningen,
-      generatedAt: data.generated_at,
-    }
+    return mapPseoPage(data, (data.straat as string) ?? null)
   },
   ['pseo', 'straatPage'],
   { revalidate: PSEO_FETCH_REVALIDATE }
@@ -103,23 +123,7 @@ export const getWijkPage = unstable_cache(
 
     if (error || !data) return null
 
-    return {
-      slug: data.slug,
-      provincie: data.provincie,
-      stad: data.stad,
-      wijk: data.wijk,
-      straat: null,
-      titel: data.titel,
-      metaDescription: data.meta_description,
-      hoofdtekst: data.hoofdtekst,
-      faqItems: data.faq_items ?? [],
-      jsonLd: data.json_ld ?? {},
-      gemBouwjaar: data.gem_bouwjaar,
-      gemHealthScore: data.gem_health_score,
-      netcongestieStatus: data.netcongestie_status,
-      aantalWoningen: data.aantal_woningen,
-      generatedAt: data.generated_at,
-    }
+    return mapPseoPage(data, null)
   },
   ['pseo', 'wijkPage'],
   { revalidate: PSEO_FETCH_REVALIDATE }

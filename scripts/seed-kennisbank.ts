@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import * as dotenv from 'dotenv'
 import { buildArticleSchema } from '../lib/json-ld'
+import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
 
 dotenv.config({ path: '.env.local' })
 
@@ -38,7 +39,7 @@ const KENNISBANK_TOPICS: Record<string, string> = {
   'energiebelasting-2027-veranderingen': 'Energiebelasting 2027: wat verandert er voor zonnepaneelbezitters?',
   'beste-zonnepanelen-2025': 'Beste zonnepanelen 2025: welk merk en type past bij uw woning?',
   'zonnepanelen-subsidie-nederland': 'Zonnepanelen subsidie Nederland: alle regelingen op een rij',
-  'salderingsregeling-afbouw-2026-2027': 'Salderingsregeling afbouw 2026-2027: stap voor stap uitgelegd',
+  'salderingsregeling-afbouw-2026-2027': 'Salderen blijft 100% in 2026 en stopt per 1 januari 2027',
   'omvormer-kiezen-zonnepanelen': 'Omvormer kiezen voor zonnepanelen: string vs micro vs optimizer',
   'thuisbatterij-saldering-alternatief': 'Thuisbatterij als alternatief voor saldering: rendement en kosten',
   'zonnepanelen-huurhuis-toegestaan': 'Zonnepanelen in een huurhuis: rechten, regels en mogelijkheden',
@@ -61,6 +62,8 @@ async function generateAndUpsert(slug: string): Promise<void> {
 Schrijf een uitgebreid kennisbank-artikel van precies 1200 woorden over: "${topicTitle}".
 
 Context: SaldeerScan.nl helpt Nederlandse huiseigenaren de impact van het einde van de salderingsregeling op 1 januari 2027 te begrijpen. Doelgroep: Nederlandse woningbezitters met zonnepanelen of interesse daarin.
+
+${ENERGY_EDITORIAL_GUARDRAILS}
 
 Vereisten:
 - Minimaal 6 ## H2-koppen (markdown, geen #, geen ###)

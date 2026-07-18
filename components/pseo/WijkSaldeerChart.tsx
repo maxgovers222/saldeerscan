@@ -4,6 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
 } from 'recharts'
+import { LEVERINGSTARIEF, TERUGLEVERTARIEF } from '@/lib/roi'
 
 interface WijkSaldeerChartProps {
   besparing: number
@@ -29,12 +30,15 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export function WijkSaldeerChart({ besparing, wijk }: WijkSaldeerChartProps) {
+  const terugleverWaarde = TERUGLEVERTARIEF / LEVERINGSTARIEF
+  const zonderBatterijNa2027 = Math.round(besparing * (0.30 + 0.70 * terugleverWaarde))
+  const metBatterijNa2027 = Math.round(besparing * (0.70 + 0.30 * terugleverWaarde))
   const data = [
     { jaar: '2024', zonderBatterij: besparing, metBatterij: besparing },
-    { jaar: '2025', zonderBatterij: Math.round(besparing * 0.64), metBatterij: Math.round(besparing * 0.85) },
-    { jaar: '2026', zonderBatterij: Math.round(besparing * 0.28), metBatterij: Math.round(besparing * 0.80) },
-    { jaar: '2027', zonderBatterij: 0, metBatterij: Math.round(besparing * 0.72) },
-    { jaar: '2028', zonderBatterij: 0, metBatterij: Math.round(besparing * 0.70) },
+    { jaar: '2025', zonderBatterij: besparing, metBatterij: besparing },
+    { jaar: '2026', zonderBatterij: besparing, metBatterij: besparing },
+    { jaar: '2027', zonderBatterij: zonderBatterijNa2027, metBatterij: metBatterijNa2027 },
+    { jaar: '2028', zonderBatterij: zonderBatterijNa2027, metBatterij: metBatterijNa2027 },
   ]
 
   return (

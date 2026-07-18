@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import * as dotenv from 'dotenv'
 import { buildLocalBusinessSchema } from '../lib/json-ld'
+import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
 
 dotenv.config({ path: '.env.local' })
 
@@ -61,6 +62,8 @@ Bouwjaar woningen: ~${page.gem_bouwjaar}
 Netcongestie: ${page.netcongestie}
 
 Focus op het einde van salderen op 1 januari 2027. Schrijf voor Nederlandse huiseigenaren.
+
+${ENERGY_EDITORIAL_GUARDRAILS}
 
 Geef SEO-titel (max 60 tekens), meta-description (max 155 tekens), hoofdtekst (600 woorden), en 3 FAQ items.
 

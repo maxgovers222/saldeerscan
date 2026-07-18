@@ -33,18 +33,18 @@ function HealthScoreGauge({ score, label }: { score: number; label: string }) {
 function NetcongentieBadge({ status, netbeheerder }: { status: 'ROOD' | 'ORANJE' | 'GROEN'; netbeheerder: string }) {
   const config = {
     ROOD: {
-      label: `Net vol (${netbeheerder || 'netbeheerder'}): teruglevering beperkt`,
-      subtext: 'Zonne-energie die u teruglevert wordt niet volledig vergoed. Een thuisbatterij is hier extra waardevol.',
+      label: `Hoge regionale netdruk (${netbeheerder || 'netbeheerder'})`,
+      subtext: 'Indicatie: dit kan gevolgen hebben voor nieuwe of zwaardere aansluitingen en lokale spanning. Het is geen bewijs dat uw teruglevering actief wordt beperkt.',
       textClass: 'text-danger', bgClass: 'bg-danger/8 border-danger/25', dotClass: 'bg-danger',
     },
     ORANJE: {
-      label: `Druk stroomnet (${netbeheerder || 'netbeheerder'}): piekproductie soms beperkt`,
-      subtext: null,
+      label: `Regionale netdruk (${netbeheerder || 'netbeheerder'})`,
+      subtext: 'Controleer de actuele situatie bij de netbeheerder als u een nieuwe of zwaardere aansluiting nodig heeft.',
       textClass: 'text-warning', bgClass: 'bg-action/10 border-warning/25', dotClass: 'bg-warning',
     },
     GROEN: {
-      label: `Vrij stroomnet (${netbeheerder || 'netbeheerder'}): teruglevering onbeperkt`,
-      subtext: null,
+      label: `Lagere regionale netdruk (${netbeheerder || 'netbeheerder'})`,
+      subtext: 'Dit is een indicatie en geen garantie voor onbeperkte teruglevering of toekomstige aansluitcapaciteit.',
       textClass: 'text-trust-dark', bgClass: 'bg-trust/10 border-trust/25', dotClass: 'bg-trust',
     },
   }
