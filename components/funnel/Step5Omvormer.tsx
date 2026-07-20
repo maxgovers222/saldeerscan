@@ -37,7 +37,7 @@ function FallbackOmvormer({ onComplete }: { onComplete: (data: OmvormerAnalyse) 
               model: null,
               vermogenKw: null,
               hybrideKlaar: false,
-              vervangenNodig: heeft,
+              vervangenNodig: false,
               opmerkingen: heeft
                 ? ['Handmatig ingevuld — installateur inspecteert omvormer']
                 : ['Geen omvormer aanwezig — nieuwe installatie'],
@@ -80,14 +80,14 @@ function OmvormerResultaat({ analyse }: { analyse: OmvormerAnalyse }) {
       </dl>
 
       {analyse.vervangenNodig && (
-        <FunnelNotice variant="danger" title="Vervanging aanbevolen">
-          De omvormer lijkt verouderd of niet compatibel met hybride systemen.
+        <FunnelNotice variant="danger" title="Inspectie voor vervanging aanbevolen">
+          De foto toont een mogelijk aandachtspunt. Laat het exacte model en de technische staat controleren.
         </FunnelNotice>
       )}
 
       {!analyse.hybrideKlaar && !analyse.vervangenNodig && (
         <FunnelNotice variant="warning" title="Extra omvormer of vervanging kan nodig zijn">
-          Deze omvormer lijkt niet hybride en kan daardoor niet direct met een thuisbatterij samenwerken.
+          Op de foto is geen batterijaansluiting bevestigd. Een installateur controleert de modelspecificaties.
         </FunnelNotice>
       )}
 

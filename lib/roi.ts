@@ -98,6 +98,27 @@ function berekenJaarwaarde(
   )
 }
 
+export function berekenBatterijJaarwaarde2027(input: {
+  productieKwh: number
+  verbruikKwh: number
+  huishoudenGrootte?: 1 | 2 | 3 | null
+}): number {
+  const batterijFactor = input.huishoudenGrootte
+    ? (EIGENGEBRUIK_BATTERIJ[input.huishoudenGrootte] ?? 0.70)
+    : 0.70
+  const eigenGebruikBatterijKwh = Math.min(
+    input.productieKwh * batterijFactor,
+    input.verbruikKwh,
+  )
+
+  return Math.round(berekenJaarwaarde(
+    input.productieKwh,
+    input.verbruikKwh,
+    eigenGebruikBatterijKwh,
+    SALDERING_SCHEMA[2027],
+  ))
+}
+
 // Schat jaarverbruik op basis van woonoppervlak en bouwjaar
 export function schatVerbruik(oppervlakte: number, bouwjaar: number): number {
   // Basisverbruik per m² daalt naarmate woning nieuwer is
@@ -123,10 +144,8 @@ export function berekenROI(input: ROIInput): ROIResult {
 
   // Eigengebruik factor op basis van huishoudenssamenstelling
   const basisFactor = input.huishouden_grootte ? (EIGENGEBRUIK_BASIS[input.huishouden_grootte] ?? 0.30) : 0.30
-  const batterijFactor = input.huishouden_grootte ? (EIGENGEBRUIK_BATTERIJ[input.huishouden_grootte] ?? 0.70) : 0.70
 
   const eigenGebruikBasisKwh = Math.min(productieKwh * basisFactor, verbruikKwh)
-  const eigenGebruikBatterijKwh = Math.min(productieKwh * batterijFactor, verbruikKwh)
 
   // Scenario A: in 2026 mag teruglevering nog volledig worden gesaldeerd tegen
   // de jaarlijkse netafname. Een eventueel overschot krijgt een terugleververgoeding.
@@ -138,13 +157,15 @@ export function berekenROI(input: ROIInput): ROIResult {
   )
   const investeringPanelen = aantalPanelen * 350  // ~€350 per paneel geïnstalleerd
 
-  // Scenario B: Met batterij (10 kWh, ~€4000)
-  const besparingMetBatterij = berekenJaarwaarde(
+  // Scenario B: vanaf 2027 met batterij (10 kWh, ~€4000). Het extra
+  // batterijvoordeel moet worden vergeleken met scenario C: hetzelfde jaar
+  // zonder batterij. In 2026 maakt 100% salderen extra eigen gebruik financieel
+  // vrijwel waardeloos, wat ten onrechte een opslagvoordeel van €0 gaf.
+  const besparingMetBatterij = berekenBatterijJaarwaarde2027({
     productieKwh,
     verbruikKwh,
-    eigenGebruikBatterijKwh,
-    saldering2026,
-  )
+    huishoudenGrootte: input.huishouden_grootte,
+  })
   const investeringMetBatterij = investeringPanelen + 4000
 
   // Scenario C: vanaf 2027 stopt salderen. Teruglevering houdt wel een
@@ -165,8 +186,8 @@ export function berekenROI(input: ROIInput): ROIResult {
     boodschap: `Door het einde van salderen daalt de geraamde jaarwaarde met €${Math.round(jaarlijksVerlies)} per jaar vanaf 1 januari 2027`,
   }
 
-  // Aanbeveling
-  const aanbeveling = besparingMetBatterij > besparingNu * 1.2 ? 'beide' : 'panelen'
+  // Vergelijk batterij en geen batterij binnen hetzelfde tariefjaar (2027).
+  const aanbeveling = besparingMetBatterij > besparingWachten * 1.2 ? 'beide' : 'panelen'
 
   // Zonnepanelen en thuisbatterijen vallen niet onder de landelijke ISDE.
   const isdeSchatting = {
@@ -190,7 +211,7 @@ export function berekenROI(input: ROIInput): ROIResult {
     },
     scenarioMetBatterij: {
       naam: 'Panelen + batterij',
-      beschrijving: 'Zonnepanelen + 10 kWh thuisbatterij',
+      beschrijving: 'Vanaf 2027 met 10 kWh thuisbatterij',
       besparingJaarEur: Math.round(besparingMetBatterij),
       investeringEur: investeringMetBatterij,
       terugverdientijdJaar: Math.round((investeringMetBatterij / besparingMetBatterij) * 10) / 10,
@@ -208,7 +229,7 @@ export function berekenROI(input: ROIInput): ROIResult {
     shockEffect2027,
     aanbeveling,
     aanbevelingTekst: aanbeveling === 'beide'
-      ? `Met panelen en batterij is de geraamde besparing €${Math.round(besparingMetBatterij)}/jaar. Laat rendement en dimensionering altijd toetsen met actuele tarieven en een offerte.`
+      ? `Vanaf 2027 is de geraamde jaarwaarde met panelen en batterij €${Math.round(besparingMetBatterij)}/jaar. Het extra opslagvoordeel ten opzichte van alleen panelen is circa €${Math.round(besparingMetBatterij - besparingWachten)}/jaar. Laat rendement en dimensionering altijd toetsen met actuele tarieven en een offerte.`
       : `Zonnepanelen leveren in deze indicatie €${Math.round(besparingNu)}/jaar op. Tot en met 31 december 2026 kunt u jaarlijks salderen; vanaf 2027 tellen vooral direct eigen gebruik en de terugleververgoeding.`,
     isdeSchatting,
   }

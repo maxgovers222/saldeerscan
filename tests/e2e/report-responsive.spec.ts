@@ -47,12 +47,20 @@ test('email failure never claims the report was sent', async ({ page }) => {
 })
 
 test('existing panels show an upgrade recommendation on web', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await seedReportState(page, expectedExistingPanelsReportFixture)
   await page.goto('/check')
   await page.getByRole('button', { name: 'Doorgaan' }).click()
+  const desktopReport = page.getByTestId('report-desktop-grid')
   await expect(page.getByText('Thuisbatterij en slim verbruik')).toBeVisible()
+  await expect(page.getByText('Extra opslagvoordeel vanaf 2027')).toBeVisible()
   await expect(page.getByText(/10 bestaande panelen/i)).toBeVisible()
-  await expect(page.getByText(/€360.*extra/i)).toBeVisible()
+  await expect(page.getByText('€360 per jaar extra', { exact: true })).toBeVisible()
+  await expect(desktopReport.getByRole('rowheader', { name: 'Huidige installatie (2026)' })).toBeVisible()
+  await expect(desktopReport.getByRole('rowheader', { name: 'Vanaf 2027 met batterij' })).toBeVisible()
+  const scenario = desktopReport.getByTestId('report-scenario-scroll')
+  expect(await scenario.evaluate(element => element.scrollWidth))
+    .toBeLessThanOrEqual(await scenario.evaluate(element => element.clientWidth))
 })
 
 test('PDF opens in a new tab after generation', async ({ page }) => {

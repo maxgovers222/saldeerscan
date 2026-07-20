@@ -51,10 +51,10 @@ export const reportSourceNoPanels = {
     },
     scenarioMetBatterij: {
       naam: 'Panelen + batterij',
-      beschrijving: 'Zonnepanelen en thuisbatterij',
-      besparingJaarEur: 1180,
+      beschrijving: 'Vanaf 2027 met 10 kWh thuisbatterij',
+      besparingJaarEur: 780,
       investeringEur: 7500,
-      terugverdientijdJaar: 6.4,
+      terugverdientijdJaar: 9.6,
     },
     scenarioWachten: {
       naam: 'Wachten',

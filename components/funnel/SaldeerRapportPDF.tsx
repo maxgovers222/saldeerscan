@@ -481,7 +481,7 @@ function TechnicalCards({ report }: { report: NormalizedReport }) {
         <Text style={S.technicalTitle}>Plaatsingsscan</Text>
         <Text style={S.paragraph}>
           {hasPlaatsing
-            ? `Geschiktheid ${plaatsing.geschiktheidScore}/100 - ${plaatsing.nenCompliant ? 'NEN-conform' : 'NEN-controle aanbevolen'}`
+            ? `Foto-indicatie ${plaatsing.geschiktheidScore}/10 - ${plaatsing.nenCompliant ? 'geen directe aandachtspunten zichtbaar' : 'controle op locatie aanbevolen'}`
             : 'Niet toegevoegd'}
         </Text>
       </View>
@@ -511,11 +511,47 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
     report.home.surfaceM2 === null ? null : `${report.home.surfaceM2} m²`,
     report.home.postcode,
   ].filter(Boolean).join(' - ')
-  const scenarios = [
-    ['Nu', report.scenarios.panelsNow],
-    ['Met batterij', report.scenarios.withBattery],
-    ['Wachten tot 2027', report.scenarios.waitUntil2027],
-  ] as const
+  const scenarios = existing
+    ? [
+        {
+          label: 'Huidige installatie (2026)',
+          saving: report.scenarios.panelsNow.besparingJaarEur,
+          investment: 0,
+          paybackYears: null,
+        },
+        {
+          label: 'Vanaf 2027 met batterij',
+          saving: report.scenarios.withBattery.besparingJaarEur,
+          investment: recommendation.investmentEur,
+          paybackYears: recommendation.paybackYears,
+        },
+        {
+          label: 'Vanaf 2027 zonder batterij',
+          saving: report.scenarios.waitUntil2027.besparingJaarEur,
+          investment: 0,
+          paybackYears: null,
+        },
+      ]
+    : [
+        {
+          label: 'Nu',
+          saving: report.scenarios.panelsNow.besparingJaarEur,
+          investment: report.scenarios.panelsNow.investeringEur,
+          paybackYears: report.scenarios.panelsNow.terugverdientijdJaar,
+        },
+        {
+          label: 'Met batterij',
+          saving: report.scenarios.withBattery.besparingJaarEur,
+          investment: report.scenarios.withBattery.investeringEur,
+          paybackYears: report.scenarios.withBattery.terugverdientijdJaar,
+        },
+        {
+          label: 'Wachten tot 2027',
+          saving: report.scenarios.waitUntil2027.besparingJaarEur,
+          investment: report.scenarios.waitUntil2027.investeringEur,
+          paybackYears: report.scenarios.waitUntil2027.terugverdientijdJaar,
+        },
+      ]
 
   return (
     <Document title="SaldeerScan - Persoonlijk 2027-rapport" author="SaldeerScan.nl">
@@ -545,9 +581,9 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
               detail={report.summary.healthLabel ?? 'Geen scorelabel'}
             />
             <Metric
-              label="Mogelijke besparing"
+              label={existing ? 'Extra opslagvoordeel vanaf 2027' : 'Mogelijke besparing'}
               value={`${money(report.summary.annualSavingEur)}/jaar`}
-              detail="Volgens het servermodel"
+              detail={existing ? 'Versus dezelfde installatie zonder batterij' : 'Volgens het servermodel'}
               tone="positive"
             />
             <Metric
@@ -592,7 +628,7 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
                     : `${recommendation.batteryCapacityKwh} kWh`}
                 />
                 <DataRow label="Investering" value={money(recommendation.investmentEur)} />
-                {recommendation.extraAnnualSavingEur !== null && (
+                {recommendation.batteryCapacityKwh !== null && recommendation.extraAnnualSavingEur !== null && (
                   <DataRow label="Extra besparing opslag" value={`${money(recommendation.extraAnnualSavingEur)}/jaar`} positive />
                 )}
                 <DataRow
@@ -632,14 +668,14 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
               <Text style={[S.tableHeaderCell, { textAlign: 'right', width: '24%' }]}>Investering</Text>
               <Text style={[S.tableHeaderCell, { textAlign: 'right', width: '24%' }]}>Terugverdientijd</Text>
             </View>
-            {scenarios.map(([label, scenario]) => (
-              <View key={label} style={S.tableRow}>
-                <Text style={S.scenarioName}>{label}</Text>
-                <Text style={S.scenarioValue}>{money(scenario.besparingJaarEur)}</Text>
-                <Text style={S.scenarioValue}>{money(scenario.investeringEur)}</Text>
+            {scenarios.map(scenario => (
+              <View key={scenario.label} style={S.tableRow}>
+                <Text style={S.scenarioName}>{scenario.label}</Text>
+                <Text style={S.scenarioValue}>{money(scenario.saving)}</Text>
+                <Text style={S.scenarioValue}>{money(scenario.investment)}</Text>
                 <Text style={S.scenarioValue}>
-                  {Number.isFinite(scenario.terugverdientijdJaar)
-                    ? `${scenario.terugverdientijdJaar} jaar`
+                  {scenario.paybackYears !== null && Number.isFinite(scenario.paybackYears)
+                    ? `${scenario.paybackYears} jaar`
                     : 'Niet beschikbaar'}
                 </Text>
               </View>

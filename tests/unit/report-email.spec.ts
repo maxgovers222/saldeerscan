@@ -19,7 +19,7 @@ test('email contains normalized report values and report URL', () => {
     reportUrl: 'https://saldeerscan.nl/check?leadId=1&token=abc',
   })
   expect(html).toContain('€400')
-  expect(html).toContain('€820')
+  expect(html).toContain('€780')
   expect(html).toContain('10 panelen')
   expect(html).toContain('10 kWh batterij')
   expect(html).toContain('https://saldeerscan.nl/check?leadId=1&amp;token=abc')
@@ -39,6 +39,7 @@ test('email describes existing panels as an upgrade, not a new installation', ()
   expect(html).toContain('10 bestaande panelen')
   expect(html).toContain('10 kWh batterij')
   expect(html).toContain('€360')
+  expect(html).toContain('Extra opslagvoordeel vanaf 2027')
 })
 
 test('email escapes personal and report text', () => {

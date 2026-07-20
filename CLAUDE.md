@@ -164,7 +164,9 @@ supabase/migrations/
 ### Vision: two-tier kostenbeheer
 `lib/vision.ts` werkt in twee lagen:
 1. **Tier 1 — Gemini 3.5 Flash** (screening met `thinkingLevel: minimal`): beantwoordt "Is dit een [type]? Ja/Nee + confidence". Drempel: confidence < 0.7 → foutmelding naar gebruiker.
-2. **Tier 2 — Claude claude-sonnet-4-6** (diepanalyse, alleen als Tier 1 ≥ 0.7): geeft gestructureerde JSON terug per type (meterkast/plaatsing/omvormer).
+2. **Tier 2 — Claude claude-sonnet-4-6** (diepanalyse, alleen als Tier 1 ≥ 0.7): geeft via een JSON Schema gestructureerde output terug per type (meterkast/plaatsing/omvormer).
+
+Vision-uitkomsten zijn uitsluitend foto-indicaties met confidence en `needsHumanReview`; ze mogen geen NEN-conformiteit, elektrische keuring of definitieve vervangingsnoodzaak claimen. Een installateur valideert de installatie altijd ter plaatse. Het bestaande `nenCompliant`-rapportveld blijft voor v1-compatibiliteit bestaan en betekent alleen dat op de foto geen blokkerende risico-indicator zichtbaar was.
 
 `withRetry` wrapper in `vision.ts` handelt Claude 529 (overloaded) en 429 (rate limit) af met exponential backoff (1s, 2s, 3s).
 
@@ -184,7 +186,7 @@ De B2B webhook dispatcher in `lib/webhooks.ts` controleert altijd `gdpr_consent 
 - Legacy deliveries zonder `payload_body` worden éénmalig herbouwd uit de lead-row.
 
 ### Einde salderen per 2027
-`lib/roi.ts` heeft een `SALDERING_SCHEMA` map (2025: 100%, 2026: 100%, 2027: 0%). Salderen blijft volledig mogelijk tot en met 31 december 2026 en stopt per 1 januari 2027 in één keer. De jaarberekening begrenst saldering op de resterende netafname; een productieoverschot en alle teruglevering vanaf 2027 krijgen de leveranciersafhankelijke, indicatief gemodelleerde terugleververgoeding. Zonnepanelen en thuisbatterijen krijgen geen landelijke ISDE.
+`lib/roi.ts` heeft een `SALDERING_SCHEMA` map (2025: 100%, 2026: 100%, 2027: 0%). Salderen blijft volledig mogelijk tot en met 31 december 2026 en stopt per 1 januari 2027 in één keer. De jaarberekening begrenst saldering op de resterende netafname; een productieoverschot en alle teruglevering vanaf 2027 krijgen de leveranciersafhankelijke, indicatief gemodelleerde terugleververgoeding. Het incrementele batterijvoordeel vergelijkt altijd 2027 mét batterij met dezelfde 2027-situatie zonder batterij; bestaande paneelkosten tellen in het upgraderapport niet opnieuw als investering. Zonnepanelen en thuisbatterijen krijgen geen landelijke ISDE.
 
 `lib/editorial-standards.ts` bewaakt hetzelfde feitenkader in Gemini- en seedprompts en neutraliseert gericht verouderde claims uit bestaande Supabase-content bij uitlezen. De vaste Liander-correctie op de bestaande nieuwsslug gaat uitsluitend over wachtlijsten en prioritering voor nieuwe of zwaardere aansluitingen.
 

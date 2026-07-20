@@ -28,6 +28,7 @@ export function renderReportEmail(input: {
   const address = escapeHtml(report.home.address)
   const reportUrl = escapeHtml(input.reportUrl)
   const battery = report.recommendation.batteryCapacityKwh
+  const existing = report.qualification.heeftPanelen === true
   const configuration = report.qualification.heeftPanelen
     ? `${report.recommendation.existingPanelCount ?? 'Onbekend aantal'} bestaande panelen`
       + (battery ? ` · ${battery} kWh batterij` : '')
@@ -74,7 +75,7 @@ export function renderReportEmail(input: {
           </div>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px">
             <tr>
-              <td style="padding:12px;border-bottom:1px solid ${BRAND_COLORS.border}">Mogelijke besparing</td>
+              <td style="padding:12px;border-bottom:1px solid ${BRAND_COLORS.border}">${existing ? 'Extra opslagvoordeel vanaf 2027' : 'Mogelijke besparing'}</td>
               <td align="right" style="padding:12px;border-bottom:1px solid ${BRAND_COLORS.border};font-weight:700">${euro(report.summary.annualSavingEur)}/jaar</td>
             </tr>
             <tr>
@@ -85,7 +86,7 @@ export function renderReportEmail(input: {
               <td style="padding:12px">Configuratie</td>
               <td align="right" style="padding:12px;font-weight:700">${escapeHtml(configuration)}</td>
             </tr>
-            ${upgradeSaving === null ? '' : `<tr>
+            ${battery === null || upgradeSaving === null ? '' : `<tr>
               <td style="padding:12px;border-top:1px solid ${BRAND_COLORS.border}">Extra besparing door opslag</td>
               <td align="right" style="padding:12px;border-top:1px solid ${BRAND_COLORS.border};font-weight:700">${euro(upgradeSaving)}/jaar</td>
             </tr>`}

@@ -35,10 +35,11 @@ function FallbackPlaatsing({ onComplete }: { onComplete: (data: PlaatsingsAnalys
           <FunnelChoiceCard
             key={label}
             onClick={() => onComplete({
-              nenCompliant: score >= 8,
+              nenCompliant: false,
               risicoItems: [],
               aanbevelingen: ['Handmatig ingevuld — installateur verifieert locatie'],
               geschiktheidScore: score,
+              needsHumanReview: true,
             })}
           >
             {label}
@@ -66,11 +67,11 @@ function PlaatsingResultaat({ analyse }: { analyse: PlaatsingsAnalyse }) {
       <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
         <FunnelNotice
           variant={analyse.nenCompliant ? 'success' : 'danger'}
-          title={analyse.nenCompliant ? 'Voldoet aan de belangrijkste aandachtspunten' : 'Extra beoordeling nodig'}
+          title={analyse.nenCompliant ? 'Geen directe aandachtspunten zichtbaar' : 'Extra beoordeling nodig'}
         >
           {analyse.nenCompliant
-            ? 'De gekozen plek lijkt op basis van deze check passend.'
-            : 'Een installateur moet de locatie nader beoordelen.'}
+            ? 'De plek lijkt op deze foto bruikbaar. Een installateur controleert de locatie altijd ter plaatse.'
+            : 'De foto toont aandachtspunten of onvoldoende informatie. Laat de locatie ter plaatse beoordelen.'}
         </FunnelNotice>
         <div className="rounded-xl border border-ink/10 bg-mist px-5 py-3 text-center">
           <p className="text-xs text-ink-muted">Score</p>
@@ -116,24 +117,27 @@ export function Step4Plaatsing({ state, dispatch, trackFunnel }: Step4PlaatsingP
     <FunnelStageShell
       eyebrow="Stadium 3 van 4 · Verfijn uw advies"
       title="Plaatsingsplek beoordelen"
-      description="Optioneel: een foto helpt om de aandachtspunten uit NEN 2078:2023 rond een batterij of omvormer eerder te herkennen."
+      description="Optioneel: een foto helpt zichtbare aandachtspunten rond een batterij of omvormer eerder te herkennen. Dit is geen veiligheidskeuring."
     >
       <TechnicalStageChecklist state={state} dispatch={dispatch} trackFunnel={trackFunnel} />
 
       <FunnelCard surface="mist" className="space-y-2">
-        <p className="text-sm font-semibold text-ink">NEN 2078:2023 vereisten</p>
+        <p className="text-sm font-semibold text-ink">Aandachtspunten voor veilige plaatsing</p>
         <ul className="grid gap-1.5 text-xs leading-5 text-ink-muted sm:grid-cols-2">
           {[
-            'Min. 50 cm afstand tot brandbare materialen',
-            'Adequate ventilatie aanwezig',
-            'Geen waterleiding of gas in nabijheid',
-            'Stabiele temperatuur (geen directe zon)',
+            'Voldoende vrije ruimte volgens het installatievoorschrift',
+            'Ventilatie en bereikbaarheid',
+            'Vocht, leidingen en warmtebronnen',
+            'Bescherming tegen zon en weersinvloed',
           ].map((requirement) => (
             <li key={requirement} className="flex items-start gap-2">
               <span className="text-trust-dark" aria-hidden="true">○</span>{requirement}
             </li>
           ))}
         </ul>
+        <p className="text-xs leading-5 text-ink-muted">
+          De fabrikant en installateur bepalen de definitieve afstanden en installatie-eisen.
+        </p>
       </FunnelCard>
 
       {!analyse && (

@@ -361,8 +361,8 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
           <div>
             <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-muted">Scenariovergelijking</div>
             <div className="space-y-4">
-              <ScenarioCard scenario={roi.scenarioNu} variant="amber" />
-              <ScenarioCard scenario={roi.scenarioMetBatterij} variant="emerald" recommended />
+              <ScenarioCard scenario={roi.scenarioNu} variant="amber" recommended={roi.aanbeveling === 'panelen'} />
+              <ScenarioCard scenario={roi.scenarioMetBatterij} variant="emerald" recommended={roi.aanbeveling === 'beide'} />
               <ScenarioCard scenario={roi.scenarioWachten} variant="red" />
             </div>
           </div>

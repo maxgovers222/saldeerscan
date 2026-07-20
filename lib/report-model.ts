@@ -1,5 +1,6 @@
 import { parseStoredRoi } from '@/lib/roi-result-guard'
 import {
+  berekenBatterijJaarwaarde2027,
   REFERENCE_BATTERY_CAPACITY_KWH,
   SALDERING_SCHEMA,
   type ROIScenario,
@@ -42,6 +43,9 @@ export interface ReportSource {
     isEigenaar: boolean | null
     heeftPanelen: boolean | null
     huidigePanelenAantal: number | null
+  }
+  calculationContext?: {
+    householdSize: 1 | 2 | 3 | null
   }
   technical: {
     meterkast: MeterkastAnalyse | null
@@ -89,7 +93,11 @@ export interface NormalizedReport {
     compensationPct: number
   }>
   recommendation: {
-    primarySolution: 'Zonnepanelen' | 'Zonnepanelen en thuisbatterij' | 'Thuisbatterij en slim verbruik'
+    primarySolution:
+      | 'Zonnepanelen'
+      | 'Zonnepanelen en thuisbatterij'
+      | 'Thuisbatterij en slim verbruik'
+      | 'Slim verbruik met huidige zonnepanelen'
     panelCount: number
     existingPanelCount: number | null
     productionKwh: number
@@ -130,22 +138,54 @@ export function buildReportModel(
     roi.scenarioMetBatterij.investeringEur - roi.scenarioNu.investeringEur,
     0,
   )
+  const batteryScenarioUses2027 = roi.scenarioMetBatterij.beschrijving
+    .toLowerCase()
+    .includes('vanaf 2027')
+  const normalizedBatteryScenario = batteryScenarioUses2027
+    ? roi.scenarioMetBatterij
+    : {
+        ...roi.scenarioMetBatterij,
+        beschrijving: 'Vanaf 2027 met 10 kWh thuisbatterij',
+        besparingJaarEur: berekenBatterijJaarwaarde2027({
+          productieKwh: roi.productieKwh,
+          verbruikKwh: roi.geschatVerbruikKwh,
+          huishoudenGrootte: source.calculationContext?.householdSize,
+        }),
+      }
+  if (!batteryScenarioUses2027) {
+    normalizedBatteryScenario.terugverdientijdJaar = normalizedBatteryScenario.besparingJaarEur > 0
+      ? roundOne(normalizedBatteryScenario.investeringEur / normalizedBatteryScenario.besparingJaarEur)
+      : 99
+  }
   const batteryExtraSaving = Math.max(
-    roi.scenarioMetBatterij.besparingJaarEur - roi.scenarioNu.besparingJaarEur,
+    normalizedBatteryScenario.besparingJaarEur - roi.scenarioWachten.besparingJaarEur,
     0,
   )
+  const batteryRecommended =
+    normalizedBatteryScenario.besparingJaarEur > roi.scenarioWachten.besparingJaarEur * 1.2
+    && batteryExtraSaving > 0
   const annualSaving = existing
-    ? roi.scenarioMetBatterij.besparingJaarEur
-    : roi.scenarioNu.besparingJaarEur
+    ? batteryExtraSaving
+    : batteryRecommended
+      ? normalizedBatteryScenario.besparingJaarEur
+      : roi.scenarioNu.besparingJaarEur
   const investment = existing
-    ? batteryInvestment
-    : roi.scenarioNu.investeringEur
+    ? batteryRecommended ? batteryInvestment : 0
+    : batteryRecommended
+      ? normalizedBatteryScenario.investeringEur
+      : roi.scenarioNu.investeringEur
   const payback = existing
-    ? batteryExtraSaving > 0
+    ? batteryRecommended
       ? roundOne(batteryInvestment / batteryExtraSaving)
       : null
-    : Number.isFinite(roi.scenarioNu.terugverdientijdJaar)
-      ? roi.scenarioNu.terugverdientijdJaar
+    : Number.isFinite(
+      batteryRecommended
+        ? normalizedBatteryScenario.terugverdientijdJaar
+        : roi.scenarioNu.terugverdientijdJaar,
+    )
+      ? batteryRecommended
+        ? normalizedBatteryScenario.terugverdientijdJaar
+        : roi.scenarioNu.terugverdientijdJaar
       : null
 
   return {
@@ -176,7 +216,7 @@ export function buildReportModel(
     },
     scenarios: {
       panelsNow: { ...roi.scenarioNu },
-      withBattery: { ...roi.scenarioMetBatterij },
+      withBattery: { ...normalizedBatteryScenario },
       waitUntil2027: { ...roi.scenarioWachten },
     },
     salderingTimeline: [
@@ -190,8 +230,10 @@ export function buildReportModel(
     ],
     recommendation: {
       primarySolution: existing
-        ? 'Thuisbatterij en slim verbruik'
-        : roi.aanbeveling === 'beide'
+        ? batteryRecommended
+          ? 'Thuisbatterij en slim verbruik'
+          : 'Slim verbruik met huidige zonnepanelen'
+        : batteryRecommended
           ? 'Zonnepanelen en thuisbatterij'
           : 'Zonnepanelen',
       panelCount: roi.aantalPanelen,
@@ -200,21 +242,25 @@ export function buildReportModel(
       consumptionKwh: roi.geschatVerbruikKwh,
       ownUsePct: roi.eigenGebruikPct,
       batteryCapacityKwh:
-        existing || roi.aanbeveling === 'beide'
+        batteryRecommended
           ? REFERENCE_BATTERY_CAPACITY_KWH
           : null,
       investmentEur: investment,
       extraAnnualSavingEur: existing ? batteryExtraSaving : null,
       paybackYears: payback,
       explanation: existing
-        ? 'Behoud uw huidige panelen en laat opslag en slim verbruik beoordelen.'
-        : roi.aanbevelingTekst,
+        ? batteryRecommended
+          ? `Behoud uw huidige panelen. Vanaf 2027 kan opslag en slimmer verbruik in deze indicatie circa €${Math.round(batteryExtraSaving)} per jaar extra opleveren. Laat dit toetsen met uw kwartierdata en een offerte.`
+          : 'Behoud uw huidige panelen en verhoog waar mogelijk het directe eigen gebruik. Een batterij is in deze indicatie niet rendabel genoeg om te adviseren.'
+        : batteryRecommended
+          ? `Vanaf 2027 is de geraamde jaarwaarde met panelen en batterij €${Math.round(normalizedBatteryScenario.besparingJaarEur)}/jaar. Het extra opslagvoordeel ten opzichte van alleen panelen is circa €${Math.round(batteryExtraSaving)}/jaar. Laat rendement en dimensionering altijd toetsen met actuele tarieven en een offerte.`
+          : roi.aanbevelingTekst,
       // Zonnepanelen en thuisbatterijen vallen niet onder de landelijke ISDE.
       isdeAmountEur: 0,
     },
     grid: {
       status: source.netcongestie?.status ?? null,
-      operator: source.netcongestie?.netbeheerder ?? null,
+      operator: source.netcongestie?.netbeheerder?.trim() || null,
       explanation: source.netcongestie?.uitleg ?? null,
     },
     qualification: source.qualification,
@@ -272,6 +318,15 @@ export function reportSourceFromStoredLead(
       heeftPanelen: typeof lead.heeft_panelen === 'boolean' ? lead.heeft_panelen : null,
       huidigePanelenAantal: typeof lead.huidige_panelen_aantal === 'number'
         ? lead.huidige_panelen_aantal
+        : null,
+    },
+    calculationContext: {
+      householdSize: (
+        lead.huishouden_grootte === 1
+        || lead.huishouden_grootte === 2
+        || lead.huishouden_grootte === 3
+      )
+        ? lead.huishouden_grootte
         : null,
     },
     technical: {

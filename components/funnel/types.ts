@@ -74,6 +74,8 @@ export interface MeterkastAnalyse {
   maxVermogenKw: number | null
   geschikt: boolean
   opmerkingen: string[]
+  confidence?: number
+  needsHumanReview?: boolean
 }
 
 export interface PlaatsingsAnalyse {
@@ -81,6 +83,8 @@ export interface PlaatsingsAnalyse {
   risicoItems: string[]
   aanbevelingen: string[]
   geschiktheidScore: number
+  confidence?: number
+  needsHumanReview?: boolean
 }
 
 export interface OmvormerAnalyse {
@@ -90,6 +94,8 @@ export interface OmvormerAnalyse {
   hybrideKlaar: boolean
   vervangenNodig: boolean
   opmerkingen: string[]
+  confidence?: number
+  needsHumanReview?: boolean
 }
 
 export interface RoiCalculationInput {

@@ -39,9 +39,11 @@ export function ResultsDashboard({
       </div>
 
       <div data-testid="report-desktop-grid" className="hidden gap-5 md:grid md:grid-cols-2">
-        <ReportSection title="Impact vanaf 2027">
-          <ReportImpact report={report} />
-        </ReportSection>
+        <div className="md:col-span-2">
+          <ReportSection title="Impact vanaf 2027">
+            <ReportImpact report={report} />
+          </ReportSection>
+        </div>
         <ReportSection title="Geadviseerde configuratie">
           <ReportRecommendation report={report} />
         </ReportSection>

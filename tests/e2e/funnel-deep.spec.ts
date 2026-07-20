@@ -643,7 +643,7 @@ test.describe('Stap 3 — Meterkast handmatig pad', () => {
     await expect(page.locator('button:has-text("Doorgaan")').last()).toBeEnabled({ timeout: 2000 })
   })
 
-  test('FallbackMeterkast: 0 groepen → niet geschikt', async ({ page }) => {
+  test('FallbackMeterkast: 0 groepen → aanpassing lijkt nodig', async ({ page }) => {
     // Doorgaan in FallbackMeterkast dispatcht SET_STEP(4) → ga terug om resultaat te zien
     await page.locator('button:has-text("Geen foto? Vul handmatig in")').click()
     await page.locator('button:has-text("1-fase")').click()
@@ -652,17 +652,17 @@ test.describe('Stap 3 — Meterkast handmatig pad', () => {
     // Stap 4 verschijnt, ga terug naar stap 3 om MeterkastResultaat te zien
     await expectStep(page, 4)
     await page.locator('button:has-text("← Terug")').first().click()
-    await expect(page.locator('text=Niet direct geschikt').first()).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Aanpassing lijkt nodig')).toBeVisible({ timeout: 6000 })
   })
 
-  test('FallbackMeterkast: 4+ groepen → geschikt voor installatie', async ({ page }) => {
+  test('FallbackMeterkast: 4+ groepen → lijkt geschikt voor uitbreiding', async ({ page }) => {
     await page.locator('button:has-text("Geen foto? Vul handmatig in")').click()
     await page.locator('button:has-text("3-fase")').click()
     await page.locator('button:has-text("4+")').click()
     await page.locator('button:has-text("Doorgaan")').last().click()
     await expectStep(page, 4)
     await page.locator('button:has-text("← Terug")').first().click()
-    await expect(page.locator('text=Geschikt voor installatie').first()).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Lijkt geschikt voor uitbreiding')).toBeVisible({ timeout: 6000 })
   })
 
   test('na analyse: resultaatkaart toont Merk, 3-fase, Vrije groepen', async ({ page }) => {
@@ -710,10 +710,10 @@ test.describe('Stap 4 — Plaatsingslocatie', () => {
     await expectStep(page, 4)
   })
 
-  test('NEN 2078:2023 vereisten lijst aanwezig', async ({ page }) => {
-    // Twee elementen bevatten "NEN 2078:2023" — gebruik .first()
-    await expect(page.locator('text=NEN 2078:2023').first()).toBeVisible({ timeout: 6000 })
-    await expect(page.locator('text=Min. 50 cm afstand').first()).toBeVisible()
+  test('aandachtspunten voor veilige plaatsing zijn genuanceerd', async ({ page }) => {
+    await expect(page.getByText('Aandachtspunten voor veilige plaatsing')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Voldoende vrije ruimte volgens het installatievoorschrift')).toBeVisible()
+    await expect(page.getByText('De fabrikant en installateur bepalen de definitieve afstanden en installatie-eisen.')).toBeVisible()
   })
 
   test('"Geen foto? Kies voorkeurlocatie" zichtbaar', async ({ page }) => {
@@ -802,11 +802,12 @@ test.describe('Stap 5 — Omvormer', () => {
     await expectStep(page, 6)
   })
 
-  test('"Ja, ik heb al panelen" toont "Vervanging aanbevolen" na terugkeer', async ({ page }) => {
+  test('"Ja, ik heb al panelen" claimt geen noodzakelijke vervanging na terugkeer', async ({ page }) => {
     await page.locator('button:has-text("Geen foto? Vul handmatig in")').click()
     await page.locator('button:has-text("Ja, ik heb al panelen")').click()
     await page.locator('button:has-text("← Terug")').first().click()
-    await expect(page.locator('text=Vervanging aanbevolen')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Extra omvormer of vervanging kan nodig zijn')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Inspectie voor vervanging aanbevolen')).toHaveCount(0)
   })
 
   test('Terug navigeert naar stap 4', async ({ page }) => {

@@ -29,8 +29,8 @@ export function ReportTechnical({ report }: { report: NormalizedReport }) {
       <TechnicalBlock title="Plaatsingsscan">
         {hasPlaatsing ? (
           <p>
-            Geschiktheid {plaatsing.geschiktheidScore}/100 ·{' '}
-            {plaatsing.nenCompliant ? 'NEN-conform' : 'NEN-controle aanbevolen'}
+            Foto-indicatie {plaatsing.geschiktheidScore}/10 ·{' '}
+            {plaatsing.nenCompliant ? 'geen directe aandachtspunten zichtbaar' : 'controle op locatie aanbevolen'}
           </p>
         ) : <p>Niet toegevoegd</p>}
       </TechnicalBlock>

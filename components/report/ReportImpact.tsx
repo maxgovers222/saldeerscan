@@ -5,11 +5,48 @@ function euro(value: number): string {
 }
 
 export function ReportImpact({ report }: { report: NormalizedReport }) {
-  const scenarios = [
-    ['Nu', report.scenarios.panelsNow],
-    ['Met batterij', report.scenarios.withBattery],
-    ['Wachten tot 2027', report.scenarios.waitUntil2027],
-  ] as const
+  const existing = report.qualification.heeftPanelen === true
+  const scenarios = existing
+    ? [
+        {
+          label: 'Huidige installatie (2026)',
+          saving: report.scenarios.panelsNow.besparingJaarEur,
+          investment: 0,
+          paybackYears: null,
+        },
+        {
+          label: 'Vanaf 2027 met batterij',
+          saving: report.scenarios.withBattery.besparingJaarEur,
+          investment: report.recommendation.investmentEur,
+          paybackYears: report.recommendation.paybackYears,
+        },
+        {
+          label: 'Vanaf 2027 zonder batterij',
+          saving: report.scenarios.waitUntil2027.besparingJaarEur,
+          investment: 0,
+          paybackYears: null,
+        },
+      ]
+    : [
+        {
+          label: 'Nu',
+          saving: report.scenarios.panelsNow.besparingJaarEur,
+          investment: report.scenarios.panelsNow.investeringEur,
+          paybackYears: report.scenarios.panelsNow.terugverdientijdJaar,
+        },
+        {
+          label: 'Met batterij',
+          saving: report.scenarios.withBattery.besparingJaarEur,
+          investment: report.scenarios.withBattery.investeringEur,
+          paybackYears: report.scenarios.withBattery.terugverdientijdJaar,
+        },
+        {
+          label: 'Wachten tot 2027',
+          saving: report.scenarios.waitUntil2027.besparingJaarEur,
+          investment: report.scenarios.waitUntil2027.investeringEur,
+          paybackYears: report.scenarios.waitUntil2027.terugverdientijdJaar,
+        },
+      ]
 
   return (
     <div className="space-y-5">
@@ -44,7 +81,7 @@ export function ReportImpact({ report }: { report: NormalizedReport }) {
 
       <div>
         <h3 className="font-semibold text-ink">Scenariovergelijking</h3>
-        <div className="mt-3 overflow-x-auto">
+        <div data-testid="report-scenario-scroll" className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[28rem] border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-ink/10 text-ink-muted">
@@ -55,14 +92,14 @@ export function ReportImpact({ report }: { report: NormalizedReport }) {
               </tr>
             </thead>
             <tbody>
-              {scenarios.map(([label, scenario]) => (
-                <tr key={label} className="border-b border-ink/10 last:border-0">
-                  <th className="py-3 pr-3 font-semibold text-ink">{label}</th>
-                  <td className="px-3 py-3 text-right font-mono text-ink">{euro(scenario.besparingJaarEur)}</td>
-                  <td className="px-3 py-3 text-right font-mono text-ink">{euro(scenario.investeringEur)}</td>
+              {scenarios.map(scenario => (
+                <tr key={scenario.label} className="border-b border-ink/10 last:border-0">
+                  <th className="py-3 pr-3 font-semibold text-ink">{scenario.label}</th>
+                  <td className="px-3 py-3 text-right font-mono text-ink">{euro(scenario.saving)}</td>
+                  <td className="px-3 py-3 text-right font-mono text-ink">{euro(scenario.investment)}</td>
                   <td className="py-3 pl-3 text-right font-mono text-ink">
-                    {Number.isFinite(scenario.terugverdientijdJaar)
-                      ? `${scenario.terugverdientijdJaar} jaar`
+                    {scenario.paybackYears !== null && Number.isFinite(scenario.paybackYears)
+                      ? `${scenario.paybackYears} jaar`
                       : '—'}
                   </td>
                 </tr>

@@ -54,3 +54,24 @@ test('keeps a return-delivery payment in the 2027 estimate', () => {
     apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij',
   })
 })
+
+test('compares battery value with the same 2027 situation without a battery', () => {
+  const result = berekenROI({
+    oppervlakte: 108,
+    bouwjaar: 1980,
+    dakOppervlakte: 60,
+    huidigVerbruikKwh: 4314,
+    aantalPanelenOverride: 14,
+    kwhPerPaneel: 350,
+  })
+
+  expect(result.productieKwh).toBe(4900)
+  expect(result.scenarioWachten.besparingJaarEur).toBe(897)
+  expect(result.scenarioMetBatterij.besparingJaarEur).toBe(1504)
+  expect(
+    result.scenarioMetBatterij.besparingJaarEur
+      - result.scenarioWachten.besparingJaarEur,
+  ).toBe(607)
+  expect(result.scenarioMetBatterij.beschrijving).toContain('Vanaf 2027')
+  expect(result.aanbeveling).toBe('beide')
+})

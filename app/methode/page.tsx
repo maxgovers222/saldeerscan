@@ -120,7 +120,10 @@ export default function MethodePage() {
                   terugleververgoeding. De standaardtarieven in het model zijn momenteel{' '}
                   <strong className="text-ink">{rate.format(LEVERINGSTARIEF)}/kWh</strong> en{' '}
                   <strong className="text-ink">{rate.format(TERUGLEVERTARIEF)}/kWh</strong>.
-                  Werkelijke tarieven en terugleverkosten verschillen per leverancier.
+                  Het extra batterijvoordeel vergelijken we met dezelfde 2027-situatie
+                  zonder batterij, zodat het einde van salderen niet als batterijwinst
+                  wordt meegeteld. Werkelijke tarieven en terugleverkosten verschillen
+                  per leverancier.
                 </p>
               </div>
             </div>

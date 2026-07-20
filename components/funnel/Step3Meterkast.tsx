@@ -103,9 +103,11 @@ function MeterkastResultaat({ analyse }: { analyse: MeterkastAnalyse }) {
 
       <FunnelNotice
         variant={analyse.geschikt ? 'success' : 'danger'}
-        title={analyse.geschikt ? 'Geschikt voor installatie' : 'Niet direct geschikt'}
+        title={analyse.geschikt ? 'Lijkt geschikt voor uitbreiding' : 'Aanpassing lijkt nodig'}
       >
-        {!analyse.geschikt && 'Een installateur kan beoordelen welke aanpassing nodig is.'}
+        {analyse.geschikt
+          ? 'Dit is een foto-indicatie. Een installateur controleert de aansluiting en beveiliging ter plaatse.'
+          : 'Een installateur kan ter plaatse beoordelen welke aanpassing nodig is.'}
       </FunnelNotice>
 
       {analyse.opmerkingen.length > 0 && (

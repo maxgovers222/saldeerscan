@@ -1,6 +1,21 @@
 import 'server-only'
 import Anthropic from '@anthropic-ai/sdk'
+import { jsonSchemaOutputFormat } from '@anthropic-ai/sdk/helpers/json-schema'
 import { screenImage } from '@/lib/gemini'
+import {
+  normalizeMeterkastAnalyse,
+  normalizeOmvormerAnalyse,
+  normalizePlaatsingsAnalyse,
+  type MeterkastAnalyse,
+  type OmvormerAnalyse,
+  type PlaatsingsAnalyse,
+} from '@/lib/vision-analysis'
+
+export type {
+  MeterkastAnalyse,
+  OmvormerAnalyse,
+  PlaatsingsAnalyse,
+} from '@/lib/vision-analysis'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -21,41 +36,86 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
   throw new Error('Max retries reached')
 }
 
-// --- Types ---
-
-export interface MeterkastAnalyse {
-  merk: string | null           // ABB, Hager, Schneider, Gewiss, Onbekend
-  drieFase: boolean
-  vrijeGroepen: number          // Aantal vrije/beschikbare groepen
-  maxVermogenKw: number | null  // Max aansluitvermogen in kW
-  geschikt: boolean             // Geschikt voor zonnepanelen/batterij?
-  opmerkingen: string[]
-}
-
-export interface PlaatsingsAnalyse {
-  nenCompliant: boolean         // NEN 2078:2023 compliant?
-  risicoItems: string[]         // Geïdentificeerde risico's
-  aanbevelingen: string[]
-  geschiktheidScore: number     // 0-10
-}
-
-export interface OmvormerAnalyse {
-  merk: string | null
-  model: string | null
-  vermogenKw: number | null
-  hybrideKlaar: boolean         // Heeft hybride batterij-poort?
-  vervangenNodig: boolean       // Te oud of incompatibel?
-  opmerkingen: string[]
-}
-
 // --- Private: Deep analysis with Claude Sonnet ---
 
 const SCREENING_THRESHOLD = 0.7  // Minimum confidence for Tier 1 pass
 
+const nullableString = { anyOf: [{ type: 'string' }, { type: 'null' }] } as const
+const nullableNumber = { anyOf: [{ type: 'number' }, { type: 'null' }] } as const
+const stringArray = { type: 'array', items: { type: 'string' } } as const
+
+const meterkastOutputSchema = {
+  type: 'object',
+  properties: {
+    merk: nullableString,
+    drie_fase: { type: 'boolean' },
+    vrije_groepen: { type: 'integer', minimum: 0 },
+    max_vermogen_kw: nullableNumber,
+    lijkt_geschikt: { type: 'boolean' },
+    opmerkingen: stringArray,
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
+  },
+  required: [
+    'merk',
+    'drie_fase',
+    'vrije_groepen',
+    'max_vermogen_kw',
+    'lijkt_geschikt',
+    'opmerkingen',
+    'confidence',
+  ],
+  additionalProperties: false,
+} as const
+
+const plaatsingOutputSchema = {
+  type: 'object',
+  properties: {
+    geen_zichtbare_blokkerende_risicos: { type: 'boolean' },
+    risico_items: stringArray,
+    aanbevelingen: stringArray,
+    geschiktheid_score: { type: 'number', minimum: 0, maximum: 10 },
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
+  },
+  required: [
+    'geen_zichtbare_blokkerende_risicos',
+    'risico_items',
+    'aanbevelingen',
+    'geschiktheid_score',
+    'confidence',
+  ],
+  additionalProperties: false,
+} as const
+
+const omvormerOutputSchema = {
+  type: 'object',
+  properties: {
+    merk: nullableString,
+    model: nullableString,
+    vermogen_kw: nullableNumber,
+    hybride_klaar: { type: 'boolean' },
+    vervanging_lijkt_nodig: { type: 'boolean' },
+    opmerkingen: stringArray,
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
+  },
+  required: [
+    'merk',
+    'model',
+    'vermogen_kw',
+    'hybride_klaar',
+    'vervanging_lijkt_nodig',
+    'opmerkingen',
+    'confidence',
+  ],
+  additionalProperties: false,
+} as const
+
 async function deepAnalyseMeterkast(imageBase64: string, mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'): Promise<MeterkastAnalyse> {
-  const response = await withRetry(() => anthropic.messages.create({
+  const response = await withRetry(() => anthropic.messages.parse({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
+    output_config: {
+      format: jsonSchemaOutputFormat(meterkastOutputSchema),
+    },
     messages: [{
       role: 'user',
       content: [
@@ -65,49 +125,36 @@ async function deepAnalyseMeterkast(imageBase64: string, mimeType: 'image/jpeg' 
         },
         {
           type: 'text',
-          text: `Analyseer dit meterkast voor installatie van zonnepanelen of thuisbatterij in Nederland.
+          text: `Analyseer wat op deze foto van een Nederlandse meterkast zichtbaar is.
+
+Dit is uitsluitend een foto-indicatie en geen elektrische keuring. Raad niets dat niet
+duidelijk zichtbaar of leesbaar is. Een installateur moet de aansluiting, beveiliging,
+bekabeling en beschikbare ruimte altijd ter plaatse controleren.
 
 Identificeer:
 1. Merk (ABB, Hager, Schneider Electric, Gewiss, of Onbekend)
 2. Is 3-fase aansluiting aanwezig? (zoek naar 3 hoofdzekeringen of 3-fase hoofdschakelaar)
 3. Aantal vrije/ongebruikte groepen (lege railposities)
-4. Geschat max aansluitvermogen in kW (3-fase = 3×25A×230V = 17.25 kW)
-5. Is het meterkast geschikt voor uitbreiding?
-6. Opmerkingen (verouderd, beschadigd, etc.)
-
-Antwoord uitsluitend in dit JSON formaat:
-{
-  "merk": "string of null",
-  "drie_fase": boolean,
-  "vrije_groepen": number,
-  "max_vermogen_kw": number or null,
-  "geschikt": boolean,
-  "opmerkingen": ["string", ...]
-}`,
+4. Alleen indien de relevante waarden leesbaar zijn: geschat maximaal aansluitvermogen in kW
+5. Lijkt uitbreiding technisch mogelijk op basis van uitsluitend het zichtbare beeld?
+6. Zichtbare aandachtspunten, onzekerheden of onleesbare onderdelen
+7. Confidence van 0 tot 1 in de zichtbare identificatie`,
         },
       ],
     }],
   }))
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('Claude kon meterkast niet analyseren')
-  const parsed = JSON.parse(jsonMatch[0])
-
-  return {
-    merk: parsed.merk || null,
-    drieFase: Boolean(parsed.drie_fase),
-    vrijeGroepen: Number(parsed.vrije_groepen) || 0,
-    maxVermogenKw: parsed.max_vermogen_kw != null ? Number(parsed.max_vermogen_kw) : null,
-    geschikt: Boolean(parsed.geschikt),
-    opmerkingen: Array.isArray(parsed.opmerkingen) ? parsed.opmerkingen : [],
-  }
+  if (!response.parsed_output) throw new Error('Claude kon meterkast niet analyseren')
+  return normalizeMeterkastAnalyse(response.parsed_output)
 }
 
 async function deepAnalysePlaatsing(imageBase64: string, mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'): Promise<PlaatsingsAnalyse> {
-  const response = await withRetry(() => anthropic.messages.create({
+  const response = await withRetry(() => anthropic.messages.parse({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
+    output_config: {
+      format: jsonSchemaOutputFormat(plaatsingOutputSchema),
+    },
     messages: [{
       role: 'user',
       content: [
@@ -117,46 +164,35 @@ async function deepAnalysePlaatsing(imageBase64: string, mimeType: 'image/jpeg' 
         },
         {
           type: 'text',
-          text: `Beoordeel deze locatie voor plaatsing van een thuisbatterij op NEN 2078:2023 brandveiligheid.
+          text: `Benoem zichtbare aandachtspunten voor mogelijke plaatsing van een thuisbatterij.
 
 Controleer:
-1. Afstand tot brandbare materialen (minimum 50cm vereist)
-2. Ventilatie aanwezig?
+1. Zichtbare vrije ruimte en brandbare materialen in de directe omgeving
+2. Mogelijkheden voor ventilatie
 3. Toegankelijkheid voor onderhoud
-4. Aanwezigheid van waterleiding/gas (risico)
-5. Temperatuurklimaat (garage in direct zonlicht = risico)
+4. Zichtbaar vocht, water- of gasleidingen en andere warmte- of ontstekingsbronnen
+5. Zichtbare blootstelling aan direct zonlicht, weersinvloed of extreme temperatuur
 
-Geef een geschiktheidsscore 0-10 (10 = perfect).
-
-Antwoord uitsluitend in dit JSON formaat:
-{
-  "nen_compliant": boolean,
-  "risico_items": ["string", ...],
-  "aanbevelingen": ["string", ...],
-  "geschiktheid_score": number
-}`,
+Geef een geschiktheidsindicatie van 0-10 en een confidence van 0-1. Beoordeel geen
+NEN-conformiteit en noem geen vaste minimumafstand zonder fabrikantvoorschrift. Een foto
+kan verborgen leidingen, constructie, ventilatiecapaciteit en elektrische veiligheid niet
+vaststellen; een erkend installateur moet de locatie altijd ter plaatse beoordelen.`,
         },
       ],
     }],
   }))
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('Claude kon plaatsingslocatie niet analyseren')
-  const parsed = JSON.parse(jsonMatch[0])
-
-  return {
-    nenCompliant: Boolean(parsed.nen_compliant),
-    risicoItems: Array.isArray(parsed.risico_items) ? parsed.risico_items : [],
-    aanbevelingen: Array.isArray(parsed.aanbevelingen) ? parsed.aanbevelingen : [],
-    geschiktheidScore: Math.min(10, Math.max(0, Number(parsed.geschiktheid_score) || 0)),
-  }
+  if (!response.parsed_output) throw new Error('Claude kon plaatsingslocatie niet analyseren')
+  return normalizePlaatsingsAnalyse(response.parsed_output)
 }
 
 async function deepAnalyseOmvormer(imageBase64: string, mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'): Promise<OmvormerAnalyse> {
-  const response = await withRetry(() => anthropic.messages.create({
+  const response = await withRetry(() => anthropic.messages.parse({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
+    output_config: {
+      format: jsonSchemaOutputFormat(omvormerOutputSchema),
+    },
     messages: [{
       role: 'user',
       content: [
@@ -166,43 +202,28 @@ async function deepAnalyseOmvormer(imageBase64: string, mimeType: 'image/jpeg' |
         },
         {
           type: 'text',
-          text: `Identificeer deze omvormer/inverter voor zonnepanelen.
+          text: `Identificeer wat zichtbaar en leesbaar is op deze omvormer voor zonnepanelen.
+
+Dit is een foto-indicatie. Raad geen merk, model, leeftijd, vermogen of aansluiting als
+het label niet leesbaar is. Een installateur moet compatibiliteit en technische staat
+controleren aan de hand van het exacte model en de bestaande installatie.
 
 Bepaal:
 1. Merk (SolarEdge, SMA, Fronius, Enphase, Growatt, Huawei, etc.)
 2. Model (lees label/sticker)
 3. Vermogen in kW
-4. Is het een hybride omvormer (geschikt voor thuisbatterij aansluiting)?
-5. Moet de omvormer vervangen worden? (ouder dan 15 jaar of incompatibel met hybride systemen)
-6. Opmerkingen
-
-Antwoord uitsluitend in dit JSON formaat:
-{
-  "merk": "string of null",
-  "model": "string of null",
-  "vermogen_kw": number or null,
-  "hybride_klaar": boolean,
-  "vervangen_nodig": boolean,
-  "opmerkingen": ["string", ...]
-}`,
+4. Is op basis van het exacte zichtbare model aantoonbaar dat een batterijaansluiting aanwezig is?
+5. Lijkt inspectie voor vervanging nodig door zichtbare schade, een leesbaar oud bouwjaar
+   of aantoonbare incompatibiliteit? Leeftijd alleen is geen automatische vervangingsreden.
+6. Opmerkingen en onzekerheden
+7. Confidence van 0 tot 1 in de zichtbare identificatie`,
         },
       ],
     }],
   }))
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('Claude kon omvormer niet analyseren')
-  const parsed = JSON.parse(jsonMatch[0])
-
-  return {
-    merk: parsed.merk || null,
-    model: parsed.model || null,
-    vermogenKw: parsed.vermogen_kw != null ? Number(parsed.vermogen_kw) : null,
-    hybrideKlaar: Boolean(parsed.hybride_klaar),
-    vervangenNodig: Boolean(parsed.vervangen_nodig),
-    opmerkingen: Array.isArray(parsed.opmerkingen) ? parsed.opmerkingen : [],
-  }
+  if (!response.parsed_output) throw new Error('Claude kon omvormer niet analyseren')
+  return normalizeOmvormerAnalyse(response.parsed_output)
 }
 
 // --- Public API: Two-tier (Gemini screen → Claude deep) ---

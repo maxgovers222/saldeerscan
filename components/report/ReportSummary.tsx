@@ -32,8 +32,9 @@ export function ReportSummary({ report }: { report: NormalizedReport }) {
         className="grid grid-cols-2 gap-3 lg:grid-cols-3"
       >
         <ReportMetric
-          label="Mogelijke besparing"
+          label={existing ? 'Extra opslagvoordeel vanaf 2027' : 'Mogelijke besparing'}
           value={`${euro(report.summary.annualSavingEur)}/jaar`}
+          detail={existing ? 'Ten opzichte van dezelfde installatie zonder batterij' : undefined}
           tone="positive"
         />
         <ReportMetric
@@ -60,7 +61,7 @@ export function ReportSummary({ report }: { report: NormalizedReport }) {
               <strong className="text-ink">{existingCount ?? 'Onbekend aantal'} bestaande panelen</strong>
               {' '}blijven onderdeel van uw installatie.
             </p>
-            {extraSaving !== null && (
+            {report.recommendation.batteryCapacityKwh !== null && extraSaving !== null && (
               <p><strong className="text-ink">{euro(extraSaving)} per jaar extra</strong> door opslag en slimmer verbruik.</p>
             )}
           </div>

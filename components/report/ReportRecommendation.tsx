@@ -49,7 +49,7 @@ export function ReportRecommendation({ report }: { report: NormalizedReport }) {
           <dd className="mt-1 font-semibold font-mono text-ink">{recommendation.ownUsePct}%</dd>
         </div>
       </dl>
-      {existing && recommendation.extraAnnualSavingEur !== null && (
+      {existing && recommendation.batteryCapacityKwh !== null && recommendation.extraAnnualSavingEur !== null && (
         <p className="rounded-xl bg-trust/10 px-4 py-3 text-trust-dark">
           Opslagvoordeel: <strong>{euro(recommendation.extraAnnualSavingEur)} per jaar</strong>.
         </p>

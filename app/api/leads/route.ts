@@ -43,6 +43,7 @@ const REPORT_LEAD_SELECT = `
   is_eigenaar,
   heeft_panelen,
   huidige_panelen_aantal,
+  huishouden_grootte,
   report_email_status
 `
 
