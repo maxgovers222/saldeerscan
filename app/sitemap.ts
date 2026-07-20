@@ -1,26 +1,18 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next'
 import { getPseoPagesByProvincie, getStratenByProvincie } from '@/lib/pseo'
 import { getAllPublishedKennisbank } from '@/lib/kennisbank'
 import { getAllPublishedNieuws } from '@/lib/nieuws'
 import { getPostcodePrefixesWithWijken } from '@/lib/pseo-hubs'
-
-const PROVINCIES = [
-  'noord-holland', 'zuid-holland', 'utrecht', 'noord-brabant',
-  'gelderland', 'overijssel', 'friesland', 'groningen',
-  'drenthe', 'flevoland', 'zeeland', 'limburg',
-]
+import { SITEMAP_IDS, SITEMAP_PROVINCIES } from '@/lib/sitemap-config'
 
 export async function generateSitemaps() {
-  return [
-    { id: 'core' },
-    ...PROVINCIES.map(id => ({ id })),
-    { id: 'kennisbank' },
-    { id: 'nieuws' },
-    { id: 'postcodes' },
-  ]
+  return SITEMAP_IDS.map(id => ({ id }))
 }
 
-export default async function sitemap({ id }: { id: string }): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap(
+  props: { id: Promise<string> },
+): Promise<MetadataRoute.Sitemap> {
+  const id = await props.id
   const now = new Date()
 
   if (id === 'core') {
@@ -33,7 +25,7 @@ export default async function sitemap({ id }: { id: string }): Promise<MetadataR
       { url: 'https://saldeerscan.nl/nieuws', lastModified: now, changeFrequency: 'daily' as const, priority: 0.9 },
       { url: 'https://saldeerscan.nl/postcode/1012', lastModified: now, changeFrequency: 'monthly' as const, priority: 0.88 },
       { url: 'https://saldeerscan.nl/postcode/3012', lastModified: now, changeFrequency: 'monthly' as const, priority: 0.88 },
-      ...PROVINCIES.map(provincie => ({
+      ...SITEMAP_PROVINCIES.map(provincie => ({
         url: `https://saldeerscan.nl/${provincie}`,
         lastModified: now,
         changeFrequency: 'monthly' as const,

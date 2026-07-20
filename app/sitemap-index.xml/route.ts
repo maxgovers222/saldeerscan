@@ -1,10 +1,10 @@
+import { SITEMAP_IDS } from '@/lib/sitemap-config'
+
 export const dynamic = 'force-static'
 
-const SITEMAP_COUNT = 16
-
 export async function GET() {
-  const entries = Array.from({ length: SITEMAP_COUNT }, (_, i) =>
-    `  <sitemap><loc>https://saldeerscan.nl/sitemap/${i}.xml</loc></sitemap>`
+  const entries = SITEMAP_IDS.map(id =>
+    `  <sitemap><loc>https://saldeerscan.nl/sitemap/${id}.xml</loc></sitemap>`
   ).join('\n')
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
