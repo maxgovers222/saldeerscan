@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { toDisplaySlug } from '@/lib/pseo-hubs'
 import {
+  buildWijkSeoDescription,
+  buildWijkSeoTitle,
   computeBesparing,
   computeVerliesFromBesparing,
   resolveWijkScore,
@@ -118,10 +120,8 @@ export function buildWijkMetadata(input: {
   const besparing = computeBesparing(input.gemBouwjaar ?? null, score)
   const verlies = computeVerliesFromBesparing(besparing)
 
-  const title =
-    input.titel ??
-    `${wijkDisplay}: Voorkom €${verlies} verlies per 2027 — SaldeerScan`
-  const description = `Gratis 2027 saldeercheck: woningen in ${wijkDisplay} riskeren €${verlies}/jaar na 1 jan 2027. BAG-data, AI-analyse en persoonlijk investeringsrapport.`
+  const title = buildWijkSeoTitle(wijkDisplay, besparing, verlies)
+  const description = buildWijkSeoDescription(wijkDisplay, besparing, verlies)
 
   const path = `/${input.provincie}/${input.stad}/${input.wijk}`
   const url = `https://saldeerscan.nl${path}`
@@ -131,7 +131,7 @@ export function buildWijkMetadata(input: {
     description,
     alternates: { canonical: url },
     openGraph: {
-      title: input.titel ?? `${wijkDisplay}: Voorkom €${verlies} verlies per 2027`,
+      title,
       description,
       type: 'website',
       locale: 'nl_NL',

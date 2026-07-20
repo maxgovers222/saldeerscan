@@ -98,6 +98,30 @@ export function computeVerliesFromBesparing(besparing: number): number {
   return Math.round(besparing * 0.4)
 }
 
+export function formatPseoEuro(amount: number): string {
+  return `€${amount.toLocaleString('nl-NL')}`
+}
+
+/** SEO-titel op basis van dezelfde besparing/verlies-berekening als de wijkpagina. */
+export function buildWijkSeoTitle(wijkDisplay: string, besparing: number, verlies: number): string {
+  const primary = `${wijkDisplay}: ${formatPseoEuro(besparing)}/jaar · ${formatPseoEuro(verlies)} risico 2027`
+  if (primary.length <= 60) return primary
+  return `${wijkDisplay}: ${formatPseoEuro(verlies)} risico per 2027`
+}
+
+export function buildWijkSeoDescription(wijkDisplay: string, besparing: number, verlies: number): string {
+  return `Gratis 2027-check voor ${wijkDisplay}: geraamde besparing ${formatPseoEuro(besparing)}/jaar met saldering t/m 2026, indicatief ${formatPseoEuro(verlies)}/jaar verschil na 1 januari 2027.`
+}
+
+const EURO_RANGE_RE =
+  /€\s?\d{1,4}(?:\.\d{3})*(?:,\d{2})?\s*(?:[–-]|tot)\s*€?\s?\d{1,4}(?:\.\d{3})*(?:,\d{2})?/gi
+
+/** Vervang AI-bandbreedtes in wijkcopy door het berekende wijkbedrag. */
+export function alignPseoSavingsCopy(text: string | null, besparing: number): string | null {
+  if (!text) return null
+  return text.replace(EURO_RANGE_RE, formatPseoEuro(besparing))
+}
+
 export function wijkTemplateIndex(wijk: string): 0 | 1 | 2 {
   const sum = [...wijk].reduce((acc, c) => acc + c.charCodeAt(0), 0)
   return (sum % 3) as 0 | 1 | 2

@@ -28,6 +28,7 @@ config({ path: resolve(__dir, '..', '.env.local') })
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
+import { computeBesparing } from '../lib/pseo-variation'
 
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY      = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -135,11 +136,7 @@ function buildPrompt(e: WijkEntry, aantalWoningen: number | null, score: number)
       ? `Woningen uit ${e.bouwjaar} in ${e.wijk} vereisen soms een groepenkast-upgrade (€300–€600). Het dak is in de meeste gevallen geschikt voor minimaal 10 zonnepanelen.`
       : `Woningen uit ${e.bouwjaar} in ${e.wijk} zijn wat ouder. Een dakcheck en groepenkastinspectie zijn aandachtspunten voor de offerte. ISDE geldt niet voor deze controles, zonnepanelen of een thuisbatterij; voor aangewezen isolatiemaatregelen of installaties gelden aparte RVO-voorwaarden.`
 
-  const besparingRange = e.bouwjaar >= 2000
-    ? '€700–€1.100'
-    : e.bouwjaar >= 1985
-    ? '€500–€900'
-    : '€350–€700'
+  const besparing = computeBesparing(e.bouwjaar, score)
 
   const terugverdien = e.netcongestie === 'ROOD'
     ? '6–8 jaar (met batterij: 8–11 jaar)'
@@ -153,7 +150,7 @@ HYPERLOCALE DATA (verwerk ALLE van deze specifieke feiten in de tekst):
 - Gemiddeld bouwjaar: ${e.bouwjaar}
 - Netcongestie (Netbeheer NL): ${e.netcongestie}
 - Energie-rendementsscore: ${score}/100
-- Geschatte jaarlijkse besparing zonnepanelen: ${besparingRange}
+- Geschatte jaarlijkse besparing zonnepanelen (gebruik exact dit bedrag): €${besparing}
 - Terugverdientijd: ${terugverdien}
 
 WIJK-SPECIFIEKE CONTEXT:

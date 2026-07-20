@@ -306,7 +306,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
                   {[
                     { label: 'Gem. bouwjaar', value: page.gemBouwjaar ? `${page.gemBouwjaar}` : '—', sub: 'BAG registratie' },
                     { label: 'Energy Score', value: `${score}/100`, sub: scorelabel },
-                    { label: 'Est. besparing', value: `€${besparing}/jr`, sub: 'zonder batterij, 2024' },
+                    { label: 'Est. besparing', value: `€${besparing}/jr`, sub: 'indicatief met saldering t/m 2026' },
                     { label: 'Verschil 2027', value: `−€${verlies}/jr`, sub: 'indicatief na einde salderen', danger: true },
                     { label: 'Netcongestie', value: page.netcongestieStatus ?? '—', sub: netNarrative.label ?? '' },
                     ...(page.aantalWoningen ? [{ label: 'Woningen', value: `${page.aantalWoningen.toLocaleString('nl')}`, sub: 'in dit postcodegebied' }] : []),

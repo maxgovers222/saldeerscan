@@ -1,7 +1,18 @@
 import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { rankUrgentWijken, type WijkStadRow, type WijkStadRowWithStad } from '@/lib/pseo-variation'
+import { toDisplaySlug } from '@/lib/pseo-hubs'
+import {
+  alignPseoSavingsCopy,
+  buildWijkSeoDescription,
+  buildWijkSeoTitle,
+  computeBesparing,
+  computeVerliesFromBesparing,
+  rankUrgentWijken,
+  resolveWijkScore,
+  type WijkStadRow,
+  type WijkStadRowWithStad,
+} from '@/lib/pseo-variation'
 import {
   sanitizeGeneratedEnergyCopy,
   sanitizeStructuredEnergyCopy,
@@ -34,32 +45,79 @@ export interface PseoPageData {
   generatedAt: string | null
 }
 
+function patchWijkJsonLdCopy(
+  jsonLd: Record<string, unknown>,
+  titel: string,
+  description: string,
+): Record<string, unknown> {
+  const patchNode = (node: Record<string, unknown>) =>
+    node['@type'] === 'WebPage' ? { ...node, name: titel, description } : node
+
+  if (Array.isArray(jsonLd['@graph'])) {
+    return {
+      ...jsonLd,
+      '@graph': (jsonLd['@graph'] as Record<string, unknown>[]).map(patchNode),
+    }
+  }
+
+  if (jsonLd['@type'] === 'WebPage') {
+    return { ...jsonLd, name: titel, description }
+  }
+
+  return jsonLd
+}
+
 function mapPseoPage(
   data: Record<string, unknown>,
   straat: string | null,
 ): PseoPageData {
-  const faqItems = ((data.faq_items as Array<{ vraag: string; antwoord: string }>) ?? [])
+  const wijk = (data.wijk as string) ?? null
+  const gemBouwjaar = (data.gem_bouwjaar as number) ?? null
+  const gemHealthScore = (data.gem_health_score as number) ?? null
+
+  let faqItems = ((data.faq_items as Array<{ vraag: string; antwoord: string }>) ?? [])
     .map((faq) => ({
       vraag: sanitizeGeneratedEnergyCopy(faq.vraag, 'short') ?? faq.vraag,
       antwoord: sanitizeGeneratedEnergyCopy(faq.antwoord) ?? faq.antwoord,
     }))
 
+  let titel = sanitizeGeneratedEnergyCopy((data.titel as string) ?? null, 'short')
+  let metaDescription = sanitizeGeneratedEnergyCopy(
+    (data.meta_description as string) ?? null,
+    'short',
+  )
+  let hoofdtekst = sanitizeGeneratedEnergyCopy((data.hoofdtekst as string) ?? null)
+  let jsonLd = sanitizeStructuredEnergyCopy(data.json_ld ?? {}) as Record<string, unknown>
+
+  if (wijk && !straat) {
+    const score = resolveWijkScore(gemBouwjaar, gemHealthScore)
+    const besparing = computeBesparing(gemBouwjaar, score)
+    const verlies = computeVerliesFromBesparing(besparing)
+    const wijkDisplay = toDisplaySlug(wijk)
+
+    titel = buildWijkSeoTitle(wijkDisplay, besparing, verlies)
+    metaDescription = buildWijkSeoDescription(wijkDisplay, besparing, verlies)
+    hoofdtekst = alignPseoSavingsCopy(hoofdtekst, besparing)
+    faqItems = faqItems.map((faq) => ({
+      vraag: alignPseoSavingsCopy(faq.vraag, besparing) ?? faq.vraag,
+      antwoord: alignPseoSavingsCopy(faq.antwoord, besparing) ?? faq.antwoord,
+    }))
+    jsonLd = patchWijkJsonLdCopy(jsonLd, titel, metaDescription)
+  }
+
   return {
     slug: data.slug as string,
     provincie: data.provincie as string,
     stad: data.stad as string,
-    wijk: (data.wijk as string) ?? null,
+    wijk,
     straat,
-    titel: sanitizeGeneratedEnergyCopy((data.titel as string) ?? null, 'short'),
-    metaDescription: sanitizeGeneratedEnergyCopy(
-      (data.meta_description as string) ?? null,
-      'short',
-    ),
-    hoofdtekst: sanitizeGeneratedEnergyCopy((data.hoofdtekst as string) ?? null),
+    titel,
+    metaDescription,
+    hoofdtekst,
     faqItems,
-    jsonLd: sanitizeStructuredEnergyCopy(data.json_ld ?? {}) as Record<string, unknown>,
-    gemBouwjaar: (data.gem_bouwjaar as number) ?? null,
-    gemHealthScore: (data.gem_health_score as number) ?? null,
+    jsonLd,
+    gemBouwjaar,
+    gemHealthScore,
     netcongestieStatus: (data.netcongestie_status as string) ?? null,
     aantalWoningen: (data.aantal_woningen as number) ?? null,
     generatedAt: (data.generated_at as string) ?? null,
