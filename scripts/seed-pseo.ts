@@ -2,7 +2,7 @@
 // Run with: npx tsx scripts/seed-pseo.ts [--skip-existing] [--dry-run]
 // PDOK mode: npx tsx scripts/seed-pseo.ts --wijk=centrum --stad=Amsterdam --provincie=Noord-Holland [--batch=0,20] [--dry-run]
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import * as dotenv from 'dotenv'
 import { buildLocalBusinessSchema } from '../lib/json-ld'
 import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
@@ -52,8 +52,8 @@ const SAMPLE_PAGES = [
   { provincie: 'Gelderland', stad: 'Arnhem', wijk: 'presikhaaf', straat: 'groningensingel', postcode_prefix: '6835', gem_bouwjaar: 1965, netcongestie: 'GROEN' as const },
 ]
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
+const FLASH_MODEL = 'gemini-3.5-flash'
 
 async function generateContent(page: typeof SAMPLE_PAGES[0]) {
   const prompt = `Schrijf een SEO-artikel van 600 woorden over energiebesparing voor SaldeerScan.nl.
@@ -75,8 +75,8 @@ Return JSON:
   "faqItems": [{"vraag": "...", "antwoord": "..."}, ...]
 }`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const result = await genAI.models.generateContent({ model: FLASH_MODEL, contents: prompt })
+  const text = result.text ?? ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('No JSON in Gemini response')
   return JSON.parse(jsonMatch[0])

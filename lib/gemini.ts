@@ -1,13 +1,9 @@
 import 'server-only'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
 import { ENERGY_EDITORIAL_GUARDRAILS } from '@/lib/editorial-standards'
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
-
-// Model instances (lazy — initialized on first use via closure)
-function getFlashModel() {
-  return genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-}
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
+const FLASH_MODEL = 'gemini-3.5-flash'
 
 export interface FAQ {
   vraag: string
@@ -31,8 +27,6 @@ export interface PseoContentParams {
 }
 
 export async function generatePseoContent(params: PseoContentParams): Promise<PseoContent> {
-  const model = getFlashModel()
-
   const prompt = `Je bent een SEO-expert voor de Nederlandse energiemarkt. Schrijf een SEO-artikel van precies 600 woorden voor SaldeerScan.nl.
 
 Onderwerp: Energiebesparing voor woningen op ${params.straat} in ${params.stad}, ${params.provincie}.
@@ -65,8 +59,8 @@ Antwoord uitsluitend in dit JSON formaat:
   ]
 }`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const result = await genAI.models.generateContent({ model: FLASH_MODEL, contents: prompt })
+  const text = result.text ?? ''
 
   // Extract JSON from response (Gemini sometimes wraps in markdown code blocks)
   const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -95,8 +89,6 @@ export async function generateWijkContent(params: {
   netcongestie: 'ROOD' | 'ORANJE' | 'GROEN'
   aantalWoningen?: number | null
 }): Promise<string> {
-  const model = getFlashModel()
-
   const woningenTekst = params.aantalWoningen
     ? `${params.aantalWoningen.toLocaleString('nl-NL')} woningen`
     : 'een aanzienlijke woningpopulatie'
@@ -118,8 +110,8 @@ Focus op: financiële verandering per 1 januari 2027 (einde salderingsregeling),
 
 ${ENERGY_EDITORIAL_GUARDRAILS}`
 
-  const result = await model.generateContent(prompt)
-  return result.response.text().trim()
+  const result = await genAI.models.generateContent({ model: FLASH_MODEL, contents: prompt })
+  return (result.text ?? '').trim()
 }
 
 // Kennisbank artikel generator — lang, evergreen, 1200 woorden
@@ -152,7 +144,6 @@ export async function generateKennisbankContent(params: {
   slug: string
   allSlugs: string[]
 }): Promise<KennisbankContent> {
-  const model = getFlashModel()
   const topicTitle = KENNISBANK_TOPICS[params.slug] ?? params.slug.replace(/-/g, ' ')
   const allTopics = params.allSlugs.map(s => `${s}: ${KENNISBANK_TOPICS[s] ?? s}`).join('\n')
 
@@ -193,8 +184,8 @@ Return ALLEEN dit JSON formaat (geen markdown omheen):
 
 Veldlengtes: titel max 65 tekens, metaDescription max 155 tekens, intro ~150 woorden, hoofdtekst ~1200 woorden met ## koppen.`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const result = await genAI.models.generateContent({ model: FLASH_MODEL, contents: prompt })
+  const text = result.text ?? ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('Gemini kennisbank response bevat geen geldig JSON')
 
@@ -220,7 +211,6 @@ export async function generateNieuwsContent(params: {
   topicSeed: string
   recentPublishedTitles: string[]
 }): Promise<NieuwsContent> {
-  const model = getFlashModel()
   const now = new Date()
   const maand = now.toLocaleString('nl-NL', { month: 'long' })
   const jaar = now.getFullYear()
@@ -259,8 +249,8 @@ Return ALLEEN dit JSON formaat (geen markdown omheen):
 
 Veldlengtes: titel max 70 tekens, metaDescription max 155 tekens, intro 2 zinnen, hoofdtekst ~900 woorden, slug URL-safe max 60 tekens zonder datum erin.`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const result = await genAI.models.generateContent({ model: FLASH_MODEL, contents: prompt })
+  const text = result.text ?? ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('Gemini nieuws response bevat geen geldig JSON')
 
@@ -292,8 +282,6 @@ export async function screenImage(
   imageType: ImageType,
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg'
 ): Promise<ScreeningResult> {
-  const model = getFlashModel()
-
   const prompt = `Is dit een foto van ${TYPE_LABELS[imageType]}?
 
 Antwoord uitsluitend in dit JSON formaat:
@@ -303,15 +291,20 @@ Antwoord uitsluitend in dit JSON formaat:
   "redenering": "Korte uitleg in 1 zin"
 }`
 
-  const imagePart = {
-    inlineData: {
-      data: imageBase64,
-      mimeType,
+  const result = await genAI.models.generateContent({
+    model: FLASH_MODEL,
+    contents: [{
+      role: 'user',
+      parts: [
+        { text: prompt },
+        { inlineData: { data: imageBase64, mimeType } },
+      ],
+    }],
+    config: {
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
     },
-  }
-
-  const result = await model.generateContent([prompt, imagePart])
-  const text = result.response.text()
+  })
+  const text = result.text ?? ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return { isCorrectType: false, confidence: 0, redenering: 'Kon afbeelding niet analyseren' }
 

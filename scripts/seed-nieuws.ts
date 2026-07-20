@@ -1,7 +1,7 @@
 // scripts/seed-nieuws.ts
 // Run with: npx tsx scripts/seed-nieuws.ts [--skip-existing] [--dry-run]
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import * as dotenv from 'dotenv'
 import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
 
@@ -12,8 +12,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
+const FLASH_MODEL = 'gemini-3.5-flash'
 
 const NIEUWS_ITEMS = [
   { slug: 'saldering-afgebouwd-2026-update', titel: 'Salderen blijft 100% in 2026 en stopt per 1 januari 2027' },
@@ -56,8 +56,8 @@ Return ALLEEN dit JSON formaat (geen markdown omheen):
   "hoofdtekst": "~600 woorden met ## koppen in markdown"
 }`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
+  const result = await genAI.models.generateContent({ model: FLASH_MODEL, contents: prompt })
+  const text = result.text ?? ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error(`Geen JSON in response voor ${item.slug}`)
 

@@ -31,7 +31,7 @@ Next.js 16 / React 19 platform voor de Nederlandse energiemarkt. Genereert 10.00
 | Supabase client | `@supabase/ssr` — drie clients: `lib/supabase/server.ts`, `lib/supabase/browser.ts`, `lib/supabase/admin.ts` |
 | Geocoding | Server-side Mapbox/PDOK via `lib/bag.ts`; geen Mapbox browser-SDK |
 | Grafieken | Recharts v3 |
-| AI — screening | Gemini 2.5 Flash (`@google/generative-ai`) |
+| AI — screening | Gemini 3.5 Flash (`@google/genai`) |
 | AI — diepanalyse | Claude claude-sonnet-4-6 (`@anthropic-ai/sdk`) |
 | Email | Resend (transactioneel, geawait met persistente afleverstatus) |
 | Rate limiting | Upstash Redis (`@upstash/ratelimit` + `@upstash/redis`) met in-memory fallback voor lokale dev |
@@ -112,7 +112,7 @@ lib/
   report-model.ts                   # NormalizedReport v1 + pure builder vanuit opgeslagen server-lead
   report-email.ts                   # HTML-e-mail vanuit hetzelfde NormalizedReport
   health-score.ts                   # Score 0-100 (bouwjaar/label/dak/congestie)
-  gemini.ts                         # Gemini 2.5 Flash adapter (pSEO content + screening + generateWijkContent met 800w + 5 FAQs)
+  gemini.ts                         # Gemini 3.5 Flash adapter (pSEO content + screening + generateWijkContent met 800w + 5 FAQs)
   vision.ts                         # Two-tier: Gemini screen → Claude diepanalyse + withRetry
   webhooks.ts                       # HMAC-SHA256 signed B2B dispatcher (consent-gated)
   rate-limit.ts                     # Upstash Redis sliding window, namespace per route; in-memory fallback lokaal
@@ -163,7 +163,7 @@ supabase/migrations/
 
 ### Vision: two-tier kostenbeheer
 `lib/vision.ts` werkt in twee lagen:
-1. **Tier 1 — Gemini 2.5 Flash** (screening, ~€0.0001/call): beantwoordt "Is dit een [type]? Ja/Nee + confidence". Drempel: confidence < 0.7 → foutmelding naar gebruiker.
+1. **Tier 1 — Gemini 3.5 Flash** (screening met `thinkingLevel: minimal`): beantwoordt "Is dit een [type]? Ja/Nee + confidence". Drempel: confidence < 0.7 → foutmelding naar gebruiker.
 2. **Tier 2 — Claude claude-sonnet-4-6** (diepanalyse, alleen als Tier 1 ≥ 0.7): geeft gestructureerde JSON terug per type (meterkast/plaatsing/omvormer).
 
 `withRetry` wrapper in `vision.ts` handelt Claude 529 (overloaded) en 429 (rate limit) af met exponential backoff (1s, 2s, 3s).
@@ -332,7 +332,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 MAPBOX_ACCESS_TOKEN=        # Server-side only (lib/bag.ts geocoding)
-GOOGLE_AI_API_KEY=          # Gemini 2.5 Flash (screening + pSEO content + wijk seed)
+GOOGLE_AI_API_KEY=          # Gemini 3.5 Flash (screening + pSEO content + wijk seed)
 ANTHROPIC_API_KEY=          # Claude claude-sonnet-4-6 (vision diepanalyse)
 RESEND_API_KEY=             # Transactionele email (lead bevestiging)
 EPONLINE_API_KEY=           # EP-online RVO (energie labels)

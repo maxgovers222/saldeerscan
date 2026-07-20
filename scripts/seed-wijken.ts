@@ -1,13 +1,13 @@
 /**
  * SaldeerScan.nl — pSEO Wijk Seeder v2
  *
- * Strategie: ALTIJD Gemini 2.5 Flash voor alle wijken — geen templates.
+ * Strategie: ALTIJD Gemini 3.5 Flash voor alle wijken — geen templates.
  * Elke pagina krijgt hyperlocale context via CBS PDOK WFS + unieke Gemini prompt.
  *
  * Data-bronnen:
  *   1. Hardcoded wijk-lijst (provincie/stad/bouwjaar/netcongestie)
  *   2. CBS PDOK WFS — aantal woningen per wijk (live fetch per wijk)
- *   3. Gemini 2.5 Flash — 800w unieke tekst + 5 FAQs + JSON-LD
+ *   3. Gemini 3.5 Flash — 800w unieke tekst + 5 FAQs + JSON-LD
  *
  * Gebruik:
  *   npx tsx scripts/seed-wijken.ts                  # Alle wijken (published)
@@ -15,7 +15,7 @@
  *   npx tsx scripts/seed-wijken.ts --skip-existing  # Sla reeds aanwezige over
  *   npx tsx scripts/seed-wijken.ts --batch=0,50     # Subset (index range)
  *
- * Kosten: ~€0.0002/wijk bij Gemini 2.5 Flash. 2000 wijken ≈ €0.40 totaal.
+ * Kosten: controleer de actuele Gemini-prijslijst vóór een grote seedrun.
  */
 
 import { config } from 'dotenv'
@@ -26,7 +26,7 @@ const __dir = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dir, '..', '.env.local') })
 
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
 import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
 import { computeBesparing } from '../lib/pseo-variation'
 
@@ -41,7 +41,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !GOOGLE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
-const genAI    = new GoogleGenerativeAI(GOOGLE_KEY)
+const genAI    = new GoogleGenAI({ apiKey: GOOGLE_KEY })
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -199,25 +199,23 @@ Antwoord UITSLUITEND in dit JSON-formaat (geen tekst buiten de JSON):
 }
 
 async function generateContent(e: WijkEntry, aantalWoningen: number | null): Promise<RichContent> {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 8192,
-      responseMimeType: 'application/json',
-      // @ts-ignore — thinkingConfig supported in gemini-2.5-flash, kills thinking-token overhead
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  })
-
+  const config = {
+    maxOutputTokens: 8192,
+    responseMimeType: 'application/json',
+    thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+  }
   const score = deriveHealthScore(e.bouwjaar, e.netcongestie)
   const prompt = buildPrompt(e, aantalWoningen, score)
 
   // Retry tot 3x bij Gemini-fouten
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const result = await model.generateContent(prompt)
-      const text   = result.response.text()
+      const result = await genAI.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config,
+      })
+      const text = result.text ?? ''
 
       // Native JSON mode geeft schone JSON; als fallback: extraheer eerste {...}
       let parsed: RichContent
@@ -2461,7 +2459,7 @@ async function run() {
   console.log(`Wijken:        ${subset.length} (index ${batchFrom}–${Math.min(batchTo, WIJKEN.length) - 1})`)
   console.log(`Modus:         ${dryRun ? 'DRY RUN (geen DB/AI writes)' : 'LIVE'}`)
   console.log(`Skip existing: ${skipExisting ? 'ja' : 'nee'}`)
-  console.log(`AI:            Gemini 2.5 Flash — 800w + 5 FAQs + JSON-LD per wijk`)
+  console.log(`AI:            Gemini 3.5 Flash — 800w + 5 FAQs + JSON-LD per wijk`)
   console.log(`CBS PDOK:      aantalWoningen live ophalen per wijk`)
   console.log(`Geschatte tijd: ~${Math.ceil(subset.length * 4 / 60)} minuten`)
   console.log('──────────────────────────────────────────────────────\n')
