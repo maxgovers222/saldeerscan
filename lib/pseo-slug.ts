@@ -1,4 +1,5 @@
-const WIJK_SLUG_REGEX = /^[a-z][a-z-]*[a-z]$/
+/** CBS-wijknamen mogen cijfers bevatten (bv. wijk-00, wijk02-kunrade). */
+const WIJK_SLUG_REGEX = /^[a-z](?:[a-z0-9-]*[a-z0-9])?$/
 
 /** Gedeelde slug-validatie voor wijk-URL's (sitemap, hubs, stad-pagina's). */
 export function parsePublishedWijkSlug(
