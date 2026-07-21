@@ -3,6 +3,7 @@ import { getPseoPagesByProvincie, getStratenByProvincie } from '@/lib/pseo'
 import { getAllPublishedKennisbank } from '@/lib/kennisbank'
 import { getAllPublishedNieuws } from '@/lib/nieuws'
 import { getPostcodePrefixesWithWijken } from '@/lib/pseo-hubs'
+import { parsePublishedWijkSlug } from '@/lib/pseo-slug'
 import { SITEMAP_IDS, SITEMAP_PROVINCIES } from '@/lib/sitemap-config'
 
 export async function generateSitemaps() {
@@ -103,19 +104,23 @@ export default async function sitemap(
     return provincieUrl
   }
 
-  const stadSlugs = new Set(
-    pages
-      .map(p => p.slug.split('/').slice(0, 3).join('/'))
-      .filter(s => s.split('/').length === 3)
-  )
-  const stadUrls = Array.from(stadSlugs).map(s => ({
+  const stadUrls = Array.from(
+    new Set(
+      pages
+        .map(p => parsePublishedWijkSlug(p.slug))
+        .filter((parsed): parsed is NonNullable<typeof parsed> => parsed !== null)
+        .map(parsed => `/${parsed.provincie}/${parsed.stad}`),
+    ),
+  ).map(s => ({
     url: `https://saldeerscan.nl${s}`,
     lastModified: now,
     changeFrequency: 'monthly' as const,
     priority: 0.86,
   }))
 
-  const wijkUrls = pages.map(p => ({
+  const wijkUrls = pages
+    .filter(p => parsePublishedWijkSlug(p.slug) !== null)
+    .map(p => ({
     url: `https://saldeerscan.nl${p.slug}`,
     lastModified: p.generated_at ? new Date(p.generated_at) : now,
     changeFrequency: 'monthly' as const,

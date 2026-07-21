@@ -24,7 +24,7 @@ type Params = { provincie: string; stad: string }
 
 export async function generateStaticParams() {
   try {
-    const stads = await getTopStadden(200)
+    const stads = await getTopStadden(0)
     return stads.map(item => ({ provincie: item.provincie, stad: item.stad }))
   } catch {
     return []

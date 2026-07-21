@@ -68,6 +68,14 @@ for (const path of ['/check', '/kennisbank', '/nieuws', '/privacy']) {
   })
 }
 
+test('/check heeft canonieke URL', async ({ page }) => {
+  await page.goto('/check')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://saldeerscan.nl/check',
+  )
+})
+
 test('straatroute behoudt conversie, kruimelpad en FAQ-filtering', async ({ page }) => {
   for (const wijkPath of wijkRoutesWithSampleStreets) {
     const wijkResponse = await page.goto(wijkPath)

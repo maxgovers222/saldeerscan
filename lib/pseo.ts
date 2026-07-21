@@ -2,6 +2,7 @@ import 'server-only'
 import { unstable_cache } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { toDisplaySlug } from '@/lib/pseo-hubs'
+import { parsePublishedWijkSlug } from '@/lib/pseo-slug'
 import {
   alignPseoSavingsCopy,
   buildWijkSeoDescription,
@@ -24,8 +25,6 @@ const PSEO_FETCH_REVALIDATE = 604800
 function slugPrefixStad(provincie: string, stad: string) {
   return `/${provincie}/${stad}/`
 }
-
-const WIJK_SLUG_REGEX = /^[a-z][a-z-]*[a-z]$/
 
 export interface PseoPageData {
   slug: string
@@ -199,11 +198,9 @@ export const getTopWijken = unstable_cache(
       .limit(limit)
     const out: { provincie: string; stad: string; wijk: string }[] = []
     for (const row of data ?? []) {
-      const parts = (row.slug as string).split('/').filter(Boolean)
-      if (parts.length !== 3) continue
-      const [provincie, stad, wijk] = parts
-      if (!provincie || !stad || !wijk || !WIJK_SLUG_REGEX.test(wijk)) continue
-      out.push({ provincie, stad, wijk })
+      const parsed = parsePublishedWijkSlug(row.slug as string)
+      if (!parsed) continue
+      out.push(parsed)
     }
     return out
   },
@@ -220,8 +217,8 @@ export async function getPseoPagesByProvincie(provincie: string) {
     .is('straat', null)
     .not('wijk', 'is', null)
   return (data ?? []).filter((row) => {
-    const parts = row.slug.split('/').filter(Boolean)
-    return parts.length === 3 && parts[0] === provincie
+    const parsed = parsePublishedWijkSlug(row.slug)
+    return parsed !== null && parsed.provincie === provincie
   })
 }
 
@@ -252,17 +249,11 @@ export const getWijkenByStad = unstable_cache(
       .order('aantal_woningen', { ascending: false, nullsFirst: false })
     return (data ?? [])
       .filter((row) => {
-        const parts = row.slug.split('/').filter(Boolean)
-        if (parts.length !== 3) return false
-        const wijkSlug = parts[2]
-        return (
-          parts[0] === provincie
-          && parts[1] === stad
-          && WIJK_SLUG_REGEX.test(wijkSlug)
-        )
+        const parsed = parsePublishedWijkSlug(row.slug)
+        return parsed !== null && parsed.provincie === provincie && parsed.stad === stad
       })
       .map((row) => {
-        const wijk = row.slug.split('/').filter(Boolean)[2] as string
+        const wijk = parsePublishedWijkSlug(row.slug)!.wijk
         return {
           wijk,
           gem_bouwjaar: row.gem_bouwjaar,
@@ -289,10 +280,9 @@ export const getStaddenByProvincie = unstable_cache(
 
     const map = new Map<string, number>()
     for (const row of data) {
-      const parts = row.slug.split('/').filter(Boolean)
-      if (parts.length !== 3 || parts[0] !== provincie) continue
-      const stad = parts[1]
-      map.set(stad, (map.get(stad) ?? 0) + (row.aantal_woningen ?? 0))
+      const parsed = parsePublishedWijkSlug(row.slug)
+      if (!parsed || parsed.provincie !== provincie) continue
+      map.set(parsed.stad, (map.get(parsed.stad) ?? 0) + (row.aantal_woningen ?? 0))
     }
     return Array.from(map.entries())
       .map(([stad, totalWoningen]) => ({ stad, totalWoningen }))
@@ -455,8 +445,8 @@ export function getProvincieHubStats(provincie: string) {
           .eq('status', 'published'),
       ])
       const wijkCount = (data ?? []).filter((row) => {
-        const parts = row.slug.split('/').filter(Boolean)
-        return parts.length === 3 && parts[0] === provincie
+        const parsed = parsePublishedWijkSlug(row.slug)
+        return parsed !== null && parsed.provincie === provincie
       }).length
       return { stadCount: stads.length, wijkCount }
     },
@@ -477,21 +467,19 @@ export const getTopStadden = unstable_cache(
 
     const map = new Map<string, { provincie: string; totalWoningen: number }>()
     for (const row of data) {
-      const parts = row.slug.split('/').filter(Boolean)
-      if (parts.length !== 3) continue
-      const [provincie, stad] = parts
-      if (!stad) continue
-      const key = `${provincie}/${stad}`
+      const parsed = parsePublishedWijkSlug(row.slug)
+      if (!parsed) continue
+      const key = `${parsed.provincie}/${parsed.stad}`
       const prev = map.get(key)
       map.set(key, {
-        provincie,
+        provincie: parsed.provincie,
         totalWoningen: (prev?.totalWoningen ?? 0) + (row.aantal_woningen ?? 0),
       })
     }
     return Array.from(map.entries())
       .map(([key, val]) => ({ stad: key.split('/')[1]!, provincie: val.provincie, totalWoningen: val.totalWoningen }))
       .sort((a, b) => b.totalWoningen - a.totalWoningen)
-      .slice(0, limit)
+      .slice(0, limit > 0 ? limit : undefined)
   },
   ['pseo', 'topStadden'],
   { revalidate: PSEO_FETCH_REVALIDATE }

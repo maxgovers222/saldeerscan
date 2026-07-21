@@ -7,6 +7,25 @@ import {
 
 export const INDEXING_BASE_URL = 'https://saldeerscan.nl'
 
+/**
+ * Wijken met meetbare GSC-impressies (jul 2026).
+ * Altijd vóór rotatie, na `INDEXING_PRIORITY_PATHS` uit env.
+ */
+export const INDEXING_DEFAULT_PRIORITY_PATHS = [
+  '/limburg/sittard-geleen/born',
+  '/overijssel/dalfsen/dalfsen',
+  '/zuid-holland/rotterdam/ijsselmonde',
+  '/noord-brabant/helmond/brouwhuis',
+  '/noord-holland/zaanstad/zaandam-west',
+  '/noord-brabant/meierijstad/veghel',
+  '/noord-holland/hilversum/oost',
+  '/gelderland/arnhem/malburgen-oost-noord',
+  '/utrecht/utrecht/leidsche-rijn',
+  '/noord-brabant/bergen-op-zoom/bergen-op-zoom',
+  '/flevoland/almere/almere-buiten',
+  '/noord-holland/amsterdam/centrum',
+] as const
+
 export const INDEXING_HUB_URLS = [
   `${INDEXING_BASE_URL}`,
   `${INDEXING_BASE_URL}/check`,
@@ -54,7 +73,20 @@ function extraHubUrls(): string[] {
 
 /** Handmatige GSC- of campagne-paden: krijgen voorrang in de dynamische batch (na vaste hubs). */
 function priorityPathUrls(): string[] {
-  return parseCommaPaths(process.env.INDEXING_PRIORITY_PATHS).map(p => `${INDEXING_BASE_URL}${p}`)
+  const paths = [
+    ...parseCommaPaths(process.env.INDEXING_PRIORITY_PATHS),
+    ...INDEXING_DEFAULT_PRIORITY_PATHS,
+  ]
+  const seen = new Set<string>()
+  const urls: string[] = []
+  for (const raw of paths) {
+    const path = raw.startsWith('/') ? raw : `/${raw}`
+    const url = `${INDEXING_BASE_URL}${path}`
+    if (seen.has(url)) continue
+    seen.add(url)
+    urls.push(url)
+  }
+  return urls
 }
 
 function hubUrlList(): string[] {
