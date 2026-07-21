@@ -2,6 +2,8 @@
 
 import {
   Document,
+  Font,
+  Link,
   Page,
   StyleSheet,
   Text,
@@ -11,18 +13,65 @@ import { PdfBrandMark } from '@/components/report/PdfBrandMark'
 import { BRAND_COLORS, BRAND_WORDMARK } from '@/lib/brand-colors'
 import type { NormalizedReport } from '@/lib/report-model'
 
+const fontSource = (filename: string) => typeof window === 'undefined'
+  ? `${process.cwd().replace(/\\/g, '/')}/public/fonts/${filename}`
+  : `/fonts/${filename}`
+
+Font.register({
+  family: 'Bricolage Grotesque',
+  fonts: [
+    { src: fontSource('BricolageGrotesque-Bold.ttf'), fontWeight: 700 },
+  ],
+})
+
+Font.register({
+  family: 'DM Sans',
+  fonts: [
+    { src: fontSource('DMSans-Regular.ttf'), fontWeight: 400 },
+    { src: fontSource('DMSans-SemiBold.ttf'), fontWeight: 600 },
+    { src: fontSource('DMSans-Bold.ttf'), fontWeight: 700 },
+  ],
+})
+
+Font.registerHyphenationCallback(word => [word])
+
 const S = StyleSheet.create({
   page: {
     backgroundColor: BRAND_COLORS.paper,
     color: BRAND_COLORS.ink,
-    fontFamily: 'Helvetica',
+    fontFamily: 'DM Sans',
     fontSize: 9,
     paddingBottom: 48,
   },
   header: {
     backgroundColor: BRAND_COLORS.evergreen950,
     paddingHorizontal: 34,
-    paddingVertical: 24,
+    paddingVertical: 21,
+  },
+  continuationHeader: {
+    alignItems: 'center',
+    backgroundColor: BRAND_COLORS.evergreen950,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 34,
+    paddingVertical: 15,
+  },
+  continuationMeta: {
+    alignItems: 'flex-end',
+    maxWidth: '55%',
+  },
+  continuationLabel: {
+    color: BRAND_COLORS.onEvergreenMuted,
+    fontSize: 6.5,
+    fontWeight: 600,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
+  continuationAddress: {
+    color: BRAND_COLORS.onEvergreen,
+    fontSize: 8,
+    marginTop: 3,
+    textAlign: 'right',
   },
   brandRow: {
     alignItems: 'center',
@@ -31,7 +80,8 @@ const S = StyleSheet.create({
   },
   brand: {
     color: BRAND_COLORS.onEvergreen,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Bricolage Grotesque',
+    fontWeight: 700,
     fontSize: 18,
   },
   brandSuffix: {
@@ -39,6 +89,7 @@ const S = StyleSheet.create({
   },
   eyebrow: {
     color: BRAND_COLORS.onEvergreenMuted,
+    fontWeight: 600,
     fontSize: 7,
     letterSpacing: 1.6,
     marginTop: 5,
@@ -46,8 +97,9 @@ const S = StyleSheet.create({
   },
   headerTitle: {
     color: BRAND_COLORS.onEvergreen,
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 15,
+    fontFamily: 'Bricolage Grotesque',
+    fontWeight: 700,
+    fontSize: 18,
     marginTop: 11,
   },
   headerMeta: {
@@ -67,11 +119,11 @@ const S = StyleSheet.create({
     paddingVertical: 9,
   },
   deadlineStrong: {
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
   },
   body: {
     paddingHorizontal: 34,
-    paddingTop: 24,
+    paddingTop: 20,
   },
   section: {
     marginBottom: 18,
@@ -85,21 +137,10 @@ const S = StyleSheet.create({
   },
   sectionTitle: {
     color: BRAND_COLORS.ink,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Bricolage Grotesque',
+    fontWeight: 700,
     fontSize: 13,
     marginBottom: 9,
-  },
-  addressCard: {
-    backgroundColor: BRAND_COLORS.mist,
-    borderColor: BRAND_COLORS.border,
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-  },
-  address: {
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
   },
   muted: {
     color: BRAND_COLORS.inkMuted,
@@ -124,13 +165,14 @@ const S = StyleSheet.create({
   },
   metricLabel: {
     color: BRAND_COLORS.inkMuted,
+    fontWeight: 600,
     fontSize: 6.5,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   metricValue: {
     color: BRAND_COLORS.ink,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Courier-Bold',
     fontSize: 17,
     marginTop: 6,
   },
@@ -156,13 +198,14 @@ const S = StyleSheet.create({
   },
   impactLabel: {
     color: BRAND_COLORS.warning,
+    fontWeight: 600,
     fontSize: 7,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   impactValue: {
     color: BRAND_COLORS.warning,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Courier-Bold',
     fontSize: 23,
     marginTop: 5,
   },
@@ -172,32 +215,83 @@ const S = StyleSheet.create({
     lineHeight: 1.45,
     marginTop: 5,
   },
-  timeline: {
+  adviceBox: {
+    backgroundColor: BRAND_COLORS.trustSurface,
+    borderColor: BRAND_COLORS.trust,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  adviceText: {
+    color: BRAND_COLORS.inkMuted,
+    fontSize: 8,
+    lineHeight: 1.45,
+    marginTop: 4,
+  },
+  impactPanel: {
+    backgroundColor: BRAND_COLORS.paper,
+    borderColor: BRAND_COLORS.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
+  },
+  impactStats: {
     flexDirection: 'row',
-    gap: 7,
+    gap: 28,
+    marginBottom: 12,
+  },
+  impactStatLabel: {
+    color: BRAND_COLORS.inkMuted,
+    fontSize: 6.5,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  impactStatValue: {
+    color: BRAND_COLORS.ink,
+    fontFamily: 'Courier-Bold',
+    fontSize: 10,
+    marginTop: 3,
+  },
+  subsectionTitle: {
+    color: BRAND_COLORS.ink,
+    fontWeight: 600,
+    fontSize: 9,
+    marginBottom: 7,
+  },
+  timeline: {
+    gap: 6,
   },
   timelineItem: {
     alignItems: 'center',
-    backgroundColor: BRAND_COLORS.mist,
-    borderColor: BRAND_COLORS.border,
-    borderRadius: 6,
-    borderWidth: 1,
-    flex: 1,
-    paddingVertical: 9,
-  },
-  timelineItemFinal: {
-    backgroundColor: BRAND_COLORS.dangerSurface,
-    borderColor: BRAND_COLORS.dangerBorder,
+    flexDirection: 'row',
   },
   timelineYear: {
     color: BRAND_COLORS.inkMuted,
+    fontFamily: 'Courier',
     fontSize: 7,
+    width: 34,
+  },
+  timelineTrack: {
+    backgroundColor: BRAND_COLORS.border,
+    borderRadius: 4,
+    flex: 1,
+    height: 6,
+    overflow: 'hidden',
+  },
+  timelineFill: {
+    backgroundColor: BRAND_COLORS.action,
+    borderRadius: 4,
+    height: 6,
   },
   timelinePct: {
     color: BRAND_COLORS.ink,
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 13,
-    marginTop: 3,
+    fontFamily: 'Courier-Bold',
+    fontSize: 7,
+    textAlign: 'right',
+    width: 32,
   },
   timelinePctFinal: {
     color: BRAND_COLORS.danger,
@@ -219,8 +313,9 @@ const S = StyleSheet.create({
   },
   recommendationTitle: {
     color: BRAND_COLORS.trustDark,
-    fontFamily: 'Helvetica-Bold',
-    fontSize: 12,
+    fontFamily: 'Bricolage Grotesque',
+    fontWeight: 700,
+    fontSize: 13,
     marginBottom: 5,
   },
   paragraph: {
@@ -246,7 +341,7 @@ const S = StyleSheet.create({
   },
   rowValue: {
     color: BRAND_COLORS.ink,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     fontSize: 8,
     maxWidth: '55%',
     textAlign: 'right',
@@ -257,7 +352,7 @@ const S = StyleSheet.create({
   gridBadge: {
     alignSelf: 'flex-start',
     borderRadius: 5,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     fontSize: 8,
     marginBottom: 7,
     paddingHorizontal: 9,
@@ -276,31 +371,33 @@ const S = StyleSheet.create({
     color: BRAND_COLORS.danger,
   },
   tableHeader: {
-    backgroundColor: BRAND_COLORS.evergreen900,
-    color: BRAND_COLORS.onEvergreen,
+    borderBottomColor: BRAND_COLORS.border,
+    borderBottomWidth: 1,
+    color: BRAND_COLORS.inkMuted,
     flexDirection: 'row',
-    paddingHorizontal: 10,
+    paddingHorizontal: 2,
     paddingVertical: 7,
   },
   tableHeaderCell: {
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 600,
     fontSize: 7,
   },
   tableRow: {
     borderBottomColor: BRAND_COLORS.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
-    paddingHorizontal: 10,
+    paddingHorizontal: 2,
     paddingVertical: 8,
   },
   scenarioName: {
     color: BRAND_COLORS.ink,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 600,
     fontSize: 7.5,
     width: '28%',
   },
   scenarioValue: {
     color: BRAND_COLORS.ink,
+    fontFamily: 'Courier',
     fontSize: 7.5,
     textAlign: 'right',
     width: '24%',
@@ -317,7 +414,7 @@ const S = StyleSheet.create({
   },
   technicalTitle: {
     color: BRAND_COLORS.ink,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 600,
     fontSize: 9,
     marginBottom: 5,
   },
@@ -328,7 +425,7 @@ const S = StyleSheet.create({
   },
   bullet: {
     color: BRAND_COLORS.trustDark,
-    fontFamily: 'Helvetica-Bold',
+    fontWeight: 700,
     fontSize: 8,
   },
   bulletText: {
@@ -337,16 +434,30 @@ const S = StyleSheet.create({
     fontSize: 8,
     lineHeight: 1.4,
   },
-  disclaimer: {
-    backgroundColor: BRAND_COLORS.warningSurface,
-    borderColor: BRAND_COLORS.warningBorder,
+  stepRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 7,
+    marginBottom: 6,
+  },
+  stepNumber: {
+    alignItems: 'center',
+    backgroundColor: BRAND_COLORS.trustSurface,
     borderRadius: 7,
-    borderWidth: 1,
-    color: BRAND_COLORS.warningInk,
-    fontSize: 7.5,
-    lineHeight: 1.45,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
+    color: BRAND_COLORS.trustDark,
+    fontFamily: 'Courier-Bold',
+    fontSize: 7,
+    height: 14,
+    justifyContent: 'center',
+    textAlign: 'center',
+    width: 14,
+  },
+  methodLink: {
+    color: BRAND_COLORS.trustDark,
+    fontSize: 8,
+    fontWeight: 600,
+    marginTop: 7,
+    textDecoration: 'none',
   },
   footer: {
     alignItems: 'center',
@@ -364,7 +475,16 @@ const S = StyleSheet.create({
   },
   footerBrand: {
     color: BRAND_COLORS.trust,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Bricolage Grotesque',
+    fontWeight: 700,
+  },
+  technicalEmpty: {
+    backgroundColor: BRAND_COLORS.mist,
+    borderColor: BRAND_COLORS.border,
+    borderRadius: 7,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
 })
 
@@ -385,27 +505,39 @@ function reportDate(value: string): string {
   }).format(new Date(value))
 }
 
-function Header({ report, subtitle }: { report: NormalizedReport; subtitle: string }) {
+function Header({ report, contextLabel }: { report: NormalizedReport; contextLabel: string }) {
   return (
-    <>
-      <View style={S.header}>
-        <View style={S.brandRow}>
-          <PdfBrandMark />
-          <Text style={S.brand}>
-            {BRAND_WORDMARK.name}
-            <Text style={S.brandSuffix}>{BRAND_WORDMARK.suffix}</Text>
-          </Text>
-        </View>
-        <Text style={S.eyebrow}>Persoonlijk 2027-rapport</Text>
-        <Text style={S.headerTitle}>{subtitle}</Text>
-        <Text style={S.headerMeta}>{report.home.address || 'Adres niet beschikbaar'}</Text>
-        <Text style={S.headerMeta}>Gegenereerd op {reportDate(report.generatedAt)} - model v{report.version}</Text>
+    <View style={S.header} wrap={false}>
+      <View style={S.brandRow}>
+        <PdfBrandMark />
+        <Text style={S.brand}>
+          {BRAND_WORDMARK.name}
+          <Text style={S.brandSuffix}>{BRAND_WORDMARK.suffix}</Text>
+        </Text>
       </View>
-      <View style={S.deadline}>
-        <Text style={S.deadlineStrong}>Deadline 1 januari 2027:</Text>
-        <Text>de salderingsregeling stopt volledig.</Text>
+      <Text style={S.eyebrow}>{contextLabel}</Text>
+      <Text style={S.headerTitle}>Uw SaldeerScan rapport</Text>
+      <Text style={S.headerMeta}>{report.home.address || 'Adres niet beschikbaar'}</Text>
+      <Text style={S.headerMeta}>Gegenereerd op {reportDate(report.generatedAt)} - model v{report.version}</Text>
+    </View>
+  )
+}
+
+function ContinuationHeader({ report }: { report: NormalizedReport }) {
+  return (
+    <View style={S.continuationHeader} wrap={false}>
+      <View style={S.brandRow}>
+        <PdfBrandMark size={20} />
+        <Text style={[S.brand, { fontSize: 14 }]}>
+          {BRAND_WORDMARK.name}
+          <Text style={S.brandSuffix}>{BRAND_WORDMARK.suffix}</Text>
+        </Text>
       </View>
-    </>
+      <View style={S.continuationMeta}>
+        <Text style={S.continuationLabel}>Advies en technisch dossier</Text>
+        <Text style={S.continuationAddress}>{report.home.address || 'Persoonlijk rapport'}</Text>
+      </View>
+    </View>
   )
 }
 
@@ -467,32 +599,44 @@ function TechnicalCards({ report }: { report: NormalizedReport }) {
   const hasMeterkast = meterkast && typeof meterkast.geschikt === 'boolean'
   const hasPlaatsing = plaatsing && typeof plaatsing.geschiktheidScore === 'number'
   const hasOmvormer = omvormer && typeof omvormer.hybrideKlaar === 'boolean'
+
+  if (!hasMeterkast && !hasPlaatsing && !hasOmvormer) {
+    return (
+      <View style={S.technicalEmpty}>
+        <Text style={S.technicalTitle}>Geen fotoscans toegevoegd</Text>
+        <Text style={S.paragraph}>
+          Dit rapport gebruikt de beschikbare woning-, stroomnet- en rekengegevens. Technische geschiktheid wordt altijd op locatie gevalideerd.
+        </Text>
+      </View>
+    )
+  }
+
   return (
     <View style={S.twoColumn}>
-      <View style={S.technicalCard}>
-        <Text style={S.technicalTitle}>Meterkastscan</Text>
-        <Text style={S.paragraph}>
-          {hasMeterkast
-            ? `${meterkast.merk ?? 'Merk onbekend'} - ${meterkast.drieFase ? '3-fasen' : '1-fase'} - ${meterkast.vrijeGroepen} vrije groepen - ${meterkast.geschikt ? 'geschikt' : 'aanpassing aanbevolen'}`
-            : 'Niet toegevoegd'}
-        </Text>
-      </View>
-      <View style={S.technicalCard}>
-        <Text style={S.technicalTitle}>Plaatsingsscan</Text>
-        <Text style={S.paragraph}>
-          {hasPlaatsing
-            ? `Foto-indicatie ${plaatsing.geschiktheidScore}/10 - ${plaatsing.nenCompliant ? 'geen directe aandachtspunten zichtbaar' : 'controle op locatie aanbevolen'}`
-            : 'Niet toegevoegd'}
-        </Text>
-      </View>
-      <View style={S.technicalCard}>
-        <Text style={S.technicalTitle}>Omvormerscan</Text>
-        <Text style={S.paragraph}>
-          {hasOmvormer
-            ? `${[omvormer.merk, omvormer.model].filter(Boolean).join(' ') || 'Model onbekend'} - ${omvormer.hybrideKlaar ? 'hybride-klaar' : 'niet hybride-klaar'}`
-            : 'Niet toegevoegd'}
-        </Text>
-      </View>
+      {hasMeterkast && (
+        <View style={S.technicalCard}>
+          <Text style={S.technicalTitle}>Meterkastscan</Text>
+          <Text style={S.paragraph}>
+            {meterkast.merk ?? 'Merk onbekend'} - {meterkast.drieFase ? '3-fasen' : '1-fase'} - {meterkast.vrijeGroepen} vrije groepen - {meterkast.geschikt ? 'geschikt' : 'aanpassing aanbevolen'}
+          </Text>
+        </View>
+      )}
+      {hasPlaatsing && (
+        <View style={S.technicalCard}>
+          <Text style={S.technicalTitle}>Plaatsingsscan</Text>
+          <Text style={S.paragraph}>
+            Foto-indicatie {plaatsing.geschiktheidScore}/10 - {plaatsing.nenCompliant ? 'geen directe aandachtspunten zichtbaar' : 'controle op locatie aanbevolen'}
+          </Text>
+        </View>
+      )}
+      {hasOmvormer && (
+        <View style={S.technicalCard}>
+          <Text style={S.technicalTitle}>Omvormerscan</Text>
+          <Text style={S.paragraph}>
+            {[omvormer.merk, omvormer.model].filter(Boolean).join(' ') || 'Model onbekend'} - {omvormer.hybrideKlaar ? 'hybride-klaar' : 'niet hybride-klaar'}
+          </Text>
+        </View>
+      )}
     </View>
   )
 }
@@ -504,13 +648,9 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
     ? [S.gridBadge, S.gridRed]
     : report.grid.status === 'ORANJE'
       ? [S.gridBadge, S.gridOrange]
-      : [S.gridBadge, S.gridGreen]
-  const homeDetails = [
-    report.home.housingType,
-    report.home.buildYear === null ? null : `Bouwjaar ${report.home.buildYear}`,
-    report.home.surfaceM2 === null ? null : `${report.home.surfaceM2} m²`,
-    report.home.postcode,
-  ].filter(Boolean).join(' - ')
+      : report.grid.status === 'GROEN'
+        ? [S.gridBadge, S.gridGreen]
+        : null
   const scenarios = existing
     ? [
         {
@@ -552,34 +692,62 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
           paybackYears: report.scenarios.waitUntil2027.terugverdientijdJaar,
         },
       ]
+  const recommendationRows = [
+    {
+      label: existing ? 'Huidige installatie' : 'Configuratie',
+      value: existing
+        ? `${recommendation.existingPanelCount ?? 'Onbekend'} panelen`
+        : `${recommendation.panelCount} zonnepanelen`,
+    },
+    {
+      label: 'Batterij',
+      value: recommendation.batteryCapacityKwh === null
+        ? 'Niet geadviseerd'
+        : `${recommendation.batteryCapacityKwh} kWh`,
+    },
+    { label: 'Investering', value: money(recommendation.investmentEur) },
+    { label: 'Opbrengst', value: `${number(recommendation.productionKwh)} kWh/jaar` },
+    { label: 'Verbruik', value: `${number(recommendation.consumptionKwh)} kWh/jaar` },
+    { label: 'Eigen gebruik', value: `${recommendation.ownUsePct}%` },
+    ...(recommendation.isdeAmountEur > 0
+      ? [{ label: 'Indicatieve ISDE-bijdrage', value: money(recommendation.isdeAmountEur) }]
+      : []),
+  ]
+  const homeRows = [
+    report.home.housingType ? { label: 'Woningtype', value: report.home.housingType } : null,
+    report.home.buildYear === null ? null : { label: 'Bouwjaar', value: String(report.home.buildYear) },
+    report.home.surfaceM2 === null ? null : { label: 'Woonoppervlak', value: `${report.home.surfaceM2} m²` },
+    report.home.roofSurfaceM2 === null ? null : { label: 'Dakoppervlak', value: `${report.home.roofSurfaceM2} m²` },
+    report.grid.operator ? { label: 'Netbeheerder', value: report.grid.operator } : null,
+  ].filter((row): row is { label: string; value: string } => row !== null)
+  const qualificationRows = [
+    report.qualification.isEigenaar === null
+      ? null
+      : { label: 'Woningeigenaar', value: report.qualification.isEigenaar ? 'Ja' : 'Nee' },
+    report.qualification.heeftPanelen === null
+      ? null
+      : { label: 'Bestaande panelen', value: report.qualification.heeftPanelen ? 'Ja' : 'Nee' },
+    report.qualification.huidigePanelenAantal === null
+      ? null
+      : { label: 'Aantal bestaande panelen', value: String(report.qualification.huidigePanelenAantal) },
+  ].filter((row): row is { label: string; value: string } => row !== null)
 
   return (
     <Document title="SaldeerScan - Persoonlijk 2027-rapport" author="SaldeerScan.nl">
       <Page size="A4" style={S.page}>
-        <Header report={report} subtitle="Uw woning en financiële impact" />
+        <Header report={report} contextLabel="Persoonlijk 2027-rapport" />
+        <View style={S.deadline}>
+          <Text style={S.deadlineStrong}>Deadline 1 januari 2027:</Text>
+          <Text>de salderingsregeling stopt volledig.</Text>
+        </View>
         <View style={S.body}>
-          <View style={S.section} wrap={false}>
-            <Text style={S.sectionEyebrow}>Uw woning</Text>
-            <View style={S.addressCard}>
-              <Text style={S.address}>{report.home.address || 'Adres niet beschikbaar'}</Text>
-              <Text style={S.muted}>{homeDetails || 'Woningdetails niet beschikbaar'}</Text>
-            </View>
-          </View>
-
           <View style={S.impactBox} wrap={false}>
             <Text style={S.impactLabel}>Mogelijk verlies vanaf 2027</Text>
             <Text style={S.impactValue}>-{money(report.impact.annualLossEur)} per jaar</Text>
-            <Text style={S.impactText}>
-              {report.impact.explanation} Per maand is dit {money(report.impact.monthlyLossEur)} en over vijf jaar {money(report.impact.fiveYearLossEur)}.
-            </Text>
+            <Text style={S.impactText}>{report.impact.explanation}</Text>
           </View>
 
           <View style={S.metricRow} wrap={false}>
-            <Metric
-              label="Woning-score"
-              value={report.summary.healthScore === null ? 'Niet beschikbaar' : `${report.summary.healthScore}/100`}
-              detail={report.summary.healthLabel ?? 'Geen scorelabel'}
-            />
             <Metric
               label={existing ? 'Extra opslagvoordeel vanaf 2027' : 'Mogelijke besparing'}
               value={`${money(report.summary.annualSavingEur)}/jaar`}
@@ -591,77 +759,51 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
               value={report.summary.paybackYears === null ? 'Nader te bepalen' : `${report.summary.paybackYears} jaar`}
               detail={existing ? 'Batterij-upgrade' : 'Nieuwe installatie'}
             />
+            <Metric
+              label="Woning-score"
+              value={report.summary.healthScore === null ? 'Niet beschikbaar' : `${report.summary.healthScore}/100`}
+              detail={report.summary.healthLabel ?? 'Nog niet bepaald'}
+            />
           </View>
 
-          <View style={S.section} wrap={false}>
-            <Text style={S.sectionEyebrow}>Einde salderen</Text>
-            <Text style={S.sectionTitle}>100% tot en met 2026, daarna stopt salderen</Text>
-            <View style={S.timeline}>
-              {report.salderingTimeline.map((item, index) => {
-                const final = index === report.salderingTimeline.length - 1
-                return (
-                  <View key={item.year} style={final ? [S.timelineItem, S.timelineItemFinal] : S.timelineItem}>
-                    <Text style={S.timelineYear}>{item.year}</Text>
-                    <Text style={final ? [S.timelinePct, S.timelinePctFinal] : S.timelinePct}>{item.compensationPct}%</Text>
-                  </View>
-                )
-              })}
-            </View>
+          <View style={S.adviceBox} wrap={false}>
+            <Text style={S.sectionEyebrow}>Ons advies</Text>
+            <Text style={S.recommendationTitle}>{recommendation.primarySolution}</Text>
+            <Text style={S.adviceText}>
+              {existing
+                ? `${recommendation.existingPanelCount ?? 'Uw'} bestaande panelen blijven onderdeel van uw installatie${recommendation.batteryCapacityKwh === null ? '.' : `, aangevuld met een ${recommendation.batteryCapacityKwh} kWh batterij.`}`
+                : `Een configuratie met ${recommendation.panelCount} zonnepanelen${recommendation.batteryCapacityKwh === null ? '.' : ` en een ${recommendation.batteryCapacityKwh} kWh batterij.`}`}
+            </Text>
           </View>
 
-          <View style={S.twoColumn}>
-            <View style={[S.column, S.card]} wrap={false}>
-              <Text style={S.sectionEyebrow}>Geadviseerde configuratie</Text>
-              <Text style={S.recommendationTitle}>{recommendation.primarySolution}</Text>
-              <Text style={S.paragraph}>{recommendation.explanation}</Text>
-              <View style={{ marginTop: 7 }}>
-                <DataRow
-                  label={existing ? 'Huidige installatie' : 'Panelen'}
-                  value={existing
-                    ? `${recommendation.existingPanelCount ?? 'Onbekend'} panelen`
-                    : `${recommendation.panelCount} panelen`}
-                />
-                <DataRow
-                  label="Batterij"
-                  value={recommendation.batteryCapacityKwh === null
-                    ? 'Niet geadviseerd'
-                    : `${recommendation.batteryCapacityKwh} kWh`}
-                />
-                <DataRow label="Investering" value={money(recommendation.investmentEur)} />
-                {recommendation.batteryCapacityKwh !== null && recommendation.extraAnnualSavingEur !== null && (
-                  <DataRow label="Extra besparing opslag" value={`${money(recommendation.extraAnnualSavingEur)}/jaar`} positive />
-                )}
-                <DataRow
-                  label="ISDE zonnepanelen/batterij"
-                  value={recommendation.isdeAmountEur > 0
-                    ? money(recommendation.isdeAmountEur)
-                    : 'Niet van toepassing'}
-                  last
-                />
+          <View style={S.impactPanel} wrap={false}>
+            <Text style={S.sectionTitle}>Impact vanaf 2027</Text>
+            <View style={S.impactStats}>
+              <View>
+                <Text style={S.impactStatLabel}>Per maand</Text>
+                <Text style={S.impactStatValue}>{money(report.impact.monthlyLossEur)}</Text>
+              </View>
+              <View>
+                <Text style={S.impactStatLabel}>Over vijf jaar</Text>
+                <Text style={S.impactStatValue}>{money(report.impact.fiveYearLossEur)}</Text>
               </View>
             </View>
-
-            <View style={[S.column, S.card]} wrap={false}>
-              <Text style={S.sectionEyebrow}>Woning en stroomnet</Text>
-              <Text style={gridBadgeStyle}>{report.grid.status ?? 'Status niet beschikbaar'}</Text>
-              <DataRow label="Netbeheerder" value={report.grid.operator ?? 'Niet beschikbaar'} />
-              <DataRow label="Dakoppervlak" value={report.home.roofSurfaceM2 === null ? 'Niet beschikbaar' : `${report.home.roofSurfaceM2} m²`} />
-              <DataRow label="Verbruik" value={`${number(recommendation.consumptionKwh)} kWh/jaar`} />
-              <DataRow label="Productie" value={`${number(recommendation.productionKwh)} kWh/jaar`} />
-              <DataRow label="Eigen gebruik" value={`${recommendation.ownUsePct}%`} last />
-              {report.grid.explanation && <Text style={S.muted}>{report.grid.explanation}</Text>}
+            <Text style={S.subsectionTitle}>Einde salderen</Text>
+            <View style={S.timeline}>
+              {report.salderingTimeline.map(item => (
+                <View key={item.year} style={S.timelineItem}>
+                  <Text style={S.timelineYear}>{item.year}</Text>
+                  <View style={S.timelineTrack}>
+                    <View style={[S.timelineFill, { width: `${Math.max(item.compensationPct, 2)}%` }]} />
+                  </View>
+                  <Text style={item.compensationPct === 0 ? [S.timelinePct, S.timelinePctFinal] : S.timelinePct}>
+                    {item.compensationPct}%
+                  </Text>
+                </View>
+              ))}
             </View>
-          </View>
-        </View>
-        <Footer page={1} />
-      </Page>
 
-      <Page size="A4" style={S.page}>
-        <Header report={report} subtitle="Scenario's en technisch dossier" />
-        <View style={S.body}>
-          <View style={S.section} wrap={false}>
-            <Text style={S.sectionEyebrow}>Scenariovergelijking</Text>
-            <Text style={S.sectionTitle}>Dezelfde cijfers als uw web- en e-mailrapport</Text>
+            <Text style={[S.subsectionTitle, { marginTop: 13 }]}>Scenariovergelijking</Text>
             <View style={S.tableHeader}>
               <Text style={[S.tableHeaderCell, { width: '28%' }]}>Scenario</Text>
               <Text style={[S.tableHeaderCell, { textAlign: 'right', width: '24%' }]}>Besparing/jaar</Text>
@@ -676,15 +818,56 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
                 <Text style={S.scenarioValue}>
                   {scenario.paybackYears !== null && Number.isFinite(scenario.paybackYears)
                     ? `${scenario.paybackYears} jaar`
-                    : 'Niet beschikbaar'}
+                    : '-'}
                 </Text>
               </View>
             ))}
           </View>
+        </View>
+        <Footer page={1} />
+      </Page>
+
+      <Page size="A4" style={S.page}>
+        <ContinuationHeader report={report} />
+        <View style={S.body}>
+          <View style={[S.twoColumn, S.section]}>
+            <View style={[S.column, S.card]} wrap={false}>
+              <Text style={S.sectionEyebrow}>Geadviseerde configuratie</Text>
+              <Text style={S.recommendationTitle}>{recommendation.primarySolution}</Text>
+              <Text style={S.paragraph}>{recommendation.explanation}</Text>
+              <View style={{ marginTop: 7 }}>
+                {recommendationRows.map((row, index) => (
+                  <DataRow
+                    key={row.label}
+                    label={row.label}
+                    value={row.value}
+                    last={index === recommendationRows.length - 1}
+                  />
+                ))}
+              </View>
+              {recommendation.batteryCapacityKwh !== null && recommendation.extraAnnualSavingEur !== null && (
+                <Text style={[S.adviceText, { color: BRAND_COLORS.trustDark }]}>Opslagvoordeel: {money(recommendation.extraAnnualSavingEur)} per jaar.</Text>
+              )}
+            </View>
+
+            <View style={[S.column, S.card]} wrap={false}>
+              <Text style={S.sectionEyebrow}>Woning en stroomnet</Text>
+              {gridBadgeStyle && report.grid.status && <Text style={gridBadgeStyle}>{report.grid.status}</Text>}
+              {homeRows.map((row, index) => (
+                <DataRow
+                  key={row.label}
+                  label={row.label}
+                  value={row.value}
+                  last={index === homeRows.length - 1}
+                />
+              ))}
+              {report.grid.explanation && <Text style={S.muted}>{report.grid.explanation}</Text>}
+            </View>
+          </View>
 
           <View style={S.section} wrap={false}>
             <Text style={S.sectionEyebrow}>Technisch dossier</Text>
-            <Text style={S.sectionTitle}>Toegevoegde woningscans</Text>
+            <Text style={S.sectionTitle}>Technische foto-indicaties</Text>
             <TechnicalCards report={report} />
           </View>
 
@@ -699,19 +882,48 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
                 </View>
               )) : <Text style={S.paragraph}>Geen aanvullende aandachtspunten opgeslagen.</Text>}
             </View>
-            <View style={[S.column, S.card]} wrap={false}>
-              <Text style={S.sectionEyebrow}>Kwalificatie</Text>
-              <Text style={S.sectionTitle}>Uw opgegeven situatie</Text>
-              <DataRow label="Woningeigenaar" value={report.qualification.isEigenaar === null ? 'Niet opgegeven' : report.qualification.isEigenaar ? 'Ja' : 'Nee'} />
-              <DataRow label="Bestaande panelen" value={report.qualification.heeftPanelen === null ? 'Niet opgegeven' : report.qualification.heeftPanelen ? 'Ja' : 'Nee'} />
-              <DataRow label="Aantal bestaande panelen" value={report.qualification.huidigePanelenAantal === null ? 'Niet van toepassing' : String(report.qualification.huidigePanelenAantal)} last />
-            </View>
+            {qualificationRows.length > 0 && (
+              <View style={[S.column, S.card]} wrap={false}>
+                <Text style={S.sectionEyebrow}>Uw situatie</Text>
+                <Text style={S.sectionTitle}>Door u opgegeven</Text>
+                {qualificationRows.map((row, index) => (
+                  <DataRow
+                    key={row.label}
+                    label={row.label}
+                    value={row.value}
+                    last={index === qualificationRows.length - 1}
+                  />
+                ))}
+              </View>
+            )}
           </View>
 
-          <View style={[S.section, { marginTop: 18 }]} wrap={false}>
-            <Text style={S.disclaimer}>
-              Dit rapport is indicatief en gebaseerd op de beschikbare woninggegevens en het servermodel van {reportDate(report.generatedAt)}. Werkelijke opbrengst, investering, subsidie en technische geschiktheid kunnen afwijken. Vraag altijd een gecertificeerde installateur om een locatiecontrole en definitieve offerte.
-            </Text>
+          <View style={[S.twoColumn, { marginTop: 18 }]} wrap={false}>
+            <View style={[S.column, S.card]}>
+              <Text style={S.sectionEyebrow}>Uw actieplan</Text>
+              <Text style={S.sectionTitle}>Gebruik dit rapport als startpunt</Text>
+              {[
+                'Vergelijk het advies met uw actuele verbruik en energietarieven.',
+                'Laat installatie en dimensionering op locatie controleren.',
+                "Toets de scenario's aan een gespecificeerde offerte.",
+              ].map((step, index) => (
+                <View key={step} style={S.stepRow}>
+                  <Text style={S.stepNumber}>{index + 1}</Text>
+                  <Text style={S.bulletText}>{step}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={[S.column, S.card]}>
+              <Text style={S.sectionEyebrow}>Rekenbasis</Text>
+              <Text style={S.sectionTitle}>Transparant en indicatief</Text>
+              <Text style={S.paragraph}>
+                Gebaseerd op BAG-woningdata, uw antwoorden, regionale netinformatie en het servermodel. Actuele offerteprijzen, kwartierdata en leveranciersvoorwaarden zijn niet meegenomen.
+                Uitkomsten blijven indicatief en kunnen afwijken.
+              </Text>
+              <Link src="https://saldeerscan.nl/methode" style={S.methodLink}>
+                saldeerscan.nl/methode
+              </Link>
+            </View>
           </View>
         </View>
         <Footer page={2} />

@@ -15,7 +15,11 @@ for (const source of [reportSourceNoPanels, reportSourceExistingPanels]) {
       typeof renderToBuffer
     >[0]
     const buffer = await renderToBuffer(document)
+    const pdfSource = buffer.toString('latin1')
     expect(buffer.subarray(0, 4).toString()).toBe('%PDF')
     expect(buffer.byteLength).toBeGreaterThan(10_000)
+    expect(pdfSource.match(/\/Type \/Page\b/g)).toHaveLength(2)
+    expect(pdfSource).toContain('BricolageGrotesque')
+    expect(pdfSource).toContain('DMSans')
   })
 }

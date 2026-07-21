@@ -50,9 +50,11 @@ export function ResultsDashboard({
         <ReportSection title="Woning en stroomnet">
           <ReportHomeAndGrid report={report} />
         </ReportSection>
-        <ReportSection title="Technisch dossier">
-          <ReportTechnical report={report} />
-        </ReportSection>
+        <div className="md:col-span-2">
+          <ReportSection title="Technisch dossier">
+            <ReportTechnical report={report} />
+          </ReportSection>
+        </div>
       </div>
     </ReportShell>
   )

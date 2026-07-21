@@ -27,15 +27,29 @@ export function CheckPageClient() {
   const searchParams = useSearchParams()
   const funnelUrlContext = Object.fromEntries(searchParams.entries())
   const context = parseConversionContext(searchParams)
+  const [reportReady, setReportReady] = useState(false)
+  const reportMode = Boolean(searchParams.get('leadId')) || reportReady
 
   return (
     <div className="min-w-0 overflow-x-hidden">
-      <LandingContextBanner context={context} />
-      <div className="mb-4">
-        <CountdownTimer compact />
-      </div>
-      <StatsLine />
-      <FunnelContainer urlParams={funnelUrlContext} />
+      {!reportMode && (
+        <>
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl font-extrabold text-white">
+              Uw gratis 2027 Saldeercheck
+            </h1>
+          </div>
+          <LandingContextBanner context={context} />
+          <div className="mb-4">
+            <CountdownTimer compact />
+          </div>
+          <StatsLine />
+        </>
+      )}
+      <FunnelContainer
+        urlParams={funnelUrlContext}
+        onReportModeChange={setReportReady}
+      />
     </div>
   )
 }

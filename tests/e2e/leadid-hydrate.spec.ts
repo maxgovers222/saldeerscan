@@ -61,6 +61,8 @@ test.describe('Email leadId rapport-hydratie', () => {
     await expect(page.getByTestId('report-root')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByTestId('report-annual-loss')).toContainText('400')
     await expect(page.locator('text=Vorige sessie gevonden')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Uw gratis 2027 Saldeercheck' })).toHaveCount(0)
+    await expect(page.getByText(/saldering eindigt 1 jan 2027/i)).toHaveCount(0)
 
     await expect.poll(() => captured.filter(event =>
       event[0] === 'event' && event[1] === 'report_reopened',

@@ -1,16 +1,19 @@
 import type { NormalizedReport } from '@/lib/report-model'
 import { ReportAlert } from './ReportAlert'
 
-function valueOrMissing(value: string | number | null): string {
-  return value === null || value === '' ? 'Niet beschikbaar' : String(value)
-}
-
 export function ReportHomeAndGrid({ report }: { report: NormalizedReport }) {
   const statusClass = report.grid.status === 'ROOD'
     ? 'text-danger'
     : report.grid.status === 'ORANJE'
       ? 'text-warning'
       : 'text-trust-dark'
+  const details: Array<{ label: string; value: string; valueClass?: string }> = []
+  if (report.home.housingType) details.push({ label: 'Woningtype', value: report.home.housingType })
+  if (report.home.buildYear !== null) details.push({ label: 'Bouwjaar', value: String(report.home.buildYear) })
+  if (report.home.surfaceM2 !== null) details.push({ label: 'Woonoppervlak', value: `${report.home.surfaceM2} m²` })
+  if (report.home.roofSurfaceM2 !== null) details.push({ label: 'Dakoppervlak', value: `${report.home.roofSurfaceM2} m²` })
+  if (report.grid.status) details.push({ label: 'Stroomnet', value: report.grid.status, valueClass: statusClass })
+  if (report.grid.operator) details.push({ label: 'Netbeheerder', value: report.grid.operator })
 
   return (
     <div className="space-y-4">
@@ -27,35 +30,18 @@ export function ReportHomeAndGrid({ report }: { report: NormalizedReport }) {
         </ReportAlert>
       )}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <div>
-          <dt className="text-xs uppercase tracking-wider">Woningtype</dt>
-          <dd className="mt-1 font-semibold text-ink">{valueOrMissing(report.home.housingType)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wider">Bouwjaar</dt>
-          <dd className="mt-1 font-semibold text-ink">{valueOrMissing(report.home.buildYear)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wider">Woonoppervlak</dt>
-          <dd className="mt-1 font-semibold text-ink">
-            {report.home.surfaceM2 === null ? 'Niet beschikbaar' : `${report.home.surfaceM2} m²`}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wider">Dakoppervlak</dt>
-          <dd className="mt-1 font-semibold text-ink">
-            {report.home.roofSurfaceM2 === null ? 'Niet beschikbaar' : `${report.home.roofSurfaceM2} m²`}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wider">Stroomnet</dt>
-          <dd className={`mt-1 font-semibold ${statusClass}`}>{report.grid.status ?? 'Niet beschikbaar'}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-wider">Netbeheerder</dt>
-          <dd className="mt-1 font-semibold text-ink">{valueOrMissing(report.grid.operator)}</dd>
-        </div>
+        {details.map(detail => (
+          <div key={detail.label}>
+            <dt className="text-xs uppercase tracking-wider">{detail.label}</dt>
+            <dd className={`mt-1 font-semibold ${detail.valueClass ?? 'text-ink'}`}>
+              {detail.value}
+            </dd>
+          </div>
+        ))}
       </dl>
+      {details.length === 0 && (
+        <p>Er zijn geen aanvullende woning- of stroomnetgegevens beschikbaar.</p>
+      )}
       {report.grid.explanation && <p>{report.grid.explanation}</p>}
     </div>
   )

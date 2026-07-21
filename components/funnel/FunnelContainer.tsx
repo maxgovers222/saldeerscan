@@ -141,8 +141,9 @@ export function useFunnelState() {
   return useReducer(funnelReducer, makeInitialState())
 }
 
-export function FunnelContainer({ urlParams }: {
+export function FunnelContainer({ urlParams, onReportModeChange }: {
   urlParams: Record<string, string>
+  onReportModeChange?: (active: boolean) => void
 }) {
   const urlContext = useMemo(
     () => parseFunnelUrlContext(new URLSearchParams(urlParams)),
@@ -476,6 +477,10 @@ export function FunnelContainer({ urlParams }: {
     && savedState
     && !resumeBannerDismissed
   const reportReady = state.reportModel?.version === REPORT_MODEL_VERSION
+
+  useEffect(() => {
+    onReportModeChange?.(Boolean(state.leadId || reportReady))
+  }, [onReportModeChange, reportReady, state.leadId])
 
   return (
     <div className="space-y-6 min-w-0 w-full">
