@@ -6,11 +6,27 @@ test('/check heeft canonieke URL zonder query-params', async ({ page }) => {
     'href',
     'https://saldeerscan.nl/check',
   )
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    'content',
+    /noindex/i,
+  )
 })
 
 test('/check met leadId is noindex', async ({ page }) => {
   await page.goto('/check?leadId=00000000-0000-0000-0000-000000000001&token=test')
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/i)
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://saldeerscan.nl/check',
+  )
+})
+
+test('/check met wijk/stad context is noindex', async ({ page }) => {
+  await page.goto('/check?wijk=poort&stad=almere')
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    'content',
+    /noindex/i,
+  )
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
     'https://saldeerscan.nl/check',

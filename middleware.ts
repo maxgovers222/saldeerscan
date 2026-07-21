@@ -15,7 +15,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 301)
   }
 
-  if (pathname === '/check' && (searchParams.has('leadId') || searchParams.has('token'))) {
+  // `/check` is een funnel-route met URL-context (adressen/wijk/stad/leadId).
+  // We willen varianten met queryparams niet laten indexeren; canonical blijft altijd `/check`.
+  if (pathname === '/check' && searchParams.toString().length > 0) {
     const response = NextResponse.next()
     response.headers.set('X-Robots-Tag', 'noindex, nofollow')
     return response

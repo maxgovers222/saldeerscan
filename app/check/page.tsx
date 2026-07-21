@@ -19,6 +19,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const params = await searchParams
   const privateReport = hasPrivateReportParams(params)
+  const hasAnyQueryParams = Object.keys(params).length > 0
 
   return {
     title: privateReport
@@ -27,7 +28,8 @@ export async function generateMetadata({
     description:
       'Ontdek wat het einde van salderen op 1 januari 2027 voor uw woning betekent. Gratis AI-scan, BAG-data en persoonlijk investeringsrapport.',
     alternates: { canonical: CHECK_CANONICAL },
-    robots: privateReport ? { index: false, follow: false } : { index: true, follow: true },
+    // Funnel URL-context is bedoeld voor routing/attributie, niet voor indexatie.
+    robots: privateReport || hasAnyQueryParams ? { index: false, follow: false } : { index: true, follow: true },
   }
 }
 
