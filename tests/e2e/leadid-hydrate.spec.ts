@@ -126,6 +126,6 @@ test.describe('Email leadId rapport-hydratie', () => {
     )
 
     await expect(page.locator('text=Rapport niet gevonden')).toBeVisible({ timeout: 15_000 })
-    await expect(page.locator('text=Uw SaldeerScan rapport')).toHaveCount(0)
+    await expect(page.getByTestId('report-root')).toHaveCount(0)
   })
 })
