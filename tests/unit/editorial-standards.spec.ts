@@ -22,6 +22,16 @@ test('removes deterministic netcongestion and battery claims', () => {
 
   expect(result).toContain('regionale kleur is een indicatie')
   expect(result).toContain('niet automatisch noodzakelijk')
+  expect(result).not.toContain('**')
+})
+
+test('correction copy is plain text without markdown emphasis', () => {
+  const result = sanitizeGeneratedEnergyCopy(
+    'De afbouw van de salderingsregeling start in 2025. In 2026 mag u nog 28% salderen.',
+  )
+
+  expect(result).toMatch(/^Actuele stand:/)
+  expect(result).not.toContain('**')
 })
 
 test('corrects unsafe ISDE copy in structured content without changing its shape', () => {

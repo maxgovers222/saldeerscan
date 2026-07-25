@@ -9,13 +9,13 @@ Feitenkader dat nooit mag worden tegengesproken:
 `.trim()
 
 const CURRENT_LAW_COPY =
-  '**Actuele stand:** salderen blijft 100% mogelijk tot en met 31 december 2026 en stopt in één keer per 1 januari 2027. Het eerder voorgestelde afbouwschema is verworpen.'
+  'Actuele stand: salderen blijft 100% mogelijk tot en met 31 december 2026 en stopt in één keer per 1 januari 2027. Het eerder voorgestelde afbouwschema is verworpen.'
 
 const NETCONGESTION_COPY =
-  '**Nuance bij netcongestie:** de regionale kleur is een indicatie. Hoge netdruk kan gevolgen hebben voor nieuwe of zwaardere aansluitingen en kan lokaal spanningsproblemen geven, maar bewijst niet dat teruglevering op een bestaande woningaansluiting actief wordt beperkt. Een batterij is niet automatisch noodzakelijk en vraagt altijd een individuele rendementsberekening.'
+  'Nuance bij netcongestie: de regionale kleur is een indicatie. Hoge netdruk kan gevolgen hebben voor nieuwe of zwaardere aansluitingen en kan lokaal spanningsproblemen geven, maar bewijst niet dat teruglevering op een bestaande woningaansluiting actief wordt beperkt. Een batterij is niet automatisch noodzakelijk en vraagt altijd een individuele rendementsberekening.'
 
 const ISDE_COPY =
-  '**ISDE:** zonnepanelen, thuisbatterijen, een dakcheck en een groepenkastinspectie vallen niet onder de landelijke ISDE. Controleer voor isolatie, een (hybride) warmtepomp, zonneboiler en andere aangewezen maatregelen de actuele voorwaarden bij RVO.'
+  'ISDE: zonnepanelen, thuisbatterijen, een dakcheck en een groepenkastinspectie vallen niet onder de landelijke ISDE. Controleer voor isolatie, een (hybride) warmtepomp, zonneboiler en andere aangewezen maatregelen de actuele voorwaarden bij RVO.'
 
 const LEGACY_LAW_PATTERN =
   /(2026.{0,35}28\s*%|28\s*%.{0,35}2026|2025.{0,35}64\s*%|64\s*%.{0,35}2025|salder\w*.{0,100}(stapsgewijs|geleidelijk|gefaseerd)|(stapsgewijs|geleidelijk|gefaseerd).{0,100}salder|afbouw.{0,50}(start|vanaf).{0,25}2025|vanaf.{0,25}2027.{0,60}afgebouwd|salder\w*.{0,60}naar verwachting.{0,35}2027)/i
