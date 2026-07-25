@@ -18,30 +18,16 @@ import {
   type FunnelEventExtra,
   type FunnelTracker,
 } from '@/lib/analytics'
+import { extractProvincie } from '@/lib/postcode-provincie'
 
 function extractStad(adres?: string): string {
   if (!adres) return 'Nederland'
   // Split on commas only — preserves multi-word cities like "Den Haag", "'s-Hertogenbosch"
   const parts = adres.split(',').map(s => s.trim()).filter(Boolean)
-  return parts[parts.length - 1] || 'Nederland'
-}
-
-function extractProvincie(postcodePrefix: string): string | null {
-  const num = parseInt(postcodePrefix)
-  if (num >= 1000 && num <= 1999) return 'Noord-Holland'
-  if (num >= 2000 && num <= 2999) return 'Zuid-Holland'
-  if (num >= 3000 && num <= 3999) return 'Utrecht'
-  if (num >= 4000 && num <= 4799) return 'Noord-Brabant'
-  if (num >= 4800 && num <= 4999) return 'Zeeland'
-  if (num >= 5000 && num <= 5999) return 'Noord-Brabant'
-  if (num >= 6000 && num <= 6299) return 'Limburg'
-  if (num >= 6300 && num <= 6999) return 'Gelderland'
-  if (num >= 7000 && num <= 7999) return 'Overijssel'
-  if (num >= 8000 && num <= 8999) return 'Friesland'
-  if (num >= 9000 && num <= 9499) return 'Groningen'
-  if (num >= 9500 && num <= 9699) return 'Drenthe'
-  if (num >= 9700 && num <= 9999) return 'Groningen'
-  return null
+  const last = parts[parts.length - 1] || 'Nederland'
+  // "3077PL Rotterdam" → "Rotterdam"
+  const withoutPostcode = last.replace(/^\d{4}\s*[A-Za-z]{0,2}\s*/, '').trim()
+  return withoutPostcode || last
 }
 
 interface Step6LeadCaptureProps {
