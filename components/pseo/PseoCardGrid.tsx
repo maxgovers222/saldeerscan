@@ -14,7 +14,7 @@ export function PseoCardGrid({ items }: { items: PseoCardItem[] }) {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {items.map(item => (
         <Link
-          key={`${item.href}-${item.analyticsLabel}`}
+          key={`pseo-card-${item.analyticsLabel}`}
           href={item.href}
           data-analytics-event="pseo_second_click"
           data-analytics-label={item.analyticsLabel}
