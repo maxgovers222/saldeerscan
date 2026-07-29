@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { toDisplaySlug } from '@/lib/pseo-hubs'
+import { getWijkCtrTemplate } from '@/lib/pseo-ctr'
 import {
   buildWijkSeoDescription,
   buildWijkSeoTitle,
@@ -119,9 +120,11 @@ export function buildWijkMetadata(input: {
   const score = resolveWijkScore(input.gemBouwjaar ?? null, input.gemHealthScore ?? null)
   const besparing = computeBesparing(input.gemBouwjaar ?? null, score)
   const verlies = computeVerliesFromBesparing(besparing)
+  const ctrTemplate = getWijkCtrTemplate(input)
 
-  const title = buildWijkSeoTitle(wijkDisplay, besparing, verlies)
-  const description = buildWijkSeoDescription(wijkDisplay, besparing, verlies)
+  const title = ctrTemplate?.title ?? buildWijkSeoTitle(wijkDisplay, besparing, verlies)
+  const description =
+    ctrTemplate?.description ?? buildWijkSeoDescription(wijkDisplay, besparing, verlies)
 
   const path = `/${input.provincie}/${input.stad}/${input.wijk}`
   const url = `https://saldeerscan.nl${path}`

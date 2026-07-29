@@ -22,6 +22,7 @@ import { WijkComparisonTable, buildWijkComparisonRows } from '@/components/pseo/
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { WijkCtaButton } from '@/components/pseo/WijkCtaButton'
 import { buildCheckHref } from '@/lib/conversion-context'
+import { getWijkCtrTemplate } from '@/lib/pseo-ctr'
 
 const getCachedWijkPage = cache(getWijkPage)
 
@@ -100,6 +101,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
 
   const wijkDisplay = toDisplay(wijk)
   const stadDisplay = toDisplay(stad)
+  const ctrTemplate = getWijkCtrTemplate({ provincie, stad, wijk })
   const checkHref = buildCheckHref({
     landingPath: `/${provincie}/${stad}/${wijk}`,
     pseoLevel: 'wijk',
@@ -164,8 +166,11 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
           { name: wijkDisplay },
         ]}
         eyebrow={`${stadDisplay} · Wijkanalyse 2027`}
-        title={wijkDisplay}
-        summary={`Wat stoppen met salderen betekent voor woningen in ${wijkDisplay}, gebaseerd op lokale woningdata en netdruk.`}
+        title={ctrTemplate?.h1 ?? wijkDisplay}
+        summary={
+          ctrTemplate?.heroSummary
+          ?? `Wat stoppen met salderen betekent voor woningen in ${wijkDisplay}, gebaseerd op lokale woningdata en netdruk.`
+        }
         badge={netStatus || ranking ? (
           <div className="flex flex-wrap items-center gap-3">
             {netStatus && <PseoStatusBadge status={netStatus} />}
