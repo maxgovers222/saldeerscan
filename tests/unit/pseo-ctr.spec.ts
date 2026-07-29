@@ -36,6 +36,8 @@ test('CTR-template is beperkt tot exact het opportunity-cohort', () => {
 })
 
 test('cohorttitles en snippets bevatten de vereiste lokale 2027-context', () => {
+  const decisionBodies = new Set<string>()
+
   for (const path of expectedPaths) {
     const template = getWijkCtrTemplate(routeFromPath(path))
     expect(template).not.toBeNull()
@@ -53,5 +55,16 @@ test('cohorttitles en snippets bevatten de vereiste lokale 2027-context', () => 
     expect(template!.description).toContain(template!.stad)
     expect(template!.description).toContain('gratis adrescheck')
     expect(template!.description.length).toBeLessThanOrEqual(165)
+
+    expect(template!.decision.body).toContain(template!.wijk)
+    expect(template!.decision.links).toHaveLength(3)
+    expect(new Set(template!.decision.links.map(link => link.href)).size).toBe(3)
+    for (const link of template!.decision.links) {
+      expect(link.href).toMatch(/^\//)
+      expect(link.href).not.toBe('/check')
+    }
+    decisionBodies.add(template!.decision.body)
   }
+
+  expect(decisionBodies.size).toBe(expectedPaths.length)
 })

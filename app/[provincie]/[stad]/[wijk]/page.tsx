@@ -21,6 +21,7 @@ import { RenovatieInsightCard } from '@/components/pseo/RenovatieInsightCard'
 import { WijkComparisonTable, buildWijkComparisonRows } from '@/components/pseo/WijkComparisonTable'
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { WijkCtaButton } from '@/components/pseo/WijkCtaButton'
+import { WijkDecisionSection } from '@/components/pseo/WijkDecisionSection'
 import { buildCheckHref } from '@/lib/conversion-context'
 import { getWijkCtrTemplate } from '@/lib/pseo-ctr'
 
@@ -200,6 +201,10 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
         description="De wijkcijfers zijn een gemiddelde. Vul uw adres in voor uw woningkenmerken, verwachte impact en beste vervolgstap."
         placeholder={`Uw adres in ${wijkDisplay}`}
       />
+
+      {ctrTemplate && (
+        <WijkDecisionSection wijk={ctrTemplate.wijk} decision={ctrTemplate.decision} />
+      )}
 
       <section className="bg-mist px-6 py-16 sm:py-20">
         <div className="max-w-4xl mx-auto">
