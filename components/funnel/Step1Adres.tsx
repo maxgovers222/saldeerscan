@@ -187,6 +187,7 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
   const [selectedAdres, setSelectedAdres] = useState<string | null>(state.adres || null)
   const [localLoading, setLocalLoading] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+  const addressEntryStarted = useRef(false)
 
   const hasResults = state.bagData !== null
 
@@ -194,6 +195,12 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
     if (state.adres && state.adres.length >= 5 && !state.bagData) doSearch(state.adres)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!inputValue.trim() || !state.funnelSessionId || addressEntryStarted.current) return
+    addressEntryStarted.current = true
+    trackFunnel('address_entry_start')
+  }, [inputValue, state.funnelSessionId, trackFunnel])
 
   async function doSearch(adres: string) {
     setLocalLoading(true)
@@ -268,6 +275,7 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedAdres) return
+    trackFunnel('address_entry_submit')
     await doSearch(selectedAdres)
   }
 

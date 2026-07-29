@@ -195,6 +195,18 @@ test('BAG success and failure include only coarse location context', async ({ pa
   await expect(page.getByText('Uw woning is gevonden')).toBeVisible()
   await expect.poll(() => eventCalls(calls, 'bag_match_succeeded').length).toBe(1)
 
+  expect(eventCalls(calls, 'address_entry_start')).toHaveLength(1)
+  expect(eventCalls(calls, 'address_entry_submit')).toHaveLength(2)
+  for (const [, , params] of [
+    ...eventCalls(calls, 'address_entry_start'),
+    ...eventCalls(calls, 'address_entry_submit'),
+  ]) {
+    expect(params).toMatchObject({
+      funnel_session_id: expect.any(String),
+      landing_path: '/analytics-contract',
+      pseo_level: 'wijk',
+    })
+  }
   const successParams = eventCalls(calls, 'bag_match_succeeded')[0][2]
   expect(successParams?.postcode_prefix).toBe('1016')
   expect(eventCalls(calls, 'bag_match_failed')[0][2]?.reason).toBe('not_found')

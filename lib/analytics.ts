@@ -16,6 +16,8 @@ export function trackEvent(name: string, params?: Record<string, string | number
 }
 
 export type FunnelEventName =
+  | 'address_entry_start'
+  | 'address_entry_submit'
   | 'funnel_session_started'
   | 'funnel_stage_viewed'
   | 'funnel_stage_completed'
