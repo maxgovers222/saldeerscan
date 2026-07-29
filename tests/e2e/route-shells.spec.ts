@@ -76,6 +76,23 @@ test('/check heeft canonieke URL', async ({ page }) => {
   )
 })
 
+test('stad-grid en stad-urgent bevatten alleen geldige crawl-URL\'s', async ({ page }) => {
+  await page.goto('/utrecht/utrecht')
+
+  for (const label of ['stad-grid:', 'stad-urgent:']) {
+    const links = page.locator(`a[data-analytics-label^="${label}"]`)
+    expect(await links.count()).toBeGreaterThan(0)
+
+    for (const href of await links.evaluateAll(elements =>
+      elements.map(element => element.getAttribute('href')),
+    )) {
+      expect(href).toMatch(/^\/utrecht\/utrecht\/[a-z0-9]+(?:-[a-z0-9]+)*$/)
+      expect(href).not.toContain('[object')
+      expect(href).not.toContain('%5Bobject')
+    }
+  }
+})
+
 test('straatroute behoudt conversie, kruimelpad en FAQ-filtering', async ({ page }) => {
   for (const wijkPath of wijkRoutesWithSampleStreets) {
     const wijkResponse = await page.goto(wijkPath)

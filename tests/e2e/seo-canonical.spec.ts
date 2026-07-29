@@ -40,6 +40,11 @@ test('trailing slash redirect naar canoniek pad', async ({ request }) => {
 })
 
 test('ongeldige object-promise URL geeft 410', async ({ request }) => {
-  const response = await request.get('/%5Bobject%20Promise%5D', { maxRedirects: 0 })
-  expect(response.status()).toBe(410)
+  for (const path of [
+    '/%5Bobject%20Promise%5D',
+    '/utrecht/utrecht/%5Bobject%20Promise%5D',
+  ]) {
+    const response = await request.get(path, { maxRedirects: 0 })
+    expect(response.status()).toBe(410)
+  }
 })
