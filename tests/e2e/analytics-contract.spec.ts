@@ -229,6 +229,7 @@ test('technical complete and individual skip events preserve the four-stage cont
   })
   await page.goto('/check')
   await resumeSavedFunnel(page)
+  await page.getByText('Mijn advies verfijnen', { exact: true }).click()
 
   await page.getByLabel('Selecteer foto: Foto van uw meterkast').setInputFiles({
     name: 'meterkast.txt',
@@ -271,9 +272,7 @@ test('skipping every technical scan emits the module skip and one abandonment', 
   await page.goto('/check')
   await resumeSavedFunnel(page)
 
-  for (let index = 0; index < 3; index += 1) {
-    await page.getByRole('button', { name: /Overslaan/ }).click()
-  }
+  await page.getByRole('button', { name: /Direct naar mijn rapport/ }).click()
   await page.evaluate(() => {
     window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))
     window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))
@@ -317,6 +316,13 @@ test('lead submission reports failure and success without lead contact data', as
   })
   await page.goto('/check')
   await resumeSavedFunnel(page)
+
+  const stage4View = eventCalls(calls, 'funnel_stage_viewed')
+    .find(([, , params]) => params?.funnel_stage === 4)?.[2]
+  expect(stage4View).toMatchObject({
+    landing_path: '/check',
+    pseo_level: 'home',
+  })
 
   await page.getByRole('button', { name: /Stuur mij het gratis PDF-rapport/ }).click()
   await expect.poll(() => eventCalls(calls, 'funnel_validation_failed').length).toBe(4)

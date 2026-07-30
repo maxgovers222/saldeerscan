@@ -269,7 +269,7 @@ async function gotoStep(page: Page, step: number, stateOverrides: Record<string,
 const STEP_TITLE: Record<number, string> = {
   1: 'Voer uw adres in',
   2: 'Uw besparingsanalyse',
-  3: 'Meterkast analyseren',
+  3: 'Uw basisrapport is klaar',
   4: 'Plaatsingsplek beoordelen',
   5: 'Omvormer controleren',
   6: 'gratis PDF-rapport',
@@ -602,6 +602,7 @@ test.describe('Stap 2 — ROI Berekening', () => {
 test.describe('Stap 3 — Meterkast handmatig pad', () => {
   test.beforeEach(async ({ page }) => {
     await gotoStep(page, 3)
+    await page.getByText('Mijn advies verfijnen', { exact: true }).click()
   })
 
   test('toont stap-3 titel "Meterkast analyse"', async ({ page }) => {
@@ -1435,6 +1436,7 @@ test.describe('Volledige E2E funnel', () => {
 
     // Stap 3 — handmatig
     await expectStep(page, 3)
+    await page.getByText('Mijn advies verfijnen', { exact: true }).click()
     await page.locator('button:has-text("Geen foto? Vul handmatig in")').click()
     await page.locator('button:has-text("1-fase")').click()
     await page.locator('button:has-text("4+")').click()

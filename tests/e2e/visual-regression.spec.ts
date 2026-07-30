@@ -27,7 +27,7 @@ const comparisonViewports = [
 const funnelStages = [
   { stage: 1, internalStep: 1, heading: 'Voer uw adres in' },
   { stage: 2, internalStep: 2, heading: 'Uw besparingsanalyse' },
-  { stage: 3, internalStep: 3, heading: 'Meterkast analyseren' },
+  { stage: 3, internalStep: 3, heading: 'Uw basisrapport is klaar' },
   { stage: 4, internalStep: 6, heading: 'Ontvang uw gratis PDF-rapport' },
 ] as const
 

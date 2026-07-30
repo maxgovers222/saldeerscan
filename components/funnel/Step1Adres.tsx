@@ -187,7 +187,7 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
   const [selectedAdres, setSelectedAdres] = useState<string | null>(state.adres || null)
   const [localLoading, setLocalLoading] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
-  const addressEntryStarted = useRef(false)
+  const addressEntryStarted = useRef(Boolean(state.adres))
 
   const hasResults = state.bagData !== null
 

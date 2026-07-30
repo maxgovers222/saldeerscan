@@ -114,6 +114,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [watGebeurtOpen, setWatGebeurtOpen] = useState(false)
+  const [reportDetailsOpen, setReportDetailsOpen] = useState(false)
 
   useEffect(() => {
     if (editPanelen) return
@@ -124,6 +125,14 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
       huidigePanelenAantal: state.huidige_panelen_aantal ? String(state.huidige_panelen_aantal) : '',
     }))
   }, [state.is_eigenaar, state.heeft_panelen, state.huidige_panelen_aantal, editPanelen])
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia('(min-width: 1024px)')
+    const syncReportDetails = () => setReportDetailsOpen(desktopQuery.matches)
+    syncReportDetails()
+    desktopQuery.addEventListener('change', syncReportDetails)
+    return () => desktopQuery.removeEventListener('change', syncReportDetails)
+  }, [])
 
   function validate(): boolean {
     const e: typeof errors = {}
@@ -268,11 +277,20 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
     <FunnelStageShell
       eyebrow="Stadium 4 van 4 · Ontvang uw rapport"
       title="Ontvang uw gratis PDF-rapport"
-      description="Controleer uw samenvatting en vul uw gegevens in. Na indienen opent uw persoonlijke rapport direct; de e-mailbezorgstatus wordt apart bevestigd."
+      description="Vul uw contactgegevens in om uw persoonlijke rapport direct te openen. De e-mailbezorgstatus wordt apart bevestigd."
     >
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]">
-        <div className="min-w-0 space-y-4">
-          <FunnelCard surface="trust" className="overflow-hidden">
+        <details
+          open={reportDetailsOpen}
+          onToggle={(event) => setReportDetailsOpen(event.currentTarget.open)}
+          data-testid="stage4-report-details"
+          className="order-2 min-w-0 lg:order-1"
+        >
+          <summary className="cursor-pointer rounded-xl border border-ink/10 bg-mist px-4 py-3 text-sm font-semibold text-trust-dark focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-trust/35 lg:hidden">
+            Rapportsamenvatting bekijken
+          </summary>
+          <div className="mt-4 space-y-4 lg:mt-0">
+            <FunnelCard surface="trust" className="overflow-hidden">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-trust-dark">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
@@ -334,18 +352,19 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
                 )}
               </dl>
             )}
-          </FunnelCard>
+            </FunnelCard>
 
-          <FunnelCard className="py-4">
-            <FunnelTrustLine items={['Beveiligd', 'Lokale installateurs', 'Vrijblijvend']} />
-            <p className="mt-3 text-center text-xs text-ink-muted">
-              SSL- en AVG-bewust verwerkt, zonder koopplicht. Uw aanvraag wordt gekoppeld aan gecertificeerde installateurs in {regio}.
-            </p>
-          </FunnelCard>
-        </div>
+            <FunnelCard className="py-4">
+              <FunnelTrustLine items={['Beveiligd', 'Lokale installateurs', 'Vrijblijvend']} />
+              <p className="mt-3 text-center text-xs text-ink-muted">
+                SSL- en AVG-bewust verwerkt, zonder koopplicht. Uw aanvraag wordt gekoppeld aan gecertificeerde installateurs in {regio}.
+              </p>
+            </FunnelCard>
+          </div>
+        </details>
 
-        <div className="min-w-0 space-y-4">
-          <FunnelCard>
+        <div className="order-1 flex min-w-0 flex-col gap-4 lg:order-2">
+          <FunnelCard className="order-2 lg:order-1">
             <h3 className="font-heading text-lg font-bold text-ink">Controleer uw situatie</h3>
             <p className="mt-1 text-sm text-ink-muted">Uw eerdere antwoorden staan alvast klaar voor het rapport.</p>
 
@@ -468,7 +487,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
             </div>
           </FunnelCard>
 
-          <FunnelCard surface="mist" className="p-0 sm:p-0">
+          <FunnelCard surface="mist" className="order-3 p-0 sm:p-0 lg:order-2">
             <button
               type="button"
               onClick={() => setWatGebeurtOpen(o => !o)}
@@ -497,7 +516,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
             )}
           </FunnelCard>
 
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <form onSubmit={handleSubmit} className="order-1 space-y-4 lg:order-3" noValidate>
             <FunnelCard>
               <h3 className="font-heading text-lg font-bold text-ink">Waar mogen we uw rapport klaarzetten?</h3>
               <p className="mt-1 text-sm leading-6 text-ink-muted">Alle velden hieronder zijn nodig om uw aanvraag veilig te verwerken.</p>
@@ -648,6 +667,9 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
               )}
             />
 
+            <p data-testid="stage4-cta-trustcopy" className="text-center text-xs font-semibold leading-5 text-trust-dark">
+              Rapport opent direct · e-mailkopie · gratis en vrijblijvend
+            </p>
             <FunnelTrustLine items={['Vrijblijvend advies', 'Geen verplichtingen', 'Gratis']} />
             <p className="text-center text-xs leading-5 text-ink-muted">
               Uw data wordt beveiligd verwerkt en gevalideerd door een gecertificeerde expert in {regio} voor een definitieve 2027-check.

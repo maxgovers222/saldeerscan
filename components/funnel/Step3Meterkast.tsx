@@ -134,79 +134,90 @@ export function Step3Meterkast({ state, dispatch, trackFunnel }: Step3MeterkastP
   return (
     <FunnelStageShell
       eyebrow="Stadium 3 van 4 · Verfijn uw advies"
-      title="Meterkast analyseren"
-      description="Optioneel: hiermee zien we of uw aansluiting direct geschikt lijkt voor zonnepanelen en een thuisbatterij."
+      title="Uw basisrapport is klaar"
+      description="Open het direct, of voeg eerst optionele technische informatie toe voor een concreter advies."
     >
       <TechnicalStageChecklist state={state} dispatch={dispatch} trackFunnel={trackFunnel} />
 
-      {!analyse && (
-        <FunnelNotice variant="info" title="Zo maakt u een bruikbare foto">
-          Open de kast volledig, sta ongeveer één meter ervoor en zorg dat alle groepen goed verlicht en zichtbaar zijn.
-        </FunnelNotice>
-      )}
+      <details
+        data-testid="technical-refinement"
+        open={analyse ? true : undefined}
+        className="rounded-2xl border border-ink/10 bg-paper p-4 sm:p-5"
+      >
+        <summary className="cursor-pointer rounded-lg text-sm font-semibold text-trust-dark focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-trust/35">
+          Mijn advies verfijnen
+        </summary>
+        <div className="mt-5 space-y-5">
+          {!analyse && (
+            <FunnelNotice variant="info" title="Zo maakt u een bruikbare foto">
+              Open de kast volledig, sta ongeveer één meter ervoor en zorg dat alle groepen goed verlicht en zichtbaar zijn.
+            </FunnelNotice>
+          )}
 
-      {!analyse && !showFallback && (
-        <PhotoUpload
-          visionType="meterkast"
-          onAnalysed={(result) => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: result as MeterkastAnalyse })}
-          trackFunnel={trackFunnel}
-          title="Foto van uw meterkast"
-          description="Maak een foto van uw open meterkast waarop alle groepen zichtbaar zijn."
-        />
-      )}
+          {!analyse && !showFallback && (
+            <PhotoUpload
+              visionType="meterkast"
+              onAnalysed={(result) => dispatch({ type: 'SET_METERKAST', meterkastAnalyse: result as MeterkastAnalyse })}
+              trackFunnel={trackFunnel}
+              title="Foto van uw meterkast"
+              description="Maak een foto van uw open meterkast waarop alle groepen zichtbaar zijn."
+            />
+          )}
 
-      {!analyse && !showFallback && (
-        <button type="button" onClick={() => setShowFallback(true)} className={`w-full ${funnelTextButtonClass}`}>
-          Geen foto? Vul handmatig in
-        </button>
-      )}
+          {!analyse && !showFallback && (
+            <button type="button" onClick={() => setShowFallback(true)} className={`w-full ${funnelTextButtonClass}`}>
+              Geen foto? Vul handmatig in
+            </button>
+          )}
 
-      {!analyse && showFallback && (
-        <FallbackMeterkast
-          onComplete={(data) => {
-            trackFunnel('technical_scan_completed', { scan_type: 'Meterkast', completion: 'manual' })
-            dispatch({ type: 'SET_METERKAST', meterkastAnalyse: data })
-            dispatch({ type: 'SET_STEP', step: 4 })
-          }}
-        />
-      )}
+          {!analyse && showFallback && (
+            <FallbackMeterkast
+              onComplete={(data) => {
+                trackFunnel('technical_scan_completed', { scan_type: 'Meterkast', completion: 'manual' })
+                dispatch({ type: 'SET_METERKAST', meterkastAnalyse: data })
+                dispatch({ type: 'SET_STEP', step: 4 })
+              }}
+            />
+          )}
 
-      {analyse && (
-        <div className="space-y-3">
-          <MeterkastResultaat analyse={analyse} />
-          <button
-            type="button"
-            onClick={() => {
-              dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null })
-              setShowFallback(false)
-            }}
-            className={`w-full ${funnelTextButtonClass}`}
-          >
-            Andere foto uploaden
-          </button>
+          {analyse && (
+            <div className="space-y-3">
+              <MeterkastResultaat analyse={analyse} />
+              <button
+                type="button"
+                onClick={() => {
+                  dispatch({ type: 'SET_METERKAST', meterkastAnalyse: null })
+                  setShowFallback(false)
+                }}
+                className={`w-full ${funnelTextButtonClass}`}
+              >
+                Andere foto uploaden
+              </button>
+            </div>
+          )}
+
+          <FunnelActions
+            sticky
+            secondary={(
+              <button type="button" onClick={() => dispatch({ type: 'SET_STEP', step: 2 })} className={funnelSecondaryButtonClass}>
+                ← Terug
+              </button>
+            )}
+            primary={(
+              <button
+                type="button"
+                onClick={() => {
+                  if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Meterkast' })
+                  dispatch({ type: 'SET_STEP', step: 4 })
+                }}
+                className={funnelPrimaryButtonClass}
+              >
+                {analyse ? 'Volgende check: plaatsing' : 'Overslaan →'}
+              </button>
+            )}
+          />
         </div>
-      )}
-
-      <FunnelActions
-        sticky
-        secondary={(
-          <button type="button" onClick={() => dispatch({ type: 'SET_STEP', step: 2 })} className={funnelSecondaryButtonClass}>
-            ← Terug
-          </button>
-        )}
-        primary={(
-          <button
-            type="button"
-            onClick={() => {
-              if (!analyse) trackFunnel('technical_scan_skipped', { scan_type: 'Meterkast' })
-              dispatch({ type: 'SET_STEP', step: 4 })
-            }}
-            className={funnelPrimaryButtonClass}
-          >
-            {analyse ? 'Volgende check: plaatsing' : 'Overslaan →'}
-          </button>
-        )}
-      />
+      </details>
     </FunnelStageShell>
   )
 }

@@ -167,6 +167,7 @@ test('shock- en resume-oppervlakken behouden WCAG A/AA-contrast', async ({ page 
 
 test('uploadknop is bereikbaar en gelabeld', async ({ page }) => {
   await seedFunnelStep(page, 3)
+  await page.getByText('Mijn advies verfijnen', { exact: true }).click()
   const upload = page.getByRole('button', { name: /Foto van uw meterkast/ })
 
   await expect(upload).toBeVisible()
