@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { EXACT_GSC_REDIRECTS } from '../../lib/gsc-redirects'
 
 test('/check heeft canonieke URL zonder query-params', async ({ page }) => {
   await page.goto('/check?adres=Keizersgracht+1+Amsterdam&wijk=centrum&stad=amsterdam')
@@ -47,4 +48,28 @@ test('ongeldige object-promise URL geeft 410', async ({ request }) => {
     const response = await request.get(path, { maxRedirects: 0 })
     expect(response.status()).toBe(410)
   }
+})
+
+test('historische GSC redirect-errors zijn directe 200-responses', async ({ request }) => {
+  for (const path of ['/kennisbank', '/nieuws']) {
+    const response = await request.get(path, { maxRedirects: 0 })
+    expect(response.status()).toBe(200)
+    expect(response.headers()['location']).toBeUndefined()
+  }
+})
+
+test('alleen exacte malformed GSC-URL\'s redirecten naar hun 1:1 vervanger', async ({ request }) => {
+  for (const { source, destination } of EXACT_GSC_REDIRECTS) {
+    const response = await request.get(source, { maxRedirects: 0 })
+    expect(response.status(), source).toBe(301)
+    expect(new URL(response.headers()['location'], 'http://localhost:3000').pathname).toBe(
+      destination,
+    )
+  }
+
+  const unmapped = await request.get(
+    '/overijssel/zwolle/onbekend-stad-grid:onbekend',
+    { maxRedirects: 0 },
+  )
+  expect(unmapped.status()).toBe(404)
 })
