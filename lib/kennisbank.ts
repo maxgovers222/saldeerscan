@@ -5,6 +5,10 @@ import {
   sanitizeGeneratedEnergyCopy,
   sanitizeStructuredEnergyCopy,
 } from '@/lib/editorial-standards'
+import {
+  NETCONGESTIE_ARTICLE,
+  NETCONGESTIE_ARTICLE_SLUG,
+} from '@/lib/netcongestie-article'
 
 const KENNISBANK_REVALIDATE = 86400
 
@@ -25,6 +29,8 @@ export interface KennisbankArticle {
 
 export const getKennisbankArticle = unstable_cache(
   async (slug: string): Promise<KennisbankArticle | null> => {
+    if (slug === NETCONGESTIE_ARTICLE_SLUG) return NETCONGESTIE_ARTICLE
+
     const { data, error } = await supabaseAdmin
       .from('kennisbank_articles')
       .select('*')
@@ -47,7 +53,10 @@ export const getAllKennisbankSlugs = unstable_cache(
       .select('slug')
       .eq('status', 'published')
 
-    return (data ?? []).map(r => r.slug)
+    return [...new Set([
+      NETCONGESTIE_ARTICLE_SLUG,
+      ...(data ?? []).map(r => r.slug),
+    ])]
   },
   ['kennisbank', 'allSlugs'],
   { revalidate: KENNISBANK_REVALIDATE }
@@ -61,13 +70,23 @@ export const getAllPublishedKennisbank = unstable_cache(
       .eq('status', 'published')
       .order('generated_at', { ascending: false })
 
-    return (data ?? []).map(r => ({
+    const summaries = (data ?? []).map(r => ({
       slug: r.slug,
       titel: sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel,
       category: r.category ?? 'algemeen',
       intro: sanitizeGeneratedEnergyCopy(r.intro ?? null),
       generatedAt: r.generated_at ?? null,
     }))
+    return [
+      {
+        slug: NETCONGESTIE_ARTICLE.slug,
+        titel: NETCONGESTIE_ARTICLE.titel,
+        category: NETCONGESTIE_ARTICLE.category,
+        intro: NETCONGESTIE_ARTICLE.intro,
+        generatedAt: NETCONGESTIE_ARTICLE.generatedAt,
+      },
+      ...summaries.filter(item => item.slug !== NETCONGESTIE_ARTICLE_SLUG),
+    ]
   },
   ['kennisbank', 'allPublished'],
   { revalidate: KENNISBANK_REVALIDATE }
@@ -80,19 +99,36 @@ export async function getKennisbankSummariesBySlugs(
   const unique = [...new Set(slugs.filter(Boolean))]
   if (unique.length === 0) return []
 
-  const { data } = await supabaseAdmin
-    .from('kennisbank_articles')
-    .select('slug, titel, category, intro, generated_at')
-    .eq('status', 'published')
-    .in('slug', unique.slice(0, 20))
+  const databaseSlugs = unique
+    .filter(slug => slug !== NETCONGESTIE_ARTICLE_SLUG)
+    .slice(0, 20)
+  const { data } = databaseSlugs.length > 0
+    ? await supabaseAdmin
+        .from('kennisbank_articles')
+        .select('slug, titel, category, intro, generated_at')
+        .eq('status', 'published')
+        .in('slug', databaseSlugs)
+    : { data: [] }
 
-  return (data ?? []).map(r => ({
+  const summaries = (data ?? []).map(r => ({
     slug: r.slug,
     titel: sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel,
     category: r.category ?? 'algemeen',
     intro: sanitizeGeneratedEnergyCopy(r.intro ?? null),
     generatedAt: r.generated_at ?? null,
   }))
+  return unique.includes(NETCONGESTIE_ARTICLE_SLUG)
+    ? [
+        {
+          slug: NETCONGESTIE_ARTICLE.slug,
+          titel: NETCONGESTIE_ARTICLE.titel,
+          category: NETCONGESTIE_ARTICLE.category,
+          intro: NETCONGESTIE_ARTICLE.intro,
+          generatedAt: NETCONGESTIE_ARTICLE.generatedAt,
+        },
+        ...summaries,
+      ]
+    : summaries
 }
 
 export async function upsertKennisbankArticle(article: {

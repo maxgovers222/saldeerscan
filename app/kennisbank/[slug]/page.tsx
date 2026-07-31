@@ -3,9 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArticleBody } from '@/components/content/ArticleBody'
 import { ArticleShell } from '@/components/content/ArticleShell'
+import { NetcongestieArticleBody } from '@/components/content/NetcongestieArticleBody'
 import { LocalSchema } from '@/components/pseo/LocalSchema'
 import { RelatedWijken } from '@/components/pseo/RelatedWijken'
 import { getAllKennisbankSlugs, getKennisbankArticle, getKennisbankSummariesBySlugs } from '@/lib/kennisbank'
+import { NETCONGESTIE_ARTICLE_SLUG } from '@/lib/netcongestie-article'
 
 export const revalidate = 2592000
 
@@ -104,7 +106,11 @@ export default async function KennisbankArtikel({ params }: { params: Promise<Pa
         slug={slug}
         aside={aside}
       >
-        {article.hoofdtekst && <ArticleBody text={article.hoofdtekst} />}
+        {article.hoofdtekst && (
+          slug === NETCONGESTIE_ARTICLE_SLUG
+            ? <NetcongestieArticleBody />
+            : <ArticleBody text={article.hoofdtekst} />
+        )}
 
         {article.faqItems.length > 0 && (
           <section className="mt-12 border-t border-ink/10 pt-8">
