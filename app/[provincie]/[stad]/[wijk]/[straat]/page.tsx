@@ -9,7 +9,6 @@ import { PseoPageShell } from '@/components/pseo/PseoPageShell'
 import { PseoStatusBadge, type PseoStatus } from '@/components/pseo/PseoStatusBadge'
 import { RenovatieInsightCard } from '@/components/pseo/RenovatieInsightCard'
 import { renovatieIntelligence, straatVsWijkDelta } from '@/lib/pseo-variation'
-import { buildCheckHref } from '@/lib/conversion-context'
 
 // Deduplicate Supabase fetches: generateMetadata + page component share one request
 const getCachedPseoPage = cache(getPseoPage)
@@ -75,15 +74,6 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
   const p = await params
   const page = await getCachedPseoPage(p)
   if (!page) notFound()
-  const checkHref = buildCheckHref({
-    landingPath: `/${p.provincie}/${p.stad}/${p.wijk}/${p.straat}`,
-    pseoLevel: 'straat',
-    provincie: p.provincie,
-    stad: p.stad,
-    wijk: p.wijk,
-    straat: p.straat,
-  })
-
   const wijkPage = await getWijkPage({ provincie: p.provincie, stad: p.stad, wijk: p.wijk })
   const straatDelta = wijkPage
     ? straatVsWijkDelta(
@@ -139,7 +129,6 @@ export default async function PseoStreetPage({ params }: { params: Promise<Param
   return (
     <PseoPageShell
       headerContext={`${toDisplay(p.straat)}, ${toDisplay(p.stad)}`}
-      ctaHref={checkHref}
     >
       {/* JSON-LD — FAQPage gefilterd op straat-niveau */}
       {pageJsonLd && Object.keys(pageJsonLd).length > 0 && (

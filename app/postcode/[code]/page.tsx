@@ -7,7 +7,7 @@ import { PseoConversionCard } from '@/components/pseo/PseoConversionCard'
 import { PseoHero } from '@/components/pseo/PseoHero'
 import { PseoPageShell } from '@/components/pseo/PseoPageShell'
 import type { PseoStatus } from '@/components/pseo/PseoStatusBadge'
-import { buildCheckHref, type ConversionContext } from '@/lib/conversion-context'
+import type { ConversionContext } from '@/lib/conversion-context'
 import { buildPostcodeHubGraphLd } from '@/lib/json-ld'
 import { getWijkenByPostcode } from '@/lib/pseo'
 import { buildBreadcrumbListLd, hubBreadcrumbItems } from '@/lib/pseo-hubs'
@@ -54,10 +54,8 @@ export default async function PostcodePage({ params }: Props) {
     provincie: topProv,
     stad: topStad,
   }
-  const checkHref = buildCheckHref(conversionContext)
-
   return (
-    <PseoPageShell headerContext={`Postcode ${prefix}`} ctaHref={checkHref}>
+    <PseoPageShell headerContext={`Postcode ${prefix}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -129,7 +127,7 @@ export default async function PostcodePage({ params }: Props) {
             <div className="rounded-2xl border border-white/10 bg-evergreen-900/70 p-8 text-center">
               <p className="text-white/55">Nog geen data beschikbaar voor postcode {prefix}.</p>
               <Link
-                href={checkHref}
+                href="#adrescheck"
                 data-analytics-event="pseo_check_cta"
                 data-analytics-label={`postcode-empty:${prefix}`}
                 className="mt-5 inline-flex min-h-11 items-center rounded-xl border border-white/15 px-5 text-sm font-semibold text-white/65 transition hover:border-trust/40 hover:text-white"
@@ -158,7 +156,7 @@ export default async function PostcodePage({ params }: Props) {
               </div>
               <div className="mt-8 text-center">
                 <Link
-                  href="/check"
+                  href="#adrescheck"
                   data-analytics-event="pseo_check_cta"
                   data-analytics-label={`postcode-generic:${prefix}`}
                   className="inline-flex min-h-11 items-center text-sm text-white/55 transition hover:text-action"

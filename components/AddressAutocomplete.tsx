@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { trackEvent } from '@/lib/analytics'
 import {
-  conversionParams,
+  buildCheckHref,
   type ConversionContext,
 } from '@/lib/conversion-context'
 import { cn } from '@/lib/utils'
@@ -119,16 +119,18 @@ export function AddressAutocomplete({
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (!selected) return
-    const params = new URLSearchParams({
+    const href = buildCheckHref(context ?? {
+      landingPath: '/',
+      pseoLevel: 'home',
+    }, {
       adres: selected.label,
-      ...(context ? conversionParams(context) : {}),
       ...extraParams,
     })
     trackEvent('address_entry_submit', {
       landing_path: context?.landingPath ?? '/',
       pseo_level: context?.pseoLevel ?? 'home',
     })
-    router.push(`/check?${params.toString()}`)
+    router.push(href)
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {

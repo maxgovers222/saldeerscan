@@ -22,7 +22,6 @@ import { WijkComparisonTable, buildWijkComparisonRows } from '@/components/pseo/
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { WijkCtaButton } from '@/components/pseo/WijkCtaButton'
 import { WijkDecisionSection } from '@/components/pseo/WijkDecisionSection'
-import { buildCheckHref } from '@/lib/conversion-context'
 import { getWijkCtrTemplate } from '@/lib/pseo-ctr'
 
 const getCachedWijkPage = cache(getWijkPage)
@@ -103,13 +102,6 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   const wijkDisplay = toDisplay(wijk)
   const stadDisplay = toDisplay(stad)
   const ctrTemplate = getWijkCtrTemplate({ provincie, stad, wijk })
-  const checkHref = buildCheckHref({
-    landingPath: `/${provincie}/${stad}/${wijk}`,
-    pseoLevel: 'wijk',
-    provincie,
-    stad,
-    wijk,
-  })
   const score = resolveWijkScore(page.gemBouwjaar, page.gemHealthScore)
   const { label: scorelabel } = scoreLabel(score)
   const besparing = computeBesparing(page.gemBouwjaar, score)
@@ -145,7 +137,7 @@ export default async function WijkPage({ params }: { params: Promise<Params> }) 
   }
 
   return (
-    <PseoPageShell headerContext={`${wijkDisplay}, ${stadDisplay}`} ctaHref={checkHref}>
+    <PseoPageShell headerContext={`${wijkDisplay}, ${stadDisplay}`}>
       {page.jsonLd && Object.keys(page.jsonLd).length > 0 && <LocalSchema jsonLd={page.jsonLd} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(placeSchema).replace(/<\/script>/g, '<\\/script>') }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({

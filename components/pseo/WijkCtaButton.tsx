@@ -2,7 +2,6 @@
 
 import type { ReactNode, CSSProperties } from 'react'
 import { trackEvent } from '@/lib/analytics'
-import { buildCheckHref } from '@/lib/conversion-context'
 
 interface WijkCtaButtonProps {
   wijk: string
@@ -26,7 +25,7 @@ export function WijkCtaButton({ provincie, wijk, stad, children, className, styl
 
   return (
     <a
-      href={buildCheckHref(context)}
+      href="#adrescheck"
       className={className}
       style={style}
       onClick={() => trackEvent('pseo_check_cta', {

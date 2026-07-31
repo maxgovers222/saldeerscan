@@ -72,14 +72,6 @@ const organizationSchema = {
       image: [`${SITE_URL}/icon`, `${SITE_URL}/apple-icon`],
       inLanguage: 'nl-NL',
       publisher: { '@id': 'https://saldeerscan.nl/#organization' },
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: {
-          '@type': 'EntryPoint',
-          urlTemplate: 'https://saldeerscan.nl/check?adres={search_term_string}',
-        },
-        'query-input': 'required name=search_term_string',
-      },
     },
   ],
 }

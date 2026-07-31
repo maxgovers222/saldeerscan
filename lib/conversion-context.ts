@@ -34,8 +34,14 @@ export function conversionParams(
   )
 }
 
-export function buildCheckHref(context: ConversionContext): string {
-  return `/check?${new URLSearchParams(conversionParams(context)).toString()}`
+export function buildCheckHref(
+  context: ConversionContext,
+  interactionParams: Record<string, string> = {},
+): string {
+  return `/check?${new URLSearchParams({
+    ...conversionParams(context),
+    ...interactionParams,
+  }).toString()}`
 }
 
 const PSEO_LEVELS = new Set<PseoLevel>([

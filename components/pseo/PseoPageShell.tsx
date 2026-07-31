@@ -6,15 +6,13 @@ import { SiteHeader } from '@/components/design-system/SiteHeader'
 export function PseoPageShell({
   children,
   headerContext,
-  ctaHref = '/check',
 }: {
   children: ReactNode
   headerContext?: string
-  ctaHref?: string
 }) {
   return (
     <PageShell surface="evergreen" className="flex flex-col">
-      <SiteHeader tone="dark" contextLabel={headerContext} ctaHref={ctaHref} />
+      <SiteHeader tone="dark" contextLabel={headerContext} ctaHref="#adrescheck" />
       <main id="main-content" className="flex-1">{children}</main>
       <SiteFooter />
     </PageShell>

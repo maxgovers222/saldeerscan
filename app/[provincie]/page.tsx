@@ -7,7 +7,6 @@ import { PseoConversionCard } from '@/components/pseo/PseoConversionCard'
 import { PseoHero } from '@/components/pseo/PseoHero'
 import { PseoPageShell } from '@/components/pseo/PseoPageShell'
 import type { PseoStatus } from '@/components/pseo/PseoStatusBadge'
-import { buildCheckHref } from '@/lib/conversion-context'
 import { getProvincieHubStats, getStaddenByProvincie, getUrgentWijkenByProvincie } from '@/lib/pseo'
 import {
   buildBreadcrumbListLd,
@@ -49,12 +48,6 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
 
   const provLabel = provincieDisplaySlug(provincie)
   const totalWoningen = stads.reduce((sum, city) => sum + city.totalWoningen, 0)
-  const checkHref = buildCheckHref({
-    landingPath: `/${provincie}`,
-    pseoLevel: 'provincie',
-    provincie,
-  })
-
   const hubChildren = stads.map(city => ({
     name: `Zonnepanelen ${toDisplaySlug(city.stad)} — 2027 Saldeercheck`,
     url: `/${provincie}/${city.stad}`,
@@ -68,7 +61,7 @@ export default async function ProvincePage({ params }: { params: Promise<Params>
   const breadcrumbLd = buildBreadcrumbListLd(hubBreadcrumbItems({ provincie }))
 
   return (
-    <PseoPageShell headerContext={provLabel} ctaHref={checkHref}>
+    <PseoPageShell headerContext={provLabel}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 

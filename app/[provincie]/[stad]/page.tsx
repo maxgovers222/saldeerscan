@@ -7,7 +7,6 @@ import { PseoConversionCard } from '@/components/pseo/PseoConversionCard'
 import { PseoHero } from '@/components/pseo/PseoHero'
 import { PseoPageShell } from '@/components/pseo/PseoPageShell'
 import type { PseoStatus } from '@/components/pseo/PseoStatusBadge'
-import { buildCheckHref } from '@/lib/conversion-context'
 import { getTopStadden, getWijkenByStad } from '@/lib/pseo'
 import {
   buildBreadcrumbListLd,
@@ -61,12 +60,6 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
 
   const stadDisplay = toDisplaySlug(stad)
   const provDisplay = provincieDisplaySlug(provincie)
-  const checkHref = buildCheckHref({
-    landingPath: `/${provincie}/${stad}`,
-    pseoLevel: 'stad',
-    provincie,
-    stad,
-  })
   const totalWoningen = wijken.reduce((sum, wijk) => sum + (wijk.aantal_woningen ?? 0), 0)
   const scoredWijken = wijken.filter(wijk => wijk.gem_health_score)
   const avgScore = Math.round(
@@ -89,7 +82,7 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
   const urgentWijken = rankUrgentWijken(wijken, 9)
 
   return (
-    <PseoPageShell headerContext={`${stadDisplay}, ${provDisplay}`} ctaHref={checkHref}>
+    <PseoPageShell headerContext={`${stadDisplay}, ${provDisplay}`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
@@ -165,7 +158,9 @@ export default async function StadPage({ params }: { params: Promise<Params> }) 
               <h2 className="mt-2 text-2xl font-bold text-white">Alle wijken in {stadDisplay}</h2>
             </div>
             <Link
-              href={checkHref}
+              href="#adrescheck"
+              data-analytics-event="pseo_check_cta"
+              data-analytics-label={`stad-address:${stad}`}
               className="min-h-11 content-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-white/65 transition hover:border-trust/40 hover:text-white"
             >
               Mijn adres scannen →

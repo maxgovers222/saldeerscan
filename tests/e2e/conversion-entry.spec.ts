@@ -17,6 +17,8 @@ const phaseRoutes = [
   '/postcode/1012',
 ]
 
+const pseoRoutes = phaseRoutes.slice(1)
+
 test.describe('Customer-first conversion entry', () => {
   test('homepage leads with the customer question and one primary action', async ({ page }) => {
     await page.goto('/')
@@ -66,6 +68,29 @@ test.describe('Customer-first conversion entry', () => {
     expect(url.searchParams.get('provincie')).toBe('utrecht')
     expect(url.searchParams.get('pseo_level')).toBe('wijk')
     expect(url.searchParams.get('landing_path')).toBe('/utrecht/utrecht/leidsche-rijn')
+  })
+
+  for (const route of pseoRoutes) {
+    test(`${route} bevat geen crawlbare check-query en wel een lokale adrescheck`, async ({ request }) => {
+      const response = await request.get(route)
+      expect(response.status()).toBe(200)
+      const html = await response.text()
+      expect(html).not.toMatch(/href=["']\/check\?/)
+      expect(html).not.toContain('urlTemplate\":\"https://saldeerscan.nl/check?')
+      expect(html).toContain('id="adrescheck"')
+    })
+  }
+
+  test('pSEO-header en wijk-CTA springen naar de lokale adrescheck', async ({ page }) => {
+    await page.goto('/utrecht/utrecht/leidsche-rijn')
+    const headerCta = page.getByRole('link', { name: 'Gratis check' })
+    await expect(headerCta).toHaveAttribute('href', '#adrescheck')
+
+    const wijkCtas = page.locator('a[href="#adrescheck"]')
+    expect(await wijkCtas.count()).toBeGreaterThanOrEqual(3)
+    await headerCta.click()
+    await expect(page).toHaveURL(/#adrescheck$/)
+    await expect(page.getByTestId('pseo-conversion-entry')).toBeInViewport()
   })
 
   test('adrescombobox werkt met toetsenbord', async ({ page }) => {
