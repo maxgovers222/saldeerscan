@@ -5,6 +5,8 @@ import {
 } from '@/lib/vision'
 import { parseVisionInput, VisionInputError } from '@/lib/vision-input'
 
+export const maxDuration = 120
+
 export async function POST(request: Request) {
   const limitResult = await applyRateLimit(request, 10, 3_600_000)
   if (limitResult.response) return limitResult.response

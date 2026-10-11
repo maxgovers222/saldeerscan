@@ -50,6 +50,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
   const [error, setError] = useState<string | null>(null)
   const [screeningError, setScreeningError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const lastFileRef = useRef<File | null>(null)
 
   const processFile = useCallback(async (file: File) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
@@ -65,6 +66,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
     }
     setError(null)
     setScreeningError(null)
+    lastFileRef.current = file
     setOptimizing(true)
     setLoading(true)
 
@@ -116,6 +118,7 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
   }
 
   const handleReset = () => {
+    lastFileRef.current = null
     setImageUrl(null)
     setError(null)
     setScreeningError(null)
@@ -203,8 +206,8 @@ export function PhotoUpload({ visionType, onAnalysed, title, description, trackF
       {error && (
         <FunnelNotice variant="danger" role="alert" title="Analyseren lukt nog niet" className="space-y-3">
           <p>{error}</p>
-          <button type="button" onClick={handleReset} className={`w-full ${funnelSecondaryButtonClass}`}>
-            Probeer een andere foto
+          <button type="button" onClick={() => { if (lastFileRef.current) void processFile(lastFileRef.current) }} className={`w-full ${funnelSecondaryButtonClass}`}>
+            Opnieuw analyseren
           </button>
         </FunnelNotice>
       )}

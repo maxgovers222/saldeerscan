@@ -301,6 +301,7 @@ Antwoord uitsluitend in dit JSON formaat:
       ],
     }],
     config: {
+      httpOptions: { timeout: 8_000 },
       thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
     },
   })
