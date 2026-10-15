@@ -26,9 +26,8 @@ export default async function sitemap(
       { url: 'https://saldeerscan.nl', changeFrequency: 'daily' as const, priority: 1 },
       { url: 'https://saldeerscan.nl/check', changeFrequency: 'daily' as const, priority: 0.95 },
       { url: 'https://saldeerscan.nl/methode', changeFrequency: 'monthly' as const, priority: 0.7 },
+      { url: 'https://saldeerscan.nl/over', changeFrequency: 'monthly' as const, priority: 0.6 },
       { url: 'https://saldeerscan.nl/privacy', changeFrequency: 'monthly' as const, priority: 0.5 },
-      { url: 'https://saldeerscan.nl/postcode/1012', changeFrequency: 'monthly' as const, priority: 0.88 },
-      { url: 'https://saldeerscan.nl/postcode/3012', changeFrequency: 'monthly' as const, priority: 0.88 },
     ]
   }
 
@@ -40,7 +39,7 @@ export default async function sitemap(
         ...articles.map(a => {
           return {
             url: `https://saldeerscan.nl/kennisbank/${a.slug}`,
-            ...withLastModified(a.generatedAt),
+            ...withLastModified(a.reviewedAt ?? a.generatedAt),
             changeFrequency: 'monthly' as const,
             priority: 0.85,
           }
@@ -60,7 +59,7 @@ export default async function sitemap(
         ...articles.map(a => {
           return {
             url: `https://saldeerscan.nl/nieuws/${a.slug}`,
-            ...withLastModified(a.publishedAt),
+            ...withLastModified(a.reviewedAt ?? a.publishedAt),
             changeFrequency: 'weekly' as const,
             priority: 0.8,
           }
@@ -86,12 +85,6 @@ export default async function sitemap(
     }
   }
 
-  const provincieUrl = [{
-    url: `https://saldeerscan.nl/${id}`,
-    changeFrequency: 'monthly' as const,
-    priority: 0.9,
-  }]
-
   let pages: Awaited<ReturnType<typeof getPseoPagesByProvincie>> = []
   let straten: Awaited<ReturnType<typeof getStratenByProvincie>> = []
   try {
@@ -100,14 +93,31 @@ export default async function sitemap(
       getStratenByProvincie(id),
     ])
   } catch {
-    return provincieUrl
+    return []
   }
+
+  const indexableCityCounts = new Map<string, number>()
+  for (const page of pages.filter(page => page.indexable)) {
+    const parsed = parsePublishedWijkSlug(page.slug)
+    if (!parsed) continue
+    indexableCityCounts.set(parsed.stad, (indexableCityCounts.get(parsed.stad) ?? 0) + 1)
+  }
+  const indexableCities = new Set([...indexableCityCounts].filter(([, count]) => count > 0).map(([city]) => city))
+  const provincieUrl = indexableCities.size > 0
+    ? [{
+        url: `https://saldeerscan.nl/${id}`,
+        changeFrequency: 'monthly' as const,
+        priority: 0.9,
+      }]
+    : []
 
   const stadUrls = Array.from(
     new Set(
       pages
+        .filter(page => page.indexable)
         .map(p => parsePublishedWijkSlug(p.slug))
         .filter((parsed): parsed is NonNullable<typeof parsed> => parsed !== null)
+        .filter(parsed => indexableCities.has(parsed.stad))
         .map(parsed => `/${parsed.provincie}/${parsed.stad}`),
     ),
   ).map(s => ({
@@ -117,7 +127,7 @@ export default async function sitemap(
   }))
 
   const wijkUrls = pages
-    .filter(p => parsePublishedWijkSlug(p.slug) !== null)
+    .filter(p => p.indexable && parsePublishedWijkSlug(p.slug) !== null)
     .map(p => ({
       url: `https://saldeerscan.nl${p.slug}`,
       ...withLastModified(p.generated_at),
@@ -125,7 +135,13 @@ export default async function sitemap(
       priority: 0.81,
     }))
 
-  const straatUrls = straten.map(p => ({
+  const indexableWijkSlugs = new Set(pages.filter(p => p.indexable).map(p => p.slug))
+  const straatUrls = straten.filter(p => {
+    if (!p.indexable) return false
+    const parts = p.slug.split('/').filter(Boolean)
+    return parts.length === 4
+      && indexableWijkSlugs.has(`/${parts.slice(0, 3).join('/')}`)
+  }).map(p => ({
     url: `https://saldeerscan.nl${p.slug}`,
     ...withLastModified(p.generated_at),
     changeFrequency: 'monthly' as const,

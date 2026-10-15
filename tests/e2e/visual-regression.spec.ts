@@ -113,12 +113,11 @@ for (const size of homepageSizes) {
     await page.goto('/')
     await waitForVisualReady(page)
 
-    const socialProof = page.getByTestId('social-proof-dynamic')
-    await expect(socialProof).toBeVisible()
-    const mask = await socialProof.count() > 0 ? [socialProof] : []
+    // The old row counter is intentionally no longer presented as customer proof.
+    await expect(page.getByTestId('social-proof-dynamic')).toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1, name: 'Wat kost stoppen met salderen u?' })).toBeVisible()
     await expect(page).toHaveScreenshot(`home-${size.name}.png`, {
       fullPage: true,
-      mask,
     })
   })
 }
@@ -163,7 +162,7 @@ for (const route of [
       expect(response?.status()).toBe(200)
       await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible()
       if (route.name === 'wijk') {
-        await expect(page.getByRole('application')).toBeVisible()
+        await expect(page.getByTestId('reviewed-location-facts')).toBeVisible()
       }
       await waitForVisualReady(page)
 

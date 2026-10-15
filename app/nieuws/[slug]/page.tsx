@@ -33,6 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
       locale: 'nl_NL',
       url: `https://saldeerscan.nl/nieuws/${slug}`,
       publishedTime: article.publishedAt ?? undefined,
+      modifiedTime: article.reviewedAt,
     },
   }
 }
@@ -87,6 +88,18 @@ export default async function NieuwsArtikel({ params }: { params: Promise<Params
         aside={aside}
       >
         {article.hoofdtekst && <ArticleBody text={article.hoofdtekst} />}
+
+        {article.sources && article.sources.length > 0 && (
+          <section aria-labelledby="article-sources" className="mt-8 rounded-2xl border border-ink/10 bg-paper p-5">
+            <h2 id="article-sources" className="text-lg font-bold text-ink">Bronnen en inhoudelijke controle</h2>
+            {article.reviewedAt && <p className="mt-2 text-sm text-ink-muted">Inhoud gecontroleerd op {formatDate(article.reviewedAt)}.</p>}
+            <ul className="mt-3 space-y-2">
+              {article.sources.map(source => (
+                <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-trust-dark underline underline-offset-4">{source.label}</a></li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {article.faqItems.length > 0 && (
           <section className="mt-12 border-t border-ink/10 pt-8">

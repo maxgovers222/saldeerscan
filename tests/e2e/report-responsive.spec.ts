@@ -46,16 +46,17 @@ test('email failure never claims the report was sent', async ({ page }) => {
   await expect(page.getByRole('button', { name: /PDF-rapport/ })).toBeVisible()
 })
 
-test('existing panels show an upgrade recommendation on web', async ({ page }) => {
+test('existing panels retain the battery scenario without recommending its long payback', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await seedReportState(page, expectedExistingPanelsReportFixture)
   await page.goto('/check')
   await page.getByRole('button', { name: 'Doorgaan' }).click()
   const desktopReport = page.getByTestId('report-desktop-grid')
-  await expect(page.getByText('Thuisbatterij en slim verbruik')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Slim verbruik met huidige zonnepanelen' })).toBeVisible()
   await expect(page.getByText('Extra opslagvoordeel vanaf 2027')).toBeVisible()
   await expect(page.getByText(/10 bestaande panelen/i)).toBeVisible()
-  await expect(page.getByText('€360 per jaar extra', { exact: true })).toBeVisible()
+  await expect(page.getByText('€360/jaar', { exact: true })).toBeVisible()
+  await expect(desktopReport.getByText('Niet geadviseerd', { exact: true })).toBeVisible()
   await expect(desktopReport.getByRole('rowheader', { name: 'Huidige installatie (2026)' })).toBeVisible()
   await expect(desktopReport.getByRole('rowheader', { name: 'Vanaf 2027 met batterij' })).toBeVisible()
   const scenario = desktopReport.getByTestId('report-scenario-scroll')
@@ -79,14 +80,16 @@ test('PDF opens in a new tab after generation', async ({ page }) => {
   await expect.poll(() => popup.url()).toMatch(/\/pdf-test\.pdf$/)
 })
 
-test('PDF falls back to a direct download when the popup is blocked', async ({ page }) => {
+test('PDF uses the desktop download or mobile open/save anchor when the popup is blocked', async ({ page, isMobile }) => {
   await page.addInitScript(() => {
     window.open = () => null
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })
     const nativeClick = HTMLElement.prototype.click
     HTMLElement.prototype.click = function click() {
       if (this instanceof HTMLAnchorElement) {
         document.documentElement.dataset.pdfFallbackHref = this.href
         document.documentElement.dataset.pdfFallbackDownload = this.download
+        document.documentElement.dataset.pdfFallbackTarget = this.target
         return
       }
       nativeClick.call(this)
@@ -98,5 +101,10 @@ test('PDF falls back to a direct download when the popup is blocked', async ({ p
   await page.getByRole('button', { name: /PDF-rapport/ }).click()
 
   await expect.poll(() => page.locator('html').getAttribute('data-pdf-fallback-href')).toMatch(/^blob:/)
-  await expect.poll(() => page.locator('html').getAttribute('data-pdf-fallback-download')).toMatch(/\.pdf$/)
+  if (isMobile) {
+    await expect(page.locator('html')).toHaveAttribute('data-pdf-fallback-target', '_blank')
+    await expect(page.locator('html')).toHaveAttribute('data-pdf-fallback-download', '')
+  } else {
+    await expect.poll(() => page.locator('html').getAttribute('data-pdf-fallback-download')).toMatch(/\.pdf$/)
+  }
 })

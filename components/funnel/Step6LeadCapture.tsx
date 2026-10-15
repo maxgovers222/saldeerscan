@@ -19,6 +19,7 @@ import {
   type FunnelTracker,
 } from '@/lib/analytics'
 import { extractProvincie } from '@/lib/postcode-provincie'
+import { REPORT_CONSENT_TEXT, ADVICE_CONSENT_TEXT } from '@/lib/lead-consent'
 
 function extractStad(adres?: string): string {
   if (!adres) return 'Nederland'
@@ -51,6 +52,7 @@ interface LeadFormData {
   telefoon: string
   countryCode: CountryCode
   gdprConsent: boolean
+  adviceConsent: boolean
   isEigenaar: boolean | null
   heeftPanelen: boolean | null
   huidigePanelenAantal: string
@@ -105,6 +107,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
     telefoon: '',
     countryCode: '+31',
     gdprConsent: false,
+    adviceConsent: false,
     isEigenaar: state.is_eigenaar,
     heeftPanelen: state.heeft_panelen,
     huidigePanelenAantal: state.huidige_panelen_aantal ? String(state.huidige_panelen_aantal) : '',
@@ -153,10 +156,10 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
       e.email = 'Voer een geldig e-mailadres in'
       validationFailures.push('email_format')
     }
-    if (!form.telefoon.trim()) {
+    if (form.adviceConsent && !form.telefoon.trim()) {
       e.telefoon = 'Telefoonnummer is verplicht'
       validationFailures.push('phone_required')
-    } else if (!validatePhone(form.telefoon, form.countryCode)) {
+    } else if (form.adviceConsent && !validatePhone(form.telefoon, form.countryCode)) {
       e.telefoon = 'Ongeldig telefoonnummer voor het geselecteerde land'
       validationFailures.push('phone_format')
     }
@@ -202,7 +205,9 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          naam: form.naam.trim(), email: form.email.trim().toLowerCase(), telefoon: normalizePhone(form.telefoon, form.countryCode),
+          naam: form.naam.trim(), email: form.email.trim().toLowerCase(),
+          telefoon: form.adviceConsent ? normalizePhone(form.telefoon, form.countryCode) : null,
+          adviceConsent: form.adviceConsent,
           adres: state.adres, postcode: state.bagData?.postcode,
           huisnummer: state.bagData?.huisnummer ? String(state.bagData.huisnummer) : null,
           wijk: state.wijk || null,
@@ -240,6 +245,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
         reportToken?: string | null
         emailStatus?: ReportEmailStatus
         report?: NormalizedReport
+        adviceRequested?: boolean
       }
       if (!data.report || data.report.version !== 1) {
         throw new Error('Rapport kon niet betrouwbaar worden opgebouwd. Probeer het later opnieuw.')
@@ -247,7 +253,11 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
       trackFunnel('lead_submit_succeeded', {
         lead_quality_segment: segment,
         email_status: data.emailStatus ?? data.report.delivery.emailStatus,
+        advice_requested: data.adviceRequested === true,
       })
+      if (data.adviceRequested === true) {
+        trackFunnel('advice_request_succeeded', { lead_quality_segment: segment })
+      }
       dispatch({ type: 'SET_REPORT_MODEL', report: data.report })
       if (typeof data.reportToken === 'string' && data.reportToken.length > 0) {
         dispatch({ type: 'SET_LEAD_REPORT_TOKEN', token: data.reportToken })
@@ -313,7 +323,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
               {[
                 { label: 'ROI-berekening', value: state.roiResult ? `€${state.roiResult.scenarioNu.besparingJaarEur.toLocaleString('nl-NL')}/jaar` : '—', done: !!state.roiResult },
                 { label: 'ISDE panelen/batterij', value: 'Niet van toepassing', done: true },
-                { label: 'Netcongestie analyse', value: state.netcongestie?.status ?? '—', done: !!state.netcongestie },
+                { label: 'Actuele netsituatie', value: 'Niet geverifieerd', done: false },
                 { label: 'Installateur advies', value: 'Na uw aanvraag', done: true },
                 { label: '2027 urgentie tijdlijn', value: 'Inbegrepen', done: true },
               ].map(({ label, value, done }) => (
@@ -357,7 +367,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
             <FunnelCard className="py-4">
               <FunnelTrustLine items={['Beveiligd', 'Lokale installateurs', 'Vrijblijvend']} />
               <p className="mt-3 text-center text-xs text-ink-muted">
-                SSL- en AVG-bewust verwerkt, zonder koopplicht. Uw aanvraag wordt gekoppeld aan gecertificeerde installateurs in {regio}.
+                Uw rapport is gratis. Alleen als u afzonderlijk kiest voor advies, mogen we uw aanvraag delen met een installateur in {regio}.
               </p>
             </FunnelCard>
           </div>
@@ -503,9 +513,9 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
             {watGebeurtOpen && (
               <ol id="lead-next-steps" className="space-y-3 border-t border-ink/10 px-4 py-4">
                 {[
-                  'Uw aanvraag wordt doorgestuurd naar gecertificeerde installateurs in uw regio',
-                  'Een adviseur neemt naar aanleiding van uw aanvraag contact met u op',
-                  'U ontvangt een vrijblijvende offerte op maat — geen verplichtingen',
+                  'Uw rapport opent direct; de bezorgstatus van de e-mail wordt apart bevestigd.',
+                  'Uw aanvraag gaat alleen naar een installateur als u de optionele doorverwijzing aanvinkt.',
+                  'Bij een doorverwijzing kan een installateur contact opnemen. U beslist zelf over een eventuele offerte.',
                 ].map((tekst, i) => (
                   <li key={tekst} className="flex gap-3 text-sm leading-5 text-ink-muted">
                     <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-trust/15 text-xs font-bold text-trust-dark">{i + 1}</span>
@@ -519,7 +529,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
           <form onSubmit={handleSubmit} className="order-1 space-y-4 lg:order-3" noValidate>
             <FunnelCard>
               <h3 className="font-heading text-lg font-bold text-ink">Waar mogen we uw rapport klaarzetten?</h3>
-              <p className="mt-1 text-sm leading-6 text-ink-muted">Alle velden hieronder zijn nodig om uw aanvraag veilig te verwerken.</p>
+              <p className="mt-1 text-sm leading-6 text-ink-muted">Uw naam en e-mailadres zijn nodig voor het rapport. Een doorverwijzing voor advies kiest u afzonderlijk.</p>
 
               <div className="mt-5 space-y-4">
                 <FunnelField htmlFor="lead-naam" label="Voor- en achternaam *" error={errors.naam}>
@@ -550,7 +560,22 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
                   />
                 </FunnelField>
 
-                <FunnelField
+                <label htmlFor="lead-advice" className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink/15 p-4 text-sm leading-6 text-ink-muted">
+                  <input
+                    id="lead-advice"
+                    type="checkbox"
+                    checked={form.adviceConsent}
+                    disabled={loading}
+                    onChange={event => {
+                      setForm(current => ({ ...current, adviceConsent: event.target.checked }))
+                      setErrors(current => ({ ...current, telefoon: undefined }))
+                    }}
+                    className="mt-1 size-5 shrink-0 accent-trust"
+                  />
+                  <span><strong className="block text-ink">Optioneel: hulp bij een vervolgstap</strong>{ADVICE_CONSENT_TEXT}</span>
+                </label>
+
+                {form.adviceConsent && <FunnelField
                   htmlFor="lead-telefoon"
                   label="Telefoonnummer *"
                   hint={form.telefoon && validatePhone(form.telefoon, form.countryCode) ? 'Nummer is geldig' : undefined}
@@ -586,10 +611,10 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
                   {!errors.telefoon && form.telefoon && validatePhone(form.telefoon, form.countryCode) && (
                     <p className="text-xs text-trust-dark">Geldig nummer — wordt opgeslagen als {normalizePhone(form.telefoon, form.countryCode)}</p>
                   )}
-                </FunnelField>
+                </FunnelField>}
 
                 <FunnelNotice title="Waarom vragen we dit?">
-                  Uw e-mailadres is nodig voor de rapportlink. Met uw telefoonnummer kan een gecertificeerde energie-expert uw aanvraag en advies valideren.
+                  Uw e-mailadres is nodig voor de rapportlink. Een telefoonnummer is alleen nodig als u ook een doorverwijzing voor advies wilt.
                 </FunnelNotice>
 
                 <div className="space-y-2 rounded-xl border border-trust/25 bg-trust/8 p-4">
@@ -619,7 +644,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
                       </span>
                     </span>
                     <span className="text-xs leading-relaxed text-ink-muted">
-                      Ja, stuur mij het gratis PDF-rapport. Ik geef toestemming om mijn scandata te laten valideren door een gecertificeerde energie-expert van SaldeerScan.nl in mijn regio.{' '}
+                      {REPORT_CONSENT_TEXT}{' '}
                       <a href="/privacy" className="font-semibold text-trust-dark underline underline-offset-2 hover:text-evergreen-900" target="_blank" rel="noopener noreferrer">Privacyverklaring →</a>
                     </span>
                   </label>
@@ -672,7 +697,7 @@ export function Step6LeadCapture({ state, dispatch, trackFunnel }: Step6LeadCapt
             </p>
             <FunnelTrustLine items={['Vrijblijvend advies', 'Geen verplichtingen', 'Gratis']} />
             <p className="text-center text-xs leading-5 text-ink-muted">
-              Uw data wordt beveiligd verwerkt en gevalideerd door een gecertificeerde expert in {regio} voor een definitieve 2027-check.
+              De uitkomst is een berekende indicatie. Voor een installatiebesluit zijn uw contractgegevens, een offerte en een controle op locatie nodig.
             </p>
           </form>
         </div>

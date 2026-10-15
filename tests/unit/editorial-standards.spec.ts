@@ -34,6 +34,20 @@ test('correction copy is plain text without markdown emphasis', () => {
   expect(result).not.toContain('**')
 })
 
+test('repairs the observed claim that saldering was already reduced in 2026', () => {
+  const result = sanitizeGeneratedEnergyCopy('De salderingsregeling is al aanzienlijk afgebouwd in 2026.\n\nBewaar uw garantievoorwaarden.')
+  expect(result).not.toContain('al aanzienlijk afgebouwd')
+  expect(result).toContain('100% mogelijk tot en met 31 december 2026')
+  expect(result).toContain('Bewaar uw garantievoorwaarden.')
+})
+
+test('repairs denial of the compensation floor while keeping gross compensation separate from fees', () => {
+  const result = sanitizeGeneratedEnergyCopy('Er is geen wettelijk vastgelegd of gegarandeerd tarief meer.')
+  expect(result).toContain('50% van het kale leveringstarief')
+  expect(result).toContain('Terugleverkosten zijn een afzonderlijke contractpost')
+  expect(result).not.toContain('geen wettelijk vastgelegd')
+})
+
 test('corrects unsafe ISDE copy in structured content without changing its shape', () => {
   const result = sanitizeStructuredEnergyCopy({
     name: 'FAQ',

@@ -70,8 +70,8 @@ export function renderReportEmail(input: {
           <p style="margin:0 0 12px;font-size:18px;font-weight:700">Beste ${firstName},</p>
           <p style="margin:0 0 24px;color:${BRAND_COLORS.inkMuted};line-height:1.65">Uw rapport voor <strong>${address}</strong> is opgesteld.</p>
           <div style="background:${BRAND_COLORS.warningSurface};border:1px solid ${BRAND_COLORS.warningBorder};border-radius:14px;padding:20px;margin-bottom:20px">
-            <small style="color:${BRAND_COLORS.warningInk}">Mogelijk verlies vanaf 2027</small>
-            <div style="font-size:30px;font-weight:800;color:${BRAND_COLORS.warning};margin-top:6px">−${euro(report.impact.annualLossEur)}/jaar</div>
+            <small style="color:${BRAND_COLORS.warningInk}">Verschil in jaarwaarde vanaf 2027</small>
+            <div style="font-size:30px;font-weight:800;color:${BRAND_COLORS.warning};margin-top:6px">${report.impact.annualLossEur > 0 ? '−' : report.impact.annualLossEur < 0 ? '+' : ''}${euro(Math.abs(report.impact.annualLossEur))}/jaar</div>
           </div>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px">
             <tr>
@@ -91,6 +91,7 @@ export function renderReportEmail(input: {
               <td align="right" style="padding:12px;border-top:1px solid ${BRAND_COLORS.border};font-weight:700">${euro(upgradeSaving)}/jaar</td>
             </tr>`}
           </table>
+          ${report.calculation ? `<details><summary>Invoer en aannames van uw berekening</summary><ul>${report.calculation.assumptions.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul></details>` : ''}
           <p style="text-align:center;margin:28px 0">
             <a href="${reportUrl}" style="display:inline-block;background:${BRAND_COLORS.action};color:${BRAND_COLORS.evergreen950};text-decoration:none;font-weight:700;padding:14px 24px;border-radius:12px">Bekijk en download uw rapport</a>
           </p>

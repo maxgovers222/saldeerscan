@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, type Dispatch } from 'react'
 import type { FunnelState, FunnelAction, ROIResult } from './types'
 import { Shock2027Banner } from './Shock2027Banner'
 import { schatVerbruik } from '@/lib/roi'
+import { buildFunnelEventParams, trackEvent } from '@/lib/analytics'
 import { FunnelActions, funnelPrimaryButtonClass, funnelSecondaryButtonClass, funnelTextButtonClass } from './ui/FunnelActions'
 import { FunnelCard } from './ui/FunnelCard'
 import { FunnelChoiceCard } from './ui/FunnelChoiceCard'
@@ -16,6 +17,7 @@ interface Step2ROIProps {
 }
 
 const PANEEL_TYPES = [
+  { label: 'Rekenvoorbeeld (350 kWh/jaar)', kwhPerPaneel: 350 },
   { label: 'Standaard (330 kWh/jaar)', kwhPerPaneel: 330 },
   { label: 'Efficiënt (370 kWh/jaar)',  kwhPerPaneel: 370 },
   { label: 'Premium (410 kWh/jaar)',    kwhPerPaneel: 410 },
@@ -109,12 +111,16 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
     if (state.huidige_panelen_aantal && state.huidige_panelen_aantal > 0) return state.huidige_panelen_aantal
     return state.roiResult?.aantalPanelen ?? (Math.floor((dakMax * 0.55) / 4) || 10)
   })
-  const [kwhPerPaneel, setKwhPerPaneel] = useState(350)
+  const [kwhPerPaneel, setKwhPerPaneel] = useState(state.roiInput?.kwhPerPaneel ?? 350)
+  const [ownFigures, setOwnFigures] = useState<Partial<NonNullable<FunnelState['roiInput']>>>(state.roiInput ?? {})
+  const requestSequence = useRef(0)
   const [localRoi, setLocalRoi] = useState<ROIResult | null>(state.roiResult ?? null)
   const [loading, setLoading] = useState(false)
   const [roiError, setRoiError] = useState<string | null>(null)
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasLoadedOnce = useRef(false)
+  const hasReceivedResult = useRef(false)
+  const trackedResultSession = useRef<string | null>(null)
 
   const aanbevolenPanelen = Math.floor((dakOpp * 0.55) / 4) || 1
 
@@ -126,19 +132,23 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
   useEffect(() => {
     if (!state.bagData?.oppervlakte || !state.bagData?.bouwjaar) return
     if (panelen === 0) return
+    setLocalRoi(null)
     if (debounceTimer.current) clearTimeout(debounceTimer.current)
     const delay = hasLoadedOnce.current ? 500 : 0
     hasLoadedOnce.current = true
     debounceTimer.current = setTimeout(async () => {
+      const sequence = ++requestSequence.current
       setLoading(true)
       setRoiError(null)
       try {
         const bag = state.bagData!
         const roiInput = {
+          ...ownFigures,
           oppervlakte: bag.oppervlakte!,
           bouwjaar: bag.bouwjaar!,
           dakOppervlakte: dakOpp,
           huidigVerbruikKwh: verbruik,
+          verbruikBron: state.verbruik_bron,
           aantalPanelenOverride: panelen,
           kwhPerPaneel,
           dakrichting: state.dakrichting,
@@ -154,22 +164,40 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
         })
         if (res.ok) {
           const data = await res.json()
+          if (sequence !== requestSequence.current) return
+          hasReceivedResult.current = true
           setLocalRoi(data.roi)
           dispatch({ type: 'SET_ROI_INPUT', roiInput })
           dispatch({ type: 'SET_ROI', roiResult: data.roi })
           if (data.health) dispatch({ type: 'SET_HEALTH_SCORE', healthScore: data.health })
         } else {
+          if (sequence !== requestSequence.current) return
           setRoiError('Herberekening mislukt. Probeer opnieuw.')
         }
       } catch {
+        if (sequence !== requestSequence.current) return
         setRoiError('Herberekening mislukt. Controleer uw verbinding.')
-      } finally { setLoading(false) }
+      } finally { if (sequence === requestSequence.current) setLoading(false) }
     }, delay)
-    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current) }
+    return () => { requestSequence.current++; if (debounceTimer.current) clearTimeout(debounceTimer.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [verbruik, dakOpp, panelen, kwhPerPaneel, state.dakrichting, state.huishouden_grootte])
+  }, [verbruik, dakOpp, panelen, kwhPerPaneel, state.dakrichting, state.huishouden_grootte, state.verbruik_bron, ownFigures])
 
   const roi = localRoi
+
+  useEffect(() => {
+    const session = state.funnelSessionId
+    if (!roi || !hasReceivedResult.current || !session || trackedResultSession.current === session) return
+    trackedResultSession.current = session
+    const marker = `saldeerscan:result-viewed:${session}`
+    try {
+      if (sessionStorage.getItem(marker)) return
+      sessionStorage.setItem(marker, '1')
+    } catch { /* In-memory ref still avoids repeats in this mounted step. */ }
+    const hasOverrides = state.verbruik_bron === 'gebruiker' || [ownFigures.jaarProductieKwh, ownFigures.directEigenGebruikPct, ownFigures.leveringstarief, ownFigures.teruglevertarief, ownFigures.terugleverkosten2027Eur].some(value => value !== undefined)
+    trackEvent('roi_result_viewed', buildFunnelEventParams({ sessionId: session, attribution: state.attribution,
+      stage: 2, extra: { calculation_source: hasOverrides ? 'with_user_overrides' : 'model_defaults' } }))
+  }, [roi, state.funnelSessionId, state.attribution, state.verbruik_bron, ownFigures])
 
   return (
     <FunnelStageShell
@@ -181,7 +209,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
       <FunnelCard surface="mist" className="space-y-4">
         <div className="text-xs font-semibold uppercase tracking-widest text-trust-dark">Huidige situatie</div>
         <p className="text-sm leading-6 text-ink-muted">
-          Dit is leidend voor het advies: met bestaande panelen verschuift de nadruk naar batterij en optimalisatie (niet naar nieuwe panelen als primaire stap).
+          Met bestaande panelen vergelijken we uw huidige situatie met meer eigen gebruik. Een batterij is alleen een optie als het extra voordeel de investering rechtvaardigt.
         </p>
         <p id="st2-panelen-label" className="text-sm font-semibold text-ink">Heeft u nu al zonnepanelen?</p>
         <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="st2-panelen-label">
@@ -233,15 +261,47 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-sm font-semibold text-ink sm:px-5">
           <span>
             Berekening aanpassen
-            <span className="mt-0.5 block text-xs font-normal text-ink-muted">Verbruik, dak, panelen en dakrichting</span>
+            <span className="mt-0.5 block text-xs font-normal text-ink-muted">Uw jaarcijfers, contracttarieven, terugleverkosten en batterijscenario</span>
           </span>
           <span className="text-trust-dark transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
         </summary>
         <div className="space-y-5 border-t border-ink/10 px-4 py-5 sm:px-5">
+        <p className="text-sm leading-6 text-ink-muted">Gebruik totaal jaarverbruik (inclusief eigen zonnestroom), uw omvormerproductie en uw energiecontract. Lege velden gebruiken de rekenvoorbeelden hieronder. Vul een kostenstaffel in als jaarbedrag bij deze teruglevering; het model herberekent staffels niet automatisch.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="roi-verbruik" className="mb-1.5 block text-sm font-semibold text-ink">Totaal jaarverbruik (kWh, inclusief zonnestroom)</label>
+            <input id="roi-verbruik" type="number" min={0} max={verbruikMax} step={1} value={verbruik}
+              onChange={event => { setVerbruik(Number(event.target.value)); dispatch({ type: 'SET_VERBRUIK_BRON', bron: 'gebruiker' }) }}
+              className="w-full min-w-0 rounded-xl border border-ink/15 bg-white px-4 py-3 font-mono text-base text-ink focus-visible:ring-3 focus-visible:ring-trust/35" />
+          </div>
+          {([
+            ['jaarProductieKwh', 'Jaarproductie zonnepanelen (kWh)', 0, 100000, 1, 'Dakmodel'],
+            ['directEigenGebruikPct', 'Direct eigen gebruik (% productie)', 0, 100, 1, 'Huishoudschatting'],
+            ['leveringstarief', 'Levering inclusief belasting (€/kWh)', 0, 2, 0.001, '0.40'],
+            ['kaalLeveringstarief', 'Kaal leveringstarief (€/kWh)', 0, 2, 0.001, '0.18'],
+            ['teruglevertarief', 'Bruto terugleververgoeding (€/kWh)', 0, 2, 0.001, '0.09'],
+            ['terugleverkosten2026Eur', 'Terugleverkosten 2026 (€/jaar)', 0, 10000, 1, '0'],
+            ['terugleverkosten2027Eur', 'Terugleverkosten 2027 (€/jaar)', 0, 10000, 1, '0'],
+            ['terugleverkostenPerKwh2026', 'Extra kosten 2026 (€/teruggeleverde kWh)', 0, 2, 0.001, '0'],
+            ['terugleverkostenPerKwh2027', 'Extra kosten 2027 (€/teruggeleverde kWh)', 0, 2, 0.001, '0'],
+            ['batterijInvesteringEur', 'Batterijofferte inclusief installatie (€)', 0, 100000, 1, '4000'],
+            ['batterijCapaciteitKwh', 'Batterijcapaciteit (kWh)', 0, 100, 0.1, '10'],
+            ['batterijRendementPct', 'Batterijrendement (%)', 1, 100, 1, '90'],
+            ['eigenGebruikMetBatterijPct', 'Doel eigen gebruik met batterij (%)', 0, 100, 1, 'Huishoudschatting'],
+          ] as const).map(([key, label, min, max, step, placeholder]) => (
+            <div key={key}>
+              <label htmlFor={`roi-${key}`} className="mb-1.5 block text-sm font-semibold text-ink">{label}</label>
+              <input id={`roi-${key}`} type="number" inputMode="decimal" min={min} max={max} step={step}
+                placeholder={placeholder} value={ownFigures[key] ?? ''}
+                onChange={event => setOwnFigures(previous => ({ ...previous, [key]: event.target.value === '' ? undefined : Number(event.target.value) }))}
+                className="w-full min-w-0 rounded-xl border border-ink/15 bg-white px-4 py-3 font-mono text-base text-ink focus-visible:ring-3 focus-visible:ring-trust/35" />
+            </div>
+          ))}
+        </div>
         <SliderInput label="Huidig verbruik" value={verbruik} onChange={(v) => {
           setVerbruik(v)
           dispatch({ type: 'SET_VERBRUIK_BRON', bron: 'gebruiker' })
-        }} min={1000} max={verbruikMax} step={100} unit="kWh/jaar"
+        }} min={0} max={verbruikMax} step={100} unit="kWh/jaar"
           note={state.bagData?.oppervlakte ? `Geschat o.b.v. ${state.bagData.oppervlakte}m²` : undefined} />
         <SliderInput label="Dakoppervlak" value={dakOpp} onChange={setDakOpp} min={10} max={dakMax} step={1} unit="m²"
           note={state.bagData?.dakOppervlakte ? `BAG: ${state.bagData.dakOppervlakte}m²` : undefined} />
@@ -299,10 +359,10 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
             </FunnelChoiceCard>
           </div>
           {state.dakrichting === 'Noord' && (
-            <p className="text-xs text-warning">Noord-dak levert ~57% minder op. Batterij is extra waardevol.</p>
+            <p className="text-xs text-warning">Het dakmodel schat bij noord minder productie. Uw gemeten jaarproductie gaat voor.</p>
           )}
           {state.dakrichting === 'Zuid' && (
-            <p className="text-xs text-trust-dark">Zuid-dak: optimale opbrengst (+23% t.o.v. gemiddeld).</p>
+            <p className="text-xs text-trust-dark">Het dakmodel schat bij zuid meer productie. Schaduw en helling zijn niet gemeten.</p>
           )}
         </div>
         </div>
@@ -325,7 +385,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
           {state.heeft_panelen === true ? (
             <>
               <p className="text-sm leading-6 text-ink-muted">
-                U heeft al panelen: de grootste hefboom richting 2027 is doorgaans <span className="font-bold text-ink">thuisbatterij + slim verbruik</span>.
+                U heeft al panelen: onderzoek eerst hoeveel stroom u direct gebruikt. Vergelijk een batterij vervolgens met uw eigen tarieven en een offerte.
                 Optioneel kunt u uitbreiden met extra panelen tot ongeveer{' '}
                 <span className="font-bold text-ink">{aanbevolenPanelen}</span> op dit dakmodel.
               </p>
@@ -361,10 +421,16 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
           <div>
             <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-muted">Scenariovergelijking</div>
             <div className="space-y-4">
-              <ScenarioCard scenario={roi.scenarioNu} variant="amber" recommended={roi.aanbeveling === 'panelen'} />
+              <ScenarioCard scenario={roi.scenarioNu} variant="amber" recommended={roi.aanbeveling === 'panelen' && roi.scenarioWachten.besparingJaarEur > 0} />
               <ScenarioCard scenario={roi.scenarioMetBatterij} variant="emerald" recommended={roi.aanbeveling === 'beide'} />
               <ScenarioCard scenario={roi.scenarioWachten} variant="red" />
             </div>
+            {roi.calculation && <div className="mt-4 space-y-2 text-sm text-ink-muted">
+              <p>{roi.aanbevelingTekst}</p>
+              <details><summary className="cursor-pointer font-semibold text-ink">Invoer en aannames</summary>
+                <ul className="mt-2 list-disc space-y-2 pl-5">{roi.calculation.assumptions.map(line => <li key={line}>{line}</li>)}</ul>
+              </details>
+            </div>}
           </div>
           <div>
             <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-muted">2027 Urgentie</div>
@@ -402,7 +468,7 @@ export function Step2ROI({ state, dispatch }: Step2ROIProps) {
             disabled={
               state.heeft_panelen === null
               || (state.heeft_panelen === true && (!state.huidige_panelen_aantal || state.huidige_panelen_aantal < 1))
-              || !roi
+              || !roi || loading || !!roiError
               || panelen === 0
             }
             className={funnelPrimaryButtonClass}

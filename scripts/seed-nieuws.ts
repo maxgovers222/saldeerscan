@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 import * as dotenv from 'dotenv'
 import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
+import { saveGeneratedArticleDraft } from '../lib/article-drafts'
 
 dotenv.config({ path: '.env.local' })
 
@@ -30,7 +31,6 @@ async function getExistingSlugs(): Promise<Set<string>> {
   const { data } = await supabase
     .from('nieuws_articles')
     .select('slug')
-    .eq('status', 'published')
   return new Set((data ?? []).map((r: { slug: string }) => r.slug))
 }
 
@@ -64,9 +64,7 @@ Return ALLEEN dit JSON formaat (geen markdown omheen):
   const content = JSON.parse(jsonMatch[0])
   const now = new Date().toISOString()
 
-  const { error } = await supabase
-    .from('nieuws_articles')
-    .upsert({
+  await saveGeneratedArticleDraft(supabase, 'nieuws_articles', {
       slug: item.slug,
       titel: content.titel ?? item.titel,
       meta_description: content.metaDescription ?? '',
@@ -75,12 +73,9 @@ Return ALLEEN dit JSON formaat (geen markdown omheen):
       faq_items: [],
       json_ld: {},
       topic_seed: item.slug,
-      status: 'published',
-      published_at: now,
+      status: 'draft',
       generated_at: now,
-    }, { onConflict: 'slug' })
-
-  if (error) throw new Error(`DB upsert mislukt voor ${item.slug}: ${error.message}`)
+    })
 }
 
 async function main() {
@@ -88,6 +83,7 @@ async function main() {
   const dryRun = process.argv.includes('--dry-run')
 
   console.log(`\nNieuws seed — ${NIEUWS_ITEMS.length} artikelen`)
+  console.log('Nieuwe artikelen blijven concept tot broncontrole en redactionele goedkeuring.')
   if (dryRun) console.log('DRY RUN — geen DB writes')
 
   const existing = await getExistingSlugs()

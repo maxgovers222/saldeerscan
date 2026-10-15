@@ -64,7 +64,7 @@ export function ArticleShell({
         <PseoConversionCard
           context={{ landingPath, pseoLevel: kind }}
           title="Wat betekent 2027 voor uw woning?"
-          description="Bereken gratis uw persoonlijke besparing en rendement op basis van uw adres."
+          description="Vergelijk met uw eigen productie, verbruik en energiecontract. Het gratis rapport vraagt geen adviesaanvraag."
           placeholder="Vul uw adres in"
         />
       </main>

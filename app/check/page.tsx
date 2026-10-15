@@ -26,7 +26,7 @@ export async function generateMetadata({
       ? 'Uw SaldeerScan rapport'
       : 'Gratis 2027 saldeercheck — SaldeerScan.nl',
     description:
-      'Ontdek wat het einde van salderen op 1 januari 2027 voor uw woning betekent. Gratis AI-scan, BAG-data en persoonlijk investeringsrapport.',
+      'Bereken het verschil tussen 2026 en 2027 met uw jaarproductie, eigen gebruik en contractkosten. Vergelijk een batterij en ontvang een gratis rapport zonder verplichte adviesaanvraag.',
     alternates: { canonical: CHECK_CANONICAL },
     // Funnel URL-context is bedoeld voor routing/attributie, niet voor indexatie.
     robots: privateReport || hasAnyQueryParams ? { index: false, follow: false } : { index: true, follow: true },

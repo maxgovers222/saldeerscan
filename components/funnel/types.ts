@@ -37,6 +37,7 @@ export interface ROIScenario {
 }
 
 export interface ROIResult {
+  calculation?: import('@/lib/roi').CalculationSnapshot
   geschatVerbruikKwh: number
   aantalPanelen: number
   productieKwh: number
@@ -99,6 +100,7 @@ export interface OmvormerAnalyse {
 }
 
 export interface RoiCalculationInput {
+  verbruikBron?: 'schatting' | 'gebruiker'
   oppervlakte: number
   bouwjaar: number
   dakOppervlakte: number
@@ -107,6 +109,19 @@ export interface RoiCalculationInput {
   kwhPerPaneel: number
   dakrichting: 'Zuid' | 'Oost/West' | 'Noord' | null
   huishouden_grootte: 1 | 2 | 3 | null
+  jaarProductieKwh?: number
+  directEigenGebruikPct?: number
+  leveringstarief?: number
+  kaalLeveringstarief?: number
+  teruglevertarief?: number
+  terugleverkosten2026Eur?: number
+  terugleverkosten2027Eur?: number
+  terugleverkostenPerKwh2026?: number
+  terugleverkostenPerKwh2027?: number
+  batterijInvesteringEur?: number
+  batterijCapaciteitKwh?: number
+  batterijRendementPct?: number
+  eigenGebruikMetBatterijPct?: number
 }
 
 export interface FunnelState {
@@ -125,10 +140,10 @@ export interface FunnelState {
     lon: number
   } | null
   netcongestie: {
-    status: 'ROOD' | 'ORANJE' | 'GROEN'
+    status: 'ROOD' | 'ORANJE' | 'GROEN' | null
     netbeheerder: string
     uitleg: string
-    terugleveringBeperkt: boolean
+    terugleveringBeperkt: boolean | null
     postcodePrefix?: string
   } | null
   healthScore: HealthScoreResult | null

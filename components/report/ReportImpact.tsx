@@ -17,8 +17,8 @@ export function ReportImpact({ report }: { report: NormalizedReport }) {
         {
           label: 'Vanaf 2027 met batterij',
           saving: report.scenarios.withBattery.besparingJaarEur,
-          investment: report.recommendation.investmentEur,
-          paybackYears: report.recommendation.paybackYears,
+          investment: report.calculation?.batteryInvestmentEur ?? Math.max(report.scenarios.withBattery.investeringEur - report.scenarios.panelsNow.investeringEur, 0),
+          paybackYears: report.calculation?.batteryPaybackYears ?? (report.recommendation.extraAnnualSavingEur && report.recommendation.extraAnnualSavingEur > 0 ? Math.round((report.scenarios.withBattery.investeringEur - report.scenarios.panelsNow.investeringEur) / report.recommendation.extraAnnualSavingEur * 10) / 10 : null),
         },
         {
           label: 'Vanaf 2027 zonder batterij',
@@ -29,19 +29,19 @@ export function ReportImpact({ report }: { report: NormalizedReport }) {
       ]
     : [
         {
-          label: 'Nu',
+          label: 'Referentiejaar 2026',
           saving: report.scenarios.panelsNow.besparingJaarEur,
           investment: report.scenarios.panelsNow.investeringEur,
           paybackYears: report.scenarios.panelsNow.terugverdientijdJaar,
         },
         {
-          label: 'Met batterij',
+          label: '2027 met batterij',
           saving: report.scenarios.withBattery.besparingJaarEur,
           investment: report.scenarios.withBattery.investeringEur,
           paybackYears: report.scenarios.withBattery.terugverdientijdJaar,
         },
         {
-          label: 'Wachten tot 2027',
+          label: '2027 zonder batterij',
           saving: report.scenarios.waitUntil2027.besparingJaarEur,
           investment: report.scenarios.waitUntil2027.investeringEur,
           paybackYears: report.scenarios.waitUntil2027.terugverdientijdJaar,
@@ -98,7 +98,7 @@ export function ReportImpact({ report }: { report: NormalizedReport }) {
                   <td className="px-3 py-3 text-right font-mono text-ink">{euro(scenario.saving)}</td>
                   <td className="px-3 py-3 text-right font-mono text-ink">{euro(scenario.investment)}</td>
                   <td className="py-3 pl-3 text-right font-mono text-ink">
-                    {scenario.paybackYears !== null && Number.isFinite(scenario.paybackYears)
+                    {scenario.paybackYears !== null && scenario.paybackYears < 99 && Number.isFinite(scenario.paybackYears)
                       ? `${scenario.paybackYears} jaar`
                       : '—'}
                   </td>

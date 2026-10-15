@@ -76,6 +76,7 @@ function hydrateLegacyReportDisplay(
 ) {
   const hasBattery = report.recommendation.batteryCapacityKwh !== null
   const roiResult: ROIResult = {
+    calculation: report.calculation,
     geschatVerbruikKwh: report.recommendation.consumptionKwh,
     aantalPanelen: report.recommendation.panelCount,
     productieKwh: report.recommendation.productionKwh,

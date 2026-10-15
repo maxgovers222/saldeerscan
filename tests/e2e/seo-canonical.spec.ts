@@ -1,4 +1,16 @@
 import { expect, test } from '@playwright/test'
+
+test('the www host redirects to the declared apex while preserving path and report query', async ({ request }) => {
+  const response = await request.get('/check?leadId=synthetic-id&token=synthetic-token', {
+    headers: { host: 'www.saldeerscan.nl' }, maxRedirects: 0,
+  })
+  expect(response.status()).toBe(308)
+  const target = new URL(response.headers().location)
+  expect(target.origin).toBe('https://saldeerscan.nl')
+  expect(target.pathname).toBe('/check')
+  expect(target.searchParams.get('leadId')).toBe('synthetic-id')
+  expect(target.searchParams.get('token')).toBe('synthetic-token')
+})
 import { EXACT_GSC_REDIRECTS } from '../../lib/gsc-redirects'
 
 test('/check heeft canonieke URL zonder query-params', async ({ page }) => {

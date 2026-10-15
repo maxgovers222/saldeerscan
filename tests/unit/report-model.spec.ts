@@ -9,11 +9,11 @@ test('builds the new-installation report once', () => {
   const report = buildReportModel(reportSourceNoPanels)!
   expect(report.version).toBe(1)
   expect(report.impact.annualLossEur).toBe(400)
-  expect(report.summary.annualSavingEur).toBe(780)
-  expect(report.summary.paybackYears).toBe(9.6)
+  expect(report.summary.annualSavingEur).toBe(420)
+  expect(report.summary.paybackYears).toBe(8.3)
   expect(report.recommendation.panelCount).toBe(10)
-  expect(report.recommendation.batteryCapacityKwh).toBe(10)
-  expect(report.recommendation.investmentEur).toBe(7500)
+  expect(report.recommendation.batteryCapacityKwh).toBeNull()
+  expect(report.recommendation.investmentEur).toBe(3500)
   expect(report.scenarios.withBattery.besparingJaarEur).toBe(780)
   expect(report.salderingTimeline).toEqual([
     { year: 2024, compensationPct: 100 },
@@ -21,17 +21,17 @@ test('builds the new-installation report once', () => {
     { year: 2026, compensationPct: 100 },
     { year: 2027, compensationPct: 0 },
   ])
-  expect(report.recommendation.primarySolution).toBe('Zonnepanelen en thuisbatterij')
+  expect(report.recommendation.primarySolution).toBe('Zonnepanelen')
   expect(report.delivery.emailStatus).toBe('sent')
 })
 
-test('uses battery delta for a home with existing panels', () => {
+test('does not advise a legacy battery with payback beyond the screening horizon', () => {
   const report = buildReportModel(reportSourceExistingPanels)!
   expect(report.summary.annualSavingEur).toBe(360)
-  expect(report.recommendation.investmentEur).toBe(4000)
+  expect(report.recommendation.investmentEur).toBe(0)
   expect(report.recommendation.extraAnnualSavingEur).toBe(360)
-  expect(report.recommendation.paybackYears).toBe(11.1)
-  expect(report.recommendation.primarySolution).toBe('Thuisbatterij en slim verbruik')
+  expect(report.recommendation.paybackYears).toBeNull()
+  expect(report.recommendation.primarySolution).toBe('Slim verbruik met huidige zonnepanelen')
 })
 
 test('recalculates a legacy 2026 battery result for the 2027 comparison', () => {

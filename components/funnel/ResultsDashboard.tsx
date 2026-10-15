@@ -8,6 +8,7 @@ import { ReportShell } from '@/components/report/ReportShell'
 import { ReportSummary } from '@/components/report/ReportSummary'
 import { ReportTechnical } from '@/components/report/ReportTechnical'
 import { SubmissionStatus } from '@/components/report/SubmissionStatus'
+import { ReportAssumptions } from '@/components/report/ReportAssumptions'
 
 export function ResultsDashboard({
   report,
@@ -30,6 +31,7 @@ export function ResultsDashboard({
         <ReportAccordion title="Waarom dit advies?">
           <ReportImpact report={report} />
         </ReportAccordion>
+        <ReportAccordion title="Invoer en aannames"><ReportAssumptions report={report} /></ReportAccordion>
         <ReportAccordion title="Technische details">
           <div className="space-y-5">
             <ReportHomeAndGrid report={report} />
@@ -55,6 +57,7 @@ export function ResultsDashboard({
             <ReportTechnical report={report} />
           </ReportSection>
         </div>
+        <div className="md:col-span-2"><ReportSection title="Invoer en aannames"><ReportAssumptions report={report} /></ReportSection></div>
       </div>
     </ReportShell>
   )

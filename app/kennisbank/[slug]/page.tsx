@@ -112,6 +112,18 @@ export default async function KennisbankArtikel({ params }: { params: Promise<Pa
             : <ArticleBody text={article.hoofdtekst} />
         )}
 
+        {slug !== NETCONGESTIE_ARTICLE_SLUG && article.sources && article.sources.length > 0 && (
+          <section aria-labelledby="article-sources" className="mt-8 rounded-2xl border border-ink/10 bg-paper p-5">
+            <h2 id="article-sources" className="text-lg font-bold text-ink">Bronnen en inhoudelijke controle</h2>
+            {article.reviewedAt && <p className="mt-2 text-sm text-ink-muted">Inhoud gecontroleerd op {new Date(article.reviewedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>}
+            <ul className="mt-3 space-y-2">
+              {article.sources.map(source => (
+                <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-trust-dark underline underline-offset-4">{source.label}</a></li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {article.faqItems.length > 0 && (
           <section className="mt-12 border-t border-ink/10 pt-8">
             <h2 className="mb-6 text-2xl font-bold text-ink">Veelgestelde vragen</h2>
@@ -136,7 +148,7 @@ export default async function KennisbankArtikel({ params }: { params: Promise<Pa
             limit={6}
             {...relatedWijkenHub(article.category)}
             title="Zonnepanelen en saldering per wijk"
-            description={`Verdiep dit onderwerp (${article.titel}) met concrete data uit Nederlandse wijken — netcongestie, scores en 2027-impact.`}
+            description="Bekijk beschikbare locatiepagina’s. Gebiedsgegevens zijn geen beoordeling van uw dak, contract of aansluiting."
           />
         </div>
       </ArticleShell>

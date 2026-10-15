@@ -1,4 +1,5 @@
 import type { ROIResult, ROIScenario, ShockEffect2027 } from './roi'
+import { parseRoiInput } from './roi-input'
 
 function finiteNum(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n)
@@ -57,6 +58,20 @@ export function parseStoredRoi(raw: unknown): ROIResult | null {
     ? o.isdeSchatting
     : { bedragEur: 0, apparaatType: '', vermogenKwp: 0 }
 
+  let calculation: ROIResult['calculation']
+  if (o.calculation !== undefined) {
+    if (!o.calculation || typeof o.calculation !== 'object') return null
+    const c = o.calculation as Record<string, unknown>
+    if (!Array.isArray(c.assumptions) || c.assumptions.some(x => typeof x !== 'string')) return null
+    for (const key of ['batteryExtraAnnualEur', 'batteryInvestmentEur', 'batteryCapacityKwh', 'directUseKwh', 'exportKwh', 'batteryDeliveredKwh', 'batteryLossKwh']) {
+      if (!finiteNum(c[key])) return null
+    }
+    if (c.batteryPaybackYears !== null && !finiteNum(c.batteryPaybackYears)) return null
+    try {
+      calculation = { ...(c as unknown as NonNullable<ROIResult['calculation']>), input: parseRoiInput(c.input) }
+    } catch { return null }
+  }
+
   return {
     geschatVerbruikKwh: o.geschatVerbruikKwh,
     aantalPanelen: Math.round(o.aantalPanelen),
@@ -69,6 +84,7 @@ export function parseStoredRoi(raw: unknown): ROIResult | null {
     aanbeveling,
     aanbevelingTekst: o.aanbevelingTekst,
     isdeSchatting,
+    calculation,
   }
 }
 

@@ -2,7 +2,6 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { Container } from '@/components/design-system/Container'
 import { DarkHeroShell } from '@/components/design-system/DarkHeroShell'
 import { InsightPreview } from './InsightPreview'
-import { SocialProofTicker } from './SocialProofTicker'
 
 export function ConversionHero() {
   return (
@@ -16,8 +15,8 @@ export function ConversionHero() {
             Wat kost stoppen met salderen u?
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-8 text-white/70">
-            Vul uw adres in. U ziet direct uw verwachte verlies,
-            woningfit en beste vervolgstap.
+            Vergelijk 2026 en 2027 met uw eigen productie, verbruik en
+            energiecontract. Bekijk uw aannames en een mogelijke vervolgstap.
           </p>
           <div className="mt-8 max-w-xl">
             <AddressAutocomplete
@@ -30,7 +29,7 @@ export function ConversionHero() {
             <span>Geen account</span>
             <span>Alleen delen met toestemming</span>
           </div>
-          <div className="mt-5"><SocialProofTicker /></div>
+          <a href="/methode" className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-trust underline underline-offset-4">Bekijk eerst een controleerbaar voorbeeld</a>
         </div>
         <InsightPreview />
       </Container>

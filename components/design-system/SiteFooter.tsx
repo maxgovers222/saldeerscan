@@ -14,7 +14,7 @@ export function SiteFooter() {
             Gratis energieanalyse voor Nederlandse woningeigenaren.
           </p>
           <p className="mt-2 max-w-sm text-xs leading-5 text-white/45">
-            Beheerd vanuit Nederland. Handelsregistergegevens worden gepubliceerd zodra deze beschikbaar zijn.
+            Een persoonlijk project van Max Govers.
           </p>
           <a
             className="mt-2 inline-block text-sm text-white/60 transition hover:text-white"
@@ -26,6 +26,7 @@ export function SiteFooter() {
         </div>
         <div className="sm:text-right">
           <nav aria-label="Voettekstnavigatie" className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-white/55 sm:justify-end">
+            <Link href="/over" className="transition hover:text-white">Over SaldeerScan</Link>
             <Link href="/kennisbank" className="transition hover:text-white">Kennisbank</Link>
             <Link href="/nieuws" className="transition hover:text-white">Nieuws</Link>
             <Link href="/methode" className="transition hover:text-white">Methode &amp; transparantie</Link>

@@ -29,7 +29,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:unit
-      - run: npm run build
+      - run: node scripts/build-reach-fixture.mjs
 
   core-e2e:
     needs: quality

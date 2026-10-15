@@ -23,7 +23,7 @@ const SITE_URL = "https://saldeerscan.nl" as const;
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "SaldeerScan.nl — Gratis 2027 saldeercheck voor uw woning",
-  description: "Ontdek in 3 minuten wat de afschaffing van salderen op 1 januari 2027 voor uw woning betekent. Gratis AI-scan, BAG-data en persoonlijk investeringsrapport.",
+  description: "Vergelijk 2026 en 2027 met uw eigen productie, verbruik en energiecontract. Gratis rapport met zichtbare aannames; advies vraagt u apart aan.",
   icons: {
     icon: [
       { url: `${SITE_URL}/favicon.ico`, sizes: "any" },
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "SaldeerScan.nl — Gratis 2027 saldeercheck",
-    description: "Hoeveel bespaart u vóór 2027? Gratis AI-scan met BAG-data en persoonlijk investeringsrapport.",
+    description: "Wat verandert er na salderen? Vergelijk uw eigen cijfers en ontvang een gratis rapport met zichtbare aannames.",
     locale: "nl_NL",
     type: "website",
     siteName: "SaldeerScan.nl",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "SaldeerScan.nl — Gratis 2027 saldeercheck",
-    description: "Hoeveel bespaart u vóór 2027? Gratis AI-scan met BAG-data.",
+    description: "Vergelijk uw eigen productie, verbruik en energiecontract voor 2026 en 2027.",
   },
 };
 
@@ -60,7 +60,7 @@ const organizationSchema = {
         width: 32,
         height: 32,
       },
-      description: 'Gratis AI-scan voor de 2027 salderingsafschaffing — ROI berekening en investeringsrapport voor Nederlandse woningeigenaren.',
+      description: 'Persoonlijk project van Max Govers: gratis berekening van de gevolgen van het einde van salderen, met eigen invoer en zichtbare aannames.',
       areaServed: 'NL',
       contactPoint: { '@type': 'ContactPoint', email: 'info@saldeerscan.nl', contactType: 'customer support', availableLanguage: 'Dutch' },
     },

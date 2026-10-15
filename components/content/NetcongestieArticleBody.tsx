@@ -37,11 +37,11 @@ export function NetcongestieArticleBody() {
 
       <section aria-labelledby="netcongestie-lokaal">
         <h2 id="netcongestie-lokaal" className="text-2xl font-bold text-ink">
-          Vergelijk zes lokale analyses
+          Bekijk zes locatiepagina’s
         </h2>
         <p className="mt-3">
-          De regionale situatie verschilt. Gebruik deze bestaande analyses om woningdata en
-          netindicaties tussen verschillende typen wijken te vergelijken.
+          Controleer op iedere pagina welke gebiedsbron en scope beschikbaar zijn.
+          Deze pagina’s bieden geen actuele netstatus of beoordeling van uw woningaansluiting.
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {NETCONGESTIE_LOCAL_ANALYSES.map(analysis => (
@@ -60,12 +60,12 @@ export function NetcongestieArticleBody() {
         </div>
       </section>
 
-      <section aria-labelledby="netcongestie-bronnen">
-        <h2 id="netcongestie-bronnen" className="text-2xl font-bold text-ink">
+      <section aria-labelledby="article-sources">
+        <h2 id="article-sources" className="text-2xl font-bold text-ink">
           Bronnen en actualiteit
         </h2>
         <p className="mt-3">
-          Laatst inhoudelijk gecontroleerd op 31 juli 2026. Capaciteit en wachttijden kunnen
+          Laatst inhoudelijk gecontroleerd op 15 oktober 2026. Capaciteit en wachttijden kunnen
           per gebied veranderen; controleer voor een besluit altijd de actuele informatie
           van uw eigen regionale netbeheerder.
         </p>

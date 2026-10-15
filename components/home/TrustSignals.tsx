@@ -1,7 +1,7 @@
 const signals = [
   {
-    title: 'Officiële woningdata',
-    text: 'Bouwjaar en woningkenmerken uit het BAG-register.',
+    title: 'Uw gegevens tellen',
+    text: 'Controleer de woningkenmerken en vul uw eigen productie, verbruik en contract aan.',
   },
   {
     title: 'U houdt controle',

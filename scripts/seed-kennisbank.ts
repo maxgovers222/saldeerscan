@@ -3,8 +3,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 import * as dotenv from 'dotenv'
-import { buildArticleSchema } from '../lib/json-ld'
 import { ENERGY_EDITORIAL_GUARDRAILS } from '../lib/editorial-standards'
+import { saveGeneratedArticleDraft } from '../lib/article-drafts'
 
 dotenv.config({ path: '.env.local' })
 
@@ -50,7 +50,6 @@ async function getExistingSlugs(): Promise<Set<string>> {
   const { data } = await supabase
     .from('kennisbank_articles')
     .select('slug')
-    .eq('status', 'published')
   return new Set((data ?? []).map((r: { slug: string }) => r.slug))
 }
 
@@ -101,32 +100,18 @@ Veldlengtes: titel max 65 tekens, metaDescription max 155 tekens, intro ~150 woo
 
   const content = JSON.parse(jsonMatch[0])
   const now = new Date().toISOString()
-  const jsonLd = buildArticleSchema({
-    slug,
-    titel: content.titel,
-    metaDescription: content.metaDescription ?? '',
-    publishedAt: now,
-    type: 'kennisbank',
-    faqItems: content.faqItems,
-  })
-
-  const { error } = await supabase
-    .from('kennisbank_articles')
-    .upsert({
+  await saveGeneratedArticleDraft(supabase, 'kennisbank_articles', {
       slug,
       titel: content.titel,
       meta_description: content.metaDescription ?? '',
       intro: content.intro ?? '',
       hoofdtekst: content.hoofdtekst,
       faq_items: content.faqItems ?? [],
-      json_ld: jsonLd,
       category: content.category ?? 'algemeen',
       related_slugs: content.relatedSlugs ?? [],
-      status: 'published',
+      status: 'draft',
       generated_at: now,
-    }, { onConflict: 'slug' })
-
-  if (error) throw new Error(`DB upsert mislukt voor ${slug}: ${error.message}`)
+    })
 }
 
 async function main() {
@@ -134,6 +119,7 @@ async function main() {
   const dryRun = process.argv.includes('--dry-run')
 
   console.log(`\nKennisbank seed — ${KENNISBANK_SLUGS.length} artikelen`)
+  console.log('Nieuwe artikelen blijven concept tot broncontrole en redactionele goedkeuring.')
   if (dryRun) console.log('DRY RUN — geen DB writes')
 
   const existing = await getExistingSlugs()

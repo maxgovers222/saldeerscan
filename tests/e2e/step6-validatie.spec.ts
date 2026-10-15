@@ -107,6 +107,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
     if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       await naamInput.fill('Jan de Vries')
       await page.locator('#lead-email').fill('jan@test.nl')
+      await page.locator('#lead-advice').check()
       await page.locator('#lead-telefoon').fill('0612345678')
       await page.locator('button[type="submit"]').click()
       await expect(page.locator('text=akkoord gaan met de privacyverklaring')).toBeVisible({ timeout: 3000 })
@@ -137,6 +138,7 @@ test.describe('Step 6 — Lead formulier validatie', () => {
     if (await naamInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       await naamInput.fill('Jan de Vries')
       await page.locator('#lead-email').fill('jan@test.nl')
+      await page.locator('#lead-advice').check()
       await page.locator('#lead-telefoon').fill('0612345678')
       await page.locator('#lead-gdpr').click({ force: true })
       await page.locator('button[type="submit"]').click()

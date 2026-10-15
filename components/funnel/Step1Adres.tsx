@@ -30,34 +30,11 @@ function HealthScoreGauge({ score, label }: { score: number; label: string }) {
   )
 }
 
-function NetcongentieBadge({ status, netbeheerder }: { status: 'ROOD' | 'ORANJE' | 'GROEN'; netbeheerder: string }) {
-  const config = {
-    ROOD: {
-      label: `Hoge regionale netdruk (${netbeheerder || 'netbeheerder'})`,
-      subtext: 'Indicatie: dit kan gevolgen hebben voor nieuwe of zwaardere aansluitingen en lokale spanning. Het is geen bewijs dat uw teruglevering actief wordt beperkt.',
-      textClass: 'text-danger', bgClass: 'bg-danger/8 border-danger/25', dotClass: 'bg-danger',
-    },
-    ORANJE: {
-      label: `Regionale netdruk (${netbeheerder || 'netbeheerder'})`,
-      subtext: 'Controleer de actuele situatie bij de netbeheerder als u een nieuwe of zwaardere aansluiting nodig heeft.',
-      textClass: 'text-warning', bgClass: 'bg-action/10 border-warning/25', dotClass: 'bg-warning',
-    },
-    GROEN: {
-      label: `Lagere regionale netdruk (${netbeheerder || 'netbeheerder'})`,
-      subtext: 'Dit is een indicatie en geen garantie voor onbeperkte teruglevering of toekomstige aansluitcapaciteit.',
-      textClass: 'text-trust-dark', bgClass: 'bg-trust/10 border-trust/25', dotClass: 'bg-trust',
-    },
-  }
-  const c = config[status]
-  return (
-    <div className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${c.bgClass}`}>
-      <span className={`w-2 h-2 rounded-full ${c.dotClass} shrink-0 mt-1`} />
-      <div>
-        <div className={`text-xs font-mono font-semibold ${c.textClass}`}>{c.label}</div>
-        {c.subtext && <div className="mt-0.5 text-xs leading-relaxed text-ink-muted">{c.subtext}</div>}
-      </div>
-    </div>
-  )
+function NetcongentieBadge() {
+  return <div className="rounded-lg border border-ink/15 bg-mist px-3 py-2 text-xs text-ink-muted">
+    <p className="font-semibold text-ink">Actuele netsituatie niet geverifieerd</p>
+    <p className="mt-1 leading-relaxed">Een postcode bepaalt geen netcapaciteit of terugleverbeperking op uw aansluiting. Controleer dit bij uw netbeheerder.</p>
+  </div>
 }
 
 function LoadingSkeleton() {
@@ -343,7 +320,7 @@ export function Step1Adres({ state, dispatch, trackFunnel }: Step1AdresProps) {
           {state.netcongestie && (
             <div>
               <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">Lokaal stroomnet</div>
-              <NetcongentieBadge status={state.netcongestie.status} netbeheerder={state.netcongestie.netbeheerder} />
+              <NetcongentieBadge />
             </div>
           )}
 

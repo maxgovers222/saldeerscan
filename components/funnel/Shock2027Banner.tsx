@@ -8,8 +8,6 @@ interface Shock2027BannerProps {
 }
 
 export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
-  const jaar = new Date().getFullYear()
-  const pct = jaar <= 2026 ? 100 : 0
 
   return (
     <aside
@@ -19,19 +17,19 @@ export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <p className="mb-1 text-[10px] uppercase tracking-widest text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
-            Besparing nu ({jaar})
+            Referentiejaar 2026
           </p>
           <p className="font-mono text-xl font-bold text-trust-dark">
             €{besparingNu.toLocaleString('nl-NL')}<span className="text-xs text-ink-muted">/jaar</span>
           </p>
-          <p className="mt-0.5 text-[10px] text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>Saldering: {pct}%</p>
+          <p className="mt-0.5 text-[10px] text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>Saldering: 100%</p>
         </div>
         <div>
           <p className="mb-1 text-[10px] uppercase tracking-widest text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
             Verschil vanaf 2027
           </p>
           <p className="font-mono text-xl font-bold text-danger">
-            −€{shock.jaarlijksVerlies.toLocaleString('nl-NL')}<span className="text-xs text-ink-muted">/jaar</span>
+            {shock.jaarlijksVerlies > 0 ? '−' : shock.jaarlijksVerlies < 0 ? '+' : ''}€{Math.abs(shock.jaarlijksVerlies).toLocaleString('nl-NL')}<span className="text-xs text-ink-muted">/jaar</span>
           </p>
           <p className="mt-0.5 text-[10px] text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>Saldering: 0%</p>
         </div>
@@ -46,10 +44,10 @@ export function Shock2027Banner({ shock, besparingNu }: Shock2027BannerProps) {
         </svg>
         <div>
           <p className="text-sm leading-relaxed text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
-            De geraamde jaarwaarde daalt met{' '}
-            <span className="font-bold text-ink">€{shock.maandelijksVerlies.toLocaleString('nl-NL')}</span> per maand.{' '}
+            De geraamde jaarwaarde {shock.jaarlijksVerlies < 0 ? 'stijgt' : 'daalt'} met{' '}
+            <span className="font-bold text-ink">€{Math.abs(shock.maandelijksVerlies).toLocaleString('nl-NL')}</span> per maand.{' '}
             Geraamd verschil over 5 jaar:{' '}
-            <span className="font-bold text-ink">€{shock.cumulatiefVerlies5Jaar.toLocaleString('nl-NL')}</span>
+            <span className="font-bold text-ink">€{Math.abs(shock.cumulatiefVerlies5Jaar).toLocaleString('nl-NL')}</span>
           </p>
         </div>
       </div>
