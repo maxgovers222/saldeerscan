@@ -24,11 +24,13 @@ export type FunnelEventName =
   | 'funnel_validation_failed'
   | 'bag_match_succeeded'
   | 'bag_match_failed'
+  | 'roi_result_viewed'
   | 'technical_scan_completed'
   | 'technical_scan_skipped'
   | 'technical_module_skipped'
   | 'lead_submit_started'
   | 'lead_submit_succeeded'
+  | 'advice_request_succeeded'
   | 'lead_submit_failed'
   | 'funnel_abandoned'
 
@@ -40,6 +42,8 @@ export interface FunnelEventExtra {
   scan_type?: 'Meterkast' | 'Plaatsingslocatie' | 'Omvormer'
   completion?: 'photo' | 'manual'
   lead_quality_segment?: string
+  advice_requested?: boolean
+  calculation_source?: 'with_user_overrides' | 'model_defaults'
   email_status?: 'pending' | 'sent' | 'failed' | 'not_configured' | 'skipped'
   failure_type?: `http_${number}` | 'network'
   validation_type?:

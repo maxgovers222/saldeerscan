@@ -1,5 +1,6 @@
 import { berekenHealthScore, type HealthScoreResult } from '@/lib/health-score'
 import { berekenROI, type ROIInput, type ROIResult } from '@/lib/roi'
+import { parseRoiInput } from '@/lib/roi-input'
 
 export const MAX_LEAD_BODY_BYTES = 128_000
 
@@ -10,7 +11,7 @@ const DAKRICHTINGEN = new Set(['Zuid', 'Oost/West', 'Noord'])
 const KWH_PER_PANEEL_OPTIONS = new Set([330, 350, 370, 410])
 
 type JsonRecord = Record<string, unknown>
-export type NetStatus = 'ROOD' | 'ORANJE' | 'GROEN'
+export type NetStatus = 'ROOD' | 'ORANJE' | 'GROEN' | null
 
 export interface NormalizedBagData {
   bouwjaar: number
@@ -26,7 +27,8 @@ export interface NormalizedBagData {
 export interface NormalizedLeadSubmission {
   naam: string
   email: string
-  telefoon: string
+  telefoon: string | null
+  adviceConsent: boolean
   adres: string
   postcode: string
   huisnummer: string | null
@@ -117,9 +119,10 @@ export function parseLeadSubmission(raw: unknown): NormalizedLeadSubmission {
   const email = text(body.email, 'email', { required: true, max: 254 })!.toLowerCase()
   if (!EMAIL_RE.test(email)) throw new LeadSubmissionError('Voer een geldig e-mailadres in', 'email')
 
-  const telefoon = text(body.telefoon, 'telefoon', { required: true, max: 20 })!
-    .replace(/[\s().-]/g, '')
-  if (!PHONE_RE.test(telefoon)) {
+  const adviceConsent = body.adviceConsent === true
+  const telefoon = text(body.telefoon, 'telefoon', { required: adviceConsent, max: 20 })
+    ?.replace(/[\s().-]/g, '') ?? null
+  if (telefoon !== null && !PHONE_RE.test(telefoon)) {
     throw new LeadSubmissionError('Voer een geldig internationaal telefoonnummer in', 'telefoon')
   }
   if (body.gdprConsent !== true) {
@@ -147,6 +150,10 @@ export function parseLeadSubmission(raw: unknown): NormalizedLeadSubmission {
   }
 
   const roiRaw = record(body.roiInput, 'roiInput')
+  let validatedInput: ROIInput
+  try { validatedInput = parseRoiInput(roiRaw) } catch (error) {
+    throw new LeadSubmissionError(error instanceof Error ? error.message : 'Ongeldige berekening', 'roiInput')
+  }
   const roiBouwjaar = Math.round(finiteNumber(roiRaw.bouwjaar, 'roiInput.bouwjaar', 1000, 2030))
   const roiOppervlakte = finiteNumber(roiRaw.oppervlakte, 'roiInput.oppervlakte', 1, 2000)
   if (roiBouwjaar !== bagData.bouwjaar) {
@@ -170,6 +177,8 @@ export function parseLeadSubmission(raw: unknown): NormalizedLeadSubmission {
   }
 
   const roiInput: ROIInput = {
+    ...validatedInput,
+    verbruikBron: validatedInput.verbruikBron ?? (body.verbruik_bron === 'gebruiker' ? 'gebruiker' : 'schatting'),
     oppervlakte: roiOppervlakte,
     bouwjaar: roiBouwjaar,
     dakOppervlakte: finiteNumber(
@@ -181,13 +190,13 @@ export function parseLeadSubmission(raw: unknown): NormalizedLeadSubmission {
     huidigVerbruikKwh: finiteNumber(
       roiRaw.huidigVerbruikKwh,
       'roiInput.huidigVerbruikKwh',
-      100,
+      0,
       Math.max(25_000, bagData.oppervlakte * 40),
     ),
     aantalPanelenOverride: Math.round(finiteNumber(
       roiRaw.aantalPanelenOverride,
       'roiInput.aantalPanelenOverride',
-      1,
+      0,
       Math.min(
         200,
         Math.max(40, Math.floor((bagData.dakOppervlakte * 0.70) / 4)),
@@ -220,6 +229,7 @@ export function parseLeadSubmission(raw: unknown): NormalizedLeadSubmission {
     naam,
     email,
     telefoon,
+    adviceConsent,
     adres: text(body.adres, 'adres', { required: true, max: 250 })!,
     postcode,
     huisnummer: bagData.huisnummer === null ? null : String(bagData.huisnummer),
@@ -247,7 +257,7 @@ export function parseLeadSubmission(raw: unknown): NormalizedLeadSubmission {
 
 export function deriveLeadAnalysis(
   lead: NormalizedLeadSubmission,
-  netcongestieStatus: NetStatus,
+  _netcongestieStatus: NetStatus,
 ): { roi: ROIResult; health: HealthScoreResult } {
   return {
     roi: berekenROI(lead.roiInput),
@@ -255,7 +265,7 @@ export function deriveLeadAnalysis(
       bouwjaar: lead.bagData.bouwjaar,
       energielabel: lead.energielabel,
       dakOppervlakte: lead.bagData.dakOppervlakte,
-      netcongestieStatus,
+      netcongestieStatus: null,
     }),
   }
 }

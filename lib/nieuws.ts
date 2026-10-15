@@ -1,6 +1,8 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { buildArticleSchema } from '@/lib/json-ld'
+import { saveGeneratedArticleDraft } from '@/lib/article-drafts'
+import { REVIEWED_NEWS_COPY } from '@/lib/reviewed-news'
 import {
   LIANDER_ARTICLE_CORRECTION,
   LIANDER_ARTICLE_SLUG,
@@ -21,6 +23,8 @@ export interface NieuwsArticle {
   status: 'draft' | 'published'
   publishedAt: string | null
   generatedAt: string | null
+  reviewedAt?: string
+  sources?: Array<{ label: string; url: string }>
 }
 
 export async function getNieuwsArticle(slug: string): Promise<NieuwsArticle | null> {
@@ -47,7 +51,7 @@ export async function getLatestNieuws(limit = 10): Promise<NieuwsArticle[]> {
   return (data ?? []).map(row => applyNieuwsOverride(mapRow(row)))
 }
 
-export async function getAllPublishedNieuws(): Promise<Pick<NieuwsArticle, 'slug' | 'titel' | 'publishedAt' | 'intro'>[]> {
+export async function getAllPublishedNieuws(): Promise<Pick<NieuwsArticle, 'slug' | 'titel' | 'publishedAt' | 'intro' | 'reviewedAt'>[]> {
   const { data } = await supabaseAdmin
     .from('nieuws_articles')
     .select('slug, titel, published_at, intro')
@@ -56,13 +60,14 @@ export async function getAllPublishedNieuws(): Promise<Pick<NieuwsArticle, 'slug
 
   return (data ?? []).map(r => ({
     slug: r.slug,
-    titel: r.slug === LIANDER_ARTICLE_SLUG
+    titel: REVIEWED_NEWS_COPY[r.slug]?.titel ?? (r.slug === LIANDER_ARTICLE_SLUG
       ? LIANDER_ARTICLE_CORRECTION.titel
-      : sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel,
+      : sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel),
     publishedAt: r.published_at ?? null,
-    intro: r.slug === LIANDER_ARTICLE_SLUG
+    reviewedAt: REVIEWED_NEWS_COPY[r.slug]?.reviewedAt,
+    intro: REVIEWED_NEWS_COPY[r.slug]?.intro ?? (r.slug === LIANDER_ARTICLE_SLUG
       ? LIANDER_ARTICLE_CORRECTION.intro
-      : sanitizeGeneratedEnergyCopy(r.intro ?? null),
+      : sanitizeGeneratedEnergyCopy(r.intro ?? null)),
   }))
 }
 
@@ -75,41 +80,33 @@ export async function getRecentNieuwsTitles(limit = 20): Promise<string[]> {
     .limit(limit)
 
   return (data ?? []).map(r =>
-    r.slug === LIANDER_ARTICLE_SLUG
+    REVIEWED_NEWS_COPY[r.slug]?.titel ?? (r.slug === LIANDER_ARTICLE_SLUG
       ? LIANDER_ARTICLE_CORRECTION.titel
-      : sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel
+      : sanitizeGeneratedEnergyCopy(r.titel, 'short') ?? r.titel)
   )
 }
 
-export async function upsertNieuwsArticle(article: {
+export async function saveNieuwsDraft(article: {
   slug: string
   titel: string
   metaDescription: string
   intro: string
   hoofdtekst: string
   faqItems: Array<{ vraag: string; antwoord: string }>
-  jsonLd: Record<string, unknown>
   topicSeed: string
-  status: 'draft' | 'published'
-  publishedAt: string
-}): Promise<void> {
-  const { error } = await supabaseAdmin
-    .from('nieuws_articles')
-    .upsert({
+  status: 'draft'
+}): Promise<boolean> {
+  return saveGeneratedArticleDraft(supabaseAdmin, 'nieuws_articles', {
       slug: article.slug,
       titel: article.titel,
       meta_description: article.metaDescription,
       intro: article.intro,
       hoofdtekst: article.hoofdtekst,
       faq_items: article.faqItems,
-      json_ld: article.jsonLd,
       topic_seed: article.topicSeed,
       status: article.status,
-      published_at: article.publishedAt,
       generated_at: new Date().toISOString(),
-    }, { onConflict: 'slug' })
-
-  if (error) throw new Error(`Upsert nieuws mislukt: ${error.message}`)
+    })
 }
 
 function mapRow(data: Record<string, unknown>): NieuwsArticle {
@@ -136,19 +133,22 @@ function mapRow(data: Record<string, unknown>): NieuwsArticle {
 }
 
 function applyNieuwsOverride(article: NieuwsArticle): NieuwsArticle {
-  if (article.slug !== LIANDER_ARTICLE_SLUG) return article
+  const correction = REVIEWED_NEWS_COPY[article.slug]
+    ?? (article.slug === LIANDER_ARTICLE_SLUG ? LIANDER_ARTICLE_CORRECTION : null)
+  if (!correction) return article
 
   return {
     ...article,
-    ...LIANDER_ARTICLE_CORRECTION,
-    faqItems: [...LIANDER_ARTICLE_CORRECTION.faqItems],
+    ...correction,
+    faqItems: [...correction.faqItems],
     jsonLd: buildArticleSchema({
       slug: article.slug,
-      titel: LIANDER_ARTICLE_CORRECTION.titel,
-      metaDescription: LIANDER_ARTICLE_CORRECTION.metaDescription,
+      titel: correction.titel,
+      metaDescription: correction.metaDescription,
       publishedAt: article.publishedAt ?? article.generatedAt ?? new Date().toISOString(),
       type: 'nieuws',
-      faqItems: [...LIANDER_ARTICLE_CORRECTION.faqItems],
+      modifiedAt: 'reviewedAt' in correction ? correction.reviewedAt : undefined,
+      faqItems: [...correction.faqItems],
     }),
   }
 }

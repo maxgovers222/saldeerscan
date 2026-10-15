@@ -14,13 +14,13 @@ export function ReportSummary({ report }: { report: NormalizedReport }) {
     <section className="space-y-4">
       <div className="rounded-3xl border border-action/35 bg-action/10 p-5 sm:p-7">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warning">
-          Mogelijk verlies vanaf 2027
+          Verschil in jaarwaarde vanaf 2027
         </p>
         <p
           data-testid="report-annual-loss"
           className="mt-2 text-4xl font-black font-mono tracking-tight text-warning sm:text-5xl"
         >
-          −{euro(report.impact.annualLossEur)} per jaar
+          {report.impact.annualLossEur > 0 ? '−' : report.impact.annualLossEur < 0 ? '+' : ''}{euro(Math.abs(report.impact.annualLossEur))} per jaar
         </p>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
           {report.impact.explanation}
@@ -39,11 +39,11 @@ export function ReportSummary({ report }: { report: NormalizedReport }) {
         />
         <ReportMetric
           label="Terugverdientijd"
-          value={report.summary.paybackYears === null ? 'Nader te bepalen' : `${report.summary.paybackYears} jaar`}
+          value={report.summary.paybackYears === null ? existing && report.recommendation.batteryCapacityKwh === null ? 'Batterij niet geadviseerd' : 'Nader te bepalen' : `${report.summary.paybackYears} jaar`}
         />
         <div className="col-span-2 lg:col-span-1">
           <ReportMetric
-            label="Woning-score"
+            label="Indicatieve modelscore"
             value={report.summary.healthScore === null ? 'Niet beschikbaar' : `${report.summary.healthScore}/100`}
             detail={report.summary.healthLabel ?? undefined}
           />

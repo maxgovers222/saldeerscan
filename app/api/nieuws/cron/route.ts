@@ -1,7 +1,5 @@
 import { generateNieuwsContent } from '@/lib/gemini'
-import { notifyGoogleIndexing } from '@/lib/google-indexing'
-import { buildArticleSchema } from '@/lib/json-ld'
-import { getRecentNieuwsTitles, upsertNieuwsArticle } from '@/lib/nieuws'
+import { getRecentNieuwsTitles, saveNieuwsDraft } from '@/lib/nieuws'
 
 const NIEUWS_TOPICS = [
   'Netcongestie kaart update: welke Nederlandse regio\'s zijn vol in 2026?',
@@ -43,7 +41,7 @@ function slugify(text: string): string {
 
 export async function GET(request: Request) {
   const secret = request.headers.get('authorization')?.replace('Bearer ', '')
-  if (secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -56,31 +54,16 @@ export async function GET(request: Request) {
   const content = await generateNieuwsContent({ topicSeed, recentPublishedTitles: recentTitles })
 
   const baseSlug = slugify(content.slug || content.titel)
-  const now = new Date().toISOString()
-
-  const jsonLd = buildArticleSchema({
-    slug: baseSlug,
-    titel: content.titel,
-    metaDescription: content.metaDescription ?? '',
-    publishedAt: now,
-    type: 'nieuws',
-    faqItems: content.faqItems,
-  })
-
-  await upsertNieuwsArticle({
+  const created = await saveNieuwsDraft({
     slug: baseSlug,
     titel: content.titel,
     metaDescription: content.metaDescription ?? '',
     intro: content.intro ?? '',
     hoofdtekst: content.hoofdtekst,
     faqItems: content.faqItems,
-    jsonLd,
     topicSeed,
-    status: 'published',
-    publishedAt: now,
+    status: 'draft',
   })
 
-  await notifyGoogleIndexing(`https://saldeerscan.nl/nieuws/${baseSlug}`).catch(() => {})
-
-  return Response.json({ ok: true, slug: baseSlug })
+  return Response.json({ ok: true, slug: baseSlug, status: created ? 'draft' : 'unchanged', requiresEditorialReview: true })
 }

@@ -45,6 +45,18 @@ test('normalizes contact and postcode values', () => {
   expect(parsed.telefoon).toBe('+31612345678')
 })
 
+test('a report-only request needs no phone and gives no permission to share', () => {
+  const parsed = parseLeadSubmission({ ...validBody, telefoon: null })
+  expect(parsed.telefoon).toBeNull()
+  expect(parsed.adviceConsent).toBe(false)
+})
+
+test('an advice request requires explicit permission and a valid phone', () => {
+  expect(() => parseLeadSubmission({ ...validBody, telefoon: null, adviceConsent: true })).toThrow(/telefoon/)
+  expect(parseLeadSubmission({ ...validBody, adviceConsent: true }).adviceConsent).toBe(true)
+  expect(parseLeadSubmission({ ...validBody, adviceConsent: 'true' }).adviceConsent).toBe(false)
+})
+
 test('rejects one-part names and malformed contact fields', () => {
   expect(() => parseLeadSubmission({ ...validBody, naam: 'Jan' }))
     .toThrow(LeadSubmissionError)

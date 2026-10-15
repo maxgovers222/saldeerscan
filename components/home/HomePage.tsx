@@ -19,12 +19,12 @@ export function HomePage({ discovery }: { discovery: ReactNode }) {
         <ContentSection
           eyebrow="Zo werkt het"
           title="Van adres naar een begrijpelijke vervolgstap"
-          intro="We controleren uw woning, berekenen de 2027-impact en laten zien welke informatie het advies nauwkeuriger maakt."
+          intro="Controleer uw woninggegevens, vergelijk uw jaarcijfers en bekijk de aannames achter de uitkomst."
         >
           <ol className="grid gap-4 md:grid-cols-3">
             {[
-              ['1', 'Woning controleren', 'BAG, postcode en lokaal stroomnet.'],
-              ['2', 'Impact berekenen', 'Verlies, besparing en woningfit.'],
+              ['1', 'Gegevens controleren', 'Uw woning, productie, verbruik en energiecontract.'],
+              ['2', 'Impact berekenen', 'Dezelfde woning in 2026 en 2027, met een apart batterijscenario.'],
               ['3', 'Rapport ontvangen', 'Websamenvatting, e-mail en volledige PDF.'],
             ].map(([number, title, text]) => (
               <li key={number} className="rounded-2xl border border-ink/10 bg-paper p-6">

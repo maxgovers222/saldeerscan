@@ -1,7 +1,6 @@
 import 'server-only'
-import { unstable_cache } from 'next/cache'
-import { supabaseAdmin } from '@/lib/supabase/admin'
-import { getWijkenByStad, getStaddenByProvincie } from '@/lib/pseo'
+import { getWijkenByStad, getStaddenByProvincie, getLegacyPostcodePrefixes } from '@/lib/pseo'
+import { formatLocationSlug } from '@/lib/pseo-content-quality'
 
 export const SITE_URL = 'https://saldeerscan.nl'
 
@@ -10,7 +9,7 @@ export type HubBreadcrumbItem = { name: string; href: string }
 export type HubChildLink = { name: string; url: string }
 
 export function toDisplaySlug(slug: string): string {
-  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  return formatLocationSlug(slug)
 }
 
 export function absoluteUrl(path: string): string {
@@ -96,23 +95,4 @@ export async function getHubWijken(provincie: string, stad: string) {
   return getWijkenByStad(provincie, stad)
 }
 
-export const getPostcodePrefixesWithWijken = unstable_cache(
-  async (): Promise<string[]> => {
-    const { data } = await supabaseAdmin
-      .from('pseo_pages')
-      .select('postcode_prefix')
-      .eq('status', 'published')
-      .is('straat', null)
-      .not('wijk', 'is', null)
-      .not('postcode_prefix', 'is', null)
-
-    const prefixes = new Set<string>()
-    for (const row of data ?? []) {
-      const prefix = String(row.postcode_prefix ?? '').slice(0, 4)
-      if (/^\d{4}$/.test(prefix)) prefixes.add(prefix)
-    }
-    return Array.from(prefixes).sort()
-  },
-  ['pseo', 'postcodePrefixes'],
-  { revalidate: 604800 }
-)
+export const getPostcodePrefixesWithWijken = getLegacyPostcodePrefixes

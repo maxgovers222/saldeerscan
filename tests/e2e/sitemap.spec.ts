@@ -36,9 +36,8 @@ test('core sitemap resolves through the Next metadata route', async ({ request }
     'https://saldeerscan.nl',
     'https://saldeerscan.nl/check',
     'https://saldeerscan.nl/methode',
+    'https://saldeerscan.nl/over',
     'https://saldeerscan.nl/privacy',
-    'https://saldeerscan.nl/postcode/1012',
-    'https://saldeerscan.nl/postcode/3012',
   ])
   expect(xml).not.toContain('<lastmod>')
 })
@@ -71,5 +70,5 @@ test('hubs staan alleen in hun eigen sitemap en lastmod komt uit brondata', asyn
   )
   expect(
     sitemapUrlBlock(utrechtXml, 'https://saldeerscan.nl/utrecht/utrecht/leidsche-rijn'),
-  ).toContain('<lastmod>2026-07-14T12:00:00.000Z</lastmod>')
+  ).toContain('<lastmod>2026-10-15T00:00:00.000Z</lastmod>')
 })

@@ -1,27 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CountdownTimer } from '@/components/CountdownTimer'
 import { FunnelContainer } from '@/components/funnel/FunnelContainer'
 import { LandingContextBanner } from '@/components/funnel/LandingContextBanner'
 import { parseConversionContext } from '@/lib/conversion-context'
-
-function StatsLine() {
-  const [count, setCount] = useState<number | null>(null)
-
-  useEffect(() => {
-    fetch('/api/stats').then(r => r.json()).then(d => setCount(d.count)).catch(() => {})
-  }, [])
-
-  if (!count) return null
-
-  return (
-    <p className="mb-4 text-center font-mono text-[10px] text-white/70">
-      {count} Nederlanders analyseerden — jij bent op de goede weg
-    </p>
-  )
-}
 
 export function CheckPageClient() {
   const searchParams = useSearchParams()
@@ -38,12 +22,13 @@ export function CheckPageClient() {
             <h1 className="text-2xl font-extrabold text-white">
               Uw gratis 2027 Saldeercheck
             </h1>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/70">Wat verandert er voor uw zonnepanelen als salderen stopt? Vergelijk 2026 en 2027 met uw eigen jaarcijfers en contractkosten. Het gratis rapport vraagt geen telefoonnummer; advies kiest u apart.</p>
+            <a href="/methode#examples-heading" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-action underline underline-offset-4">Bekijk eerst een controleerbaar rekenvoorbeeld</a>
           </div>
           <LandingContextBanner context={context} />
           <div className="mb-4">
             <CountdownTimer compact />
           </div>
-          <StatsLine />
         </>
       )}
       <FunnelContainer

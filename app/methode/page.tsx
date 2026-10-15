@@ -26,11 +26,11 @@ const inputs = [
   },
   {
     title: 'Uw eigen invoer',
-    text: 'Werkelijk jaarverbruik, aantal panelen, dakrichting, huishoudgrootte en uw antwoorden in de funnel kunnen standaardaannames vervangen.',
+    text: 'Totaal jaarverbruik, jaarproductie, direct eigen gebruik, contracttarieven, terugleverkosten en batterijofferte kunnen de rekenvoorbeelden vervangen. Een lege invoer gebruikt een zichtbaar vermelde schatting.',
   },
   {
-    title: 'Regionale netindicatie',
-    text: 'De netcongestiekleur is een regionale indicatie. Zij bewijst niet dat teruglevering op uw aansluiting actief wordt beperkt en vervangt geen informatie van de netbeheerder.',
+    title: 'Actuele netsituatie onbekend',
+    text: 'Er is geen geverifieerde actuele capaciteitsbron aangesloten. We leiden geen netkleur, netbeheerder of terugleverbeperking af uit een postcode en gebruiken oude postcode-heuristieken niet als actueel feit. Controleer de aansluiting bij uw netbeheerder.',
   },
 ]
 
@@ -80,7 +80,10 @@ export default function MethodePage() {
               Salderen blijft 100% mogelijk tot en met 31 december 2026. Per 1 januari
               2027 stopt de regeling in één keer. Er is dus geen actuele gefaseerde afbouw
               in 2025 of 2026. Na 2027 blijft voor teruggeleverde stroom een
-              leveranciersafhankelijke vergoeding bestaan.
+              leveranciersafhankelijke vergoeding bestaan. Tot 1 januari 2030 geldt
+              volgens de Rijksoverheid een minimumvergoeding van 50% van het kale
+              leveringstarief, zonder belastingen. Terugleverkosten staan daar los van;
+              controleer beide bedragen in uw eigen contract.
             </p>
             <a
               href="https://www.rijksoverheid.nl/themas/klimaat-milieu-en-natuur/energie-thuis/salderingsregeling"
@@ -101,6 +104,7 @@ export default function MethodePage() {
                   Als u geen werkelijk jaarverbruik opgeeft, schatten we dit op basis van
                   woonoppervlak en bouwjaar. Productie is het geraamde aantal panelen maal
                   een gemiddelde jaaropbrengst, met een factor voor de opgegeven dakrichting.
+                  Een opgegeven jaarproductie uit uw omvormer vervangt die dakschatting volledig.
                 </p>
               </div>
               <div className="rounded-2xl border border-ink/10 bg-paper p-5">
@@ -110,6 +114,7 @@ export default function MethodePage() {
                   leveringstarief. Teruglevering kan in 2026 jaarlijks worden gesaldeerd tot
                   maximaal de resterende netafname. Een productieoverschot krijgt de
                   aangenomen terugleververgoeding.
+                  De ingevulde jaarlijkse en kWh-afhankelijke terugleverkosten trekken we afzonderlijk af. Dit toont een volledig referentiejaar, geen resterende opbrengst na een aankoop in oktober.
                 </p>
               </div>
               <div className="rounded-2xl border border-ink/10 bg-paper p-5">
@@ -120,12 +125,31 @@ export default function MethodePage() {
                   terugleververgoeding. De standaardtarieven in het model zijn momenteel{' '}
                   <strong className="text-ink">{rate.format(LEVERINGSTARIEF)}/kWh</strong> en{' '}
                   <strong className="text-ink">{rate.format(TERUGLEVERTARIEF)}/kWh</strong>.
+                  Dit zijn rekenvoorbeelden, geen actuele leverancierstarieven. Het kale tarief is standaard €0,18/kWh en de terugleverkosten standaard €0. U kunt alle bedragen vervangen. Kosten trekken we apart af, alleen bij teruglevering.
                   Het extra batterijvoordeel vergelijken we met dezelfde 2027-situatie
                   zonder batterij, zodat het einde van salderen niet als batterijwinst
                   wordt meegeteld. Werkelijke tarieven en terugleverkosten verschillen
                   per leverancier.
                 </p>
               </div>
+              <div className="rounded-2xl border border-ink/10 bg-paper p-5">
+                <h3 className="font-semibold text-ink">Batterij als apart investeringsscenario</h3>
+                <p className="mt-1">Extra gebruik is begrensd op beschikbare zonnestroom, resterend verbruik en maximaal één volledige capaciteitscyclus per dag. Standaard gebruiken we 90% rendement, 10 kWh en €4.000 investering. De extra terugverdientijd is de batterijprijs gedeeld door het extra jaarlijkse voordeel in 2027. Alleen een positieve totale jaarwaarde én positief extra voordeel met eenvoudige terugverdientijd tot 10 jaar geeft een batterij als optie; dit is een gekozen beoordelingsgrens, geen levensduur- of rendementsbelofte. Kwartierprofielen, degradatie, onderhoud, rente en vervanging ontbreken. Een vaste kostenstaffel blijft hetzelfde jaarbedrag in het batterijscenario; pas die handmatig aan als uw contractstaffel wijzigt.</p>
+              </div>
+              <div className="rounded-2xl border border-ink/10 bg-paper p-5">
+                <h3 className="font-semibold text-ink">Indicatieve modelscore</h3>
+                <p className="mt-1">De modelscore is een eenvoudige heuristiek, geen officieel energielabel, technische keuring of bewezen rendementsmaat. Bouwjaar geeft maximaal 30 punten, een energielabel maximaal 30 en geschat dakoppervlak maximaal 20. De niet-geverifieerde netsituatie krijgt een vaste neutrale rekenwaarde van 10 punten; dat is geen oordeel over netcapaciteit. Zonder de onderliggende woninggegevens tonen we geen opgeslagen score.</p>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="examples-heading">
+            <h2 id="examples-heading" className="text-2xl font-bold text-ink">Een voorbeeld dat u kunt narekenen</h2>
+            <div className="mt-5 rounded-2xl border border-ink/10 bg-paper p-5 text-sm leading-7 text-ink-muted">
+              <p>Dit fictieve huishouden verbruikt en produceert elk 4.000 kWh per jaar en gebruikt 25% van de zonnestroom direct. Levering: €0,30/kWh inclusief belasting, kaal €0,20/kWh, bruto terugleververgoeding €0,10/kWh. Kosten: in 2026 €200 per jaar plus €0,01 per teruggeleverde kWh; in 2027 €100 plus €0,02. Dit zijn rekenwaarden, geen leverancierstarieven.</p>
+              <p className="mt-3">Zonder batterij is de 2027-jaarwaarde 1.000 × €0,30 + 3.000 × €0,10 − €100 − 3.000 × €0,02 = <strong>€440</strong>. Een batterijscenario met 10 kWh, 90% rendement en 70% eigen gebruik komt op <strong>€820</strong>, inclusief 200 kWh opslagverlies. Het extra voordeel is €380. Bij €5.000 investering is de eenvoudige extra terugverdientijd 13,2 jaar: dit model adviseert dan geen batterij.</p>
+              <p className="mt-3">Het volledige 2026-referentiejaar komt op €970. Het verschil met 2027 is €530, maar dat is niet hetzelfde als het batterijvoordeel van €380. Onderhoud, degradatie, rente en kwartierdata kunnen de vergelijking verder veranderen.</p>
+              <Link href="/check" className="mt-4 inline-flex min-h-11 items-center font-semibold text-trust-dark underline">Bereken uw eigen 2027-situatie</Link>
             </div>
           </section>
 

@@ -28,7 +28,7 @@ async function loadRelatedWijken({
   if (provincie && stad) {
     const wijken = await getWijkenByStad(provincie, stad)
     return wijken
-      .filter(w => w.wijk !== excludeWijk)
+      .filter(w => w.wijk !== excludeWijk && w.quality_indexable)
       .slice(0, limit)
       .map(w => ({
         provincie,
@@ -52,8 +52,8 @@ export async function RelatedWijken({
   provincie,
   stad,
   excludeWijk,
-  title = 'Bekijk wijk-analyses',
-  description = 'Bekijk hoe deze informatie voor specifieke wijken in Nederland uitpakt.',
+  title = 'Bekijk locatiepagina’s',
+  description = 'Controleer per pagina welke lokale gegevens beschikbaar zijn en wat ze wel en niet zeggen.',
 }: Props) {
   let wijken: RelatedWijk[] = []
   try {

@@ -2,7 +2,7 @@ export const ENERGY_EDITORIAL_GUARDRAILS = `
 Feitenkader dat nooit mag worden tegengesproken:
 - Salderen blijft 100% mogelijk tot en met 31 december 2026 en stopt in één keer per 1 januari 2027.
 - Er is geen actuele gefaseerde afbouw in 2025 of 2026. Het oude percentageschema is verworpen.
-- Na 1 januari 2027 blijft een leveranciersafhankelijke vergoeding voor teruggeleverde stroom bestaan. Noem geen gegarandeerd tarief.
+- Na 1 januari 2027 blijft een leveranciersafhankelijke vergoeding voor teruggeleverde stroom bestaan. Tot 1 januari 2030 geldt een minimumvergoeding van 50% van het kale leveringstarief, zonder belastingen. Terugleverkosten staan daar los van. Verzin geen gegarandeerd netto eurotarief.
 - Een regionale netcongestiestatus is een indicatie. Die bewijst niet dat teruglevering op een bestaande woningaansluiting actief wordt beperkt en maakt een thuisbatterij niet automatisch noodzakelijk.
 - ISDE voor woningeigenaren geldt alleen voor officieel aangewezen maatregelen. Zonnepanelen, thuisbatterijen, een dakcheck en een groepenkastinspectie krijgen geen ISDE.
 - Presenteer aannames, bandbreedtes en toekomstverwachtingen als indicatief. Verzin geen boetes, verplichte omvormeraansturing, contractvoorwaarden of subsidierechten.
@@ -18,7 +18,7 @@ const ISDE_COPY =
   'ISDE: zonnepanelen, thuisbatterijen, een dakcheck en een groepenkastinspectie vallen niet onder de landelijke ISDE. Controleer voor isolatie, een (hybride) warmtepomp, zonneboiler en andere aangewezen maatregelen de actuele voorwaarden bij RVO.'
 
 const LEGACY_LAW_PATTERN =
-  /(2026.{0,35}28\s*%|28\s*%.{0,35}2026|2025.{0,35}64\s*%|64\s*%.{0,35}2025|salder\w*.{0,100}(stapsgewijs|geleidelijk|gefaseerd)|(stapsgewijs|geleidelijk|gefaseerd).{0,100}salder|afbouw.{0,50}(start|vanaf).{0,25}2025|vanaf.{0,25}2027.{0,60}afgebouwd|salder\w*.{0,60}naar verwachting.{0,35}2027)/i
+  /(2026.{0,35}28\s*%|28\s*%.{0,35}2026|2025.{0,35}64\s*%|64\s*%.{0,35}2025|salder\w*.{0,100}(stapsgewijs|geleidelijk|gefaseerd)|(stapsgewijs|geleidelijk|gefaseerd).{0,100}salder|afbouw.{0,50}(start|vanaf).{0,25}2025|vanaf.{0,25}2027.{0,60}afgebouwd|salder\w*.{0,60}naar verwachting.{0,35}2027|salder\w*.{0,80}(?:al|reeds)\s+(?:aanzienlijk\s+|gedeeltelijk\s+)?afgebouwd)/i
 
 const UNSAFE_NET_PATTERN =
   /(teruglever\w*.{0,60}(actief gereguleerd|al gereguleerd|onbeperkt|wordt beperkt|al beperkt|beperkingen opleggen)|batterij.{0,45}(essentieel|noodzakelijk|geen luxe|noodzaak))/i
@@ -27,6 +27,11 @@ const UNSAFE_ISDE_PATTERN =
   /ISDE.{0,80}(dakcheck|dakinspectie|groepenkast|zonnepanelen|thuisbatterij|batterij)|(dakcheck|dakinspectie|groepenkast|zonnepanelen|thuisbatterij|batterij).{0,80}ISDE/i
 
 function replacementFor(block: string, short: boolean): string | null {
+  if (/geen wettelijk vastgelegd of gegarandeerd tarief(?: meer)?/i.test(block)) {
+    return short
+      ? 'Terugleververgoeding: wettelijke ondergrens en contractkosten'
+      : 'Vanaf 1 januari 2027 stopt salderen. Tot 1 januari 2030 moet de terugleververgoeding minimaal 50% van het kale leveringstarief zijn, zonder belastingen. Terugleverkosten zijn een afzonderlijke contractpost; controleer vergoeding en kosten bij uw leverancier.'
+  }
   if (LEGACY_LAW_PATTERN.test(block)) {
     return short
       ? '100% salderen tot en met 2026; einde per 1 januari 2027'

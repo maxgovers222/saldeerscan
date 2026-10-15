@@ -19,9 +19,9 @@ test('email contains normalized report values and report URL', () => {
     reportUrl: 'https://saldeerscan.nl/check?leadId=1&token=abc',
   })
   expect(html).toContain('€400')
-  expect(html).toContain('€780')
+  expect(html).toContain('€420')
   expect(html).toContain('10 panelen')
-  expect(html).toContain('10 kWh batterij')
+  expect(html).not.toContain('10 kWh batterij')
   expect(html).toContain('https://saldeerscan.nl/check?leadId=1&amp;token=abc')
   expect(html).toContain(`background:${BRAND_COLORS.evergreen950}`)
   expect(html).toContain(BRAND_EMAIL_LOGO_URL)
@@ -37,8 +37,8 @@ test('email describes existing panels as an upgrade, not a new installation', ()
     reportUrl: 'https://saldeerscan.nl/check',
   })
   expect(html).toContain('10 bestaande panelen')
-  expect(html).toContain('10 kWh batterij')
-  expect(html).toContain('€360')
+  expect(html).not.toContain('10 kWh batterij')
+  expect(html).toContain('€360/jaar')
   expect(html).toContain('Extra opslagvoordeel vanaf 2027')
 })
 

@@ -18,7 +18,7 @@ export function PseoCardGrid({ items }: { items: PseoCardItem[] }) {
           href={item.href}
           data-analytics-event="pseo_second_click"
           data-analytics-label={item.analyticsLabel}
-          className="group min-h-11 rounded-2xl border border-white/10 bg-evergreen-900/70 p-5 transition hover:border-trust/40 hover:bg-evergreen-900"
+          className="group min-h-11 rounded-2xl border border-white/10 bg-evergreen-900 p-5 transition hover:border-trust/40"
         >
           <span className="flex items-start justify-between gap-3">
             <span className="break-words font-heading text-lg font-bold text-white transition group-hover:text-trust">
@@ -26,7 +26,7 @@ export function PseoCardGrid({ items }: { items: PseoCardItem[] }) {
             </span>
             {item.status && <PseoStatusBadge status={item.status} />}
           </span>
-          {item.meta && <span className="mt-2 block text-sm text-white/55">{item.meta}</span>}
+          {item.meta && <span className="mt-2 block text-sm text-white/70">{item.meta}</span>}
         </Link>
       ))}
     </div>

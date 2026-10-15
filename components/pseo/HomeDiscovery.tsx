@@ -63,10 +63,10 @@ function motionGridHeader() {
         Regionale hubs
       </p>
       <h2 className="font-heading text-2xl font-bold text-white">
-        Populaire steden en wijken
+        Bekijk steden en wijken
       </h2>
       <p className="text-sm text-white/50 mt-2 max-w-2xl">
-        Spring direct naar een stad- of wijk-analyse, of zoek via uw postcode.
+        Bekijk per locatie welke gegevens zijn gecontroleerd en waar uw eigen cijfers nodig zijn.
       </p>
     </div>
   )

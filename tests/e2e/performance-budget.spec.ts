@@ -24,8 +24,10 @@ test('initial check client JavaScript stays under 450 KB transferred', async ({ 
 test('initial routes do not contact Mapbox browser endpoints', async ({ page }) => {
   const requests: string[] = []
   page.on('request', request => requests.push(request.url()))
-  await page.goto('/', { waitUntil: 'networkidle' })
-  await page.goto('/check', { waitUntil: 'networkidle' })
+  await page.goto('/', { waitUntil: 'load' })
+  await expect(page.getByRole('main')).toBeVisible()
+  await page.goto('/check', { waitUntil: 'load' })
+  await expect(page.getByRole('combobox')).toBeVisible()
   expect(requests.some(url => /api\.mapbox\.com|events\.mapbox\.com/i.test(url)))
     .toBe(false)
 })

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const bouwjaar = parseInt(searchParams.get('bouwjaar') ?? '0')
   const energielabel = searchParams.get('energielabel')
   const dakOppervlakte = parseFloat(searchParams.get('dakOppervlakte') ?? '0')
-  const netcongestieStatus = searchParams.get('netcongestie') as 'ROOD' | 'ORANJE' | 'GROEN' | null
+  const netcongestieStatus = null // No verified network feed is connected.
 
   if (!bouwjaar || bouwjaar < 1000 || bouwjaar > 2030) {
     return Response.json({ error: 'Geldig bouwjaar vereist (1000-2030)' }, { status: 400 })

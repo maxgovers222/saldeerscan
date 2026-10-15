@@ -22,11 +22,13 @@ const canonicalEvents = new Set([
   'funnel_validation_failed',
   'bag_match_succeeded',
   'bag_match_failed',
+  'roi_result_viewed',
   'technical_scan_completed',
   'technical_scan_skipped',
   'technical_module_skipped',
   'lead_submit_started',
   'lead_submit_succeeded',
+  'advice_request_succeeded',
   'lead_submit_failed',
   'funnel_abandoned',
   'report_reopened',
@@ -37,6 +39,7 @@ const canonicalEvents = new Set([
 ])
 
 const funnelEvents = new Set([
+  'roi_result_viewed',
   'funnel_session_started',
   'funnel_stage_viewed',
   'funnel_stage_completed',
@@ -48,6 +51,7 @@ const funnelEvents = new Set([
   'technical_module_skipped',
   'lead_submit_started',
   'lead_submit_succeeded',
+  'advice_request_succeeded',
   'lead_submit_failed',
   'funnel_abandoned',
 ])
@@ -128,6 +132,7 @@ async function resumeSavedFunnel(page: Page) {
 async function fillLeadForm(page: Page) {
   await page.locator('#lead-naam').fill(knownName)
   await page.locator('#lead-email').fill(knownEmail)
+  await page.locator('#lead-advice').check()
   await page.locator('#lead-telefoon').fill(knownPhone)
   await page.locator('#lead-gdpr').click({ force: true })
 }
@@ -325,9 +330,9 @@ test('lead submission reports failure and success without lead contact data', as
   })
 
   await page.getByRole('button', { name: /Stuur mij het gratis PDF-rapport/ }).click()
-  await expect.poll(() => eventCalls(calls, 'funnel_validation_failed').length).toBe(4)
+  await expect.poll(() => eventCalls(calls, 'funnel_validation_failed').length).toBe(3)
   expect(eventCalls(calls, 'funnel_validation_failed').map(([, , params]) => params?.validation_type).sort())
-    .toEqual(['email_required', 'full_name_required', 'phone_required', 'privacy_consent'])
+    .toEqual(['email_required', 'full_name_required', 'privacy_consent'])
   expect(eventCalls(calls, 'lead_submit_started')).toHaveLength(0)
 
   await fillLeadForm(page)

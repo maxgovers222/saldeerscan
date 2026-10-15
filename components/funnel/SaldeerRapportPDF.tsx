@@ -662,8 +662,8 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
         {
           label: 'Vanaf 2027 met batterij',
           saving: report.scenarios.withBattery.besparingJaarEur,
-          investment: recommendation.investmentEur,
-          paybackYears: recommendation.paybackYears,
+          investment: report.calculation?.batteryInvestmentEur ?? Math.max(report.scenarios.withBattery.investeringEur - report.scenarios.panelsNow.investeringEur, 0),
+          paybackYears: report.calculation?.batteryPaybackYears ?? (recommendation.extraAnnualSavingEur && recommendation.extraAnnualSavingEur > 0 ? Math.round((report.scenarios.withBattery.investeringEur - report.scenarios.panelsNow.investeringEur) / recommendation.extraAnnualSavingEur * 10) / 10 : null),
         },
         {
           label: 'Vanaf 2027 zonder batterij',
@@ -674,19 +674,19 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
       ]
     : [
         {
-          label: 'Nu',
+          label: 'Referentiejaar 2026',
           saving: report.scenarios.panelsNow.besparingJaarEur,
           investment: report.scenarios.panelsNow.investeringEur,
           paybackYears: report.scenarios.panelsNow.terugverdientijdJaar,
         },
         {
-          label: 'Met batterij',
+          label: '2027 met batterij',
           saving: report.scenarios.withBattery.besparingJaarEur,
           investment: report.scenarios.withBattery.investeringEur,
           paybackYears: report.scenarios.withBattery.terugverdientijdJaar,
         },
         {
-          label: 'Wachten tot 2027',
+          label: '2027 zonder batterij',
           saving: report.scenarios.waitUntil2027.besparingJaarEur,
           investment: report.scenarios.waitUntil2027.investeringEur,
           paybackYears: report.scenarios.waitUntil2027.terugverdientijdJaar,
@@ -742,8 +742,8 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
         </View>
         <View style={S.body}>
           <View style={S.impactBox} wrap={false}>
-            <Text style={S.impactLabel}>Mogelijk verlies vanaf 2027</Text>
-            <Text style={S.impactValue}>-{money(report.impact.annualLossEur)} per jaar</Text>
+            <Text style={S.impactLabel}>Verschil in jaarwaarde vanaf 2027</Text>
+            <Text style={S.impactValue}>{report.impact.annualLossEur > 0 ? '-' : report.impact.annualLossEur < 0 ? '+' : ''}{money(Math.abs(report.impact.annualLossEur))} per jaar</Text>
             <Text style={S.impactText}>{report.impact.explanation}</Text>
           </View>
 
@@ -756,11 +756,11 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
             />
             <Metric
               label="Terugverdientijd"
-              value={report.summary.paybackYears === null ? 'Nader te bepalen' : `${report.summary.paybackYears} jaar`}
+              value={report.summary.paybackYears === null ? existing && report.recommendation.batteryCapacityKwh === null ? 'Niet geadviseerd' : 'Nader te bepalen' : `${report.summary.paybackYears} jaar`}
               detail={existing ? 'Batterij-upgrade' : 'Nieuwe installatie'}
             />
             <Metric
-              label="Woning-score"
+              label="Indicatieve modelscore"
               value={report.summary.healthScore === null ? 'Niet beschikbaar' : `${report.summary.healthScore}/100`}
               detail={report.summary.healthLabel ?? 'Nog niet bepaald'}
             />
@@ -816,7 +816,7 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
                 <Text style={S.scenarioValue}>{money(scenario.saving)}</Text>
                 <Text style={S.scenarioValue}>{money(scenario.investment)}</Text>
                 <Text style={S.scenarioValue}>
-                  {scenario.paybackYears !== null && Number.isFinite(scenario.paybackYears)
+                  {scenario.paybackYears !== null && scenario.paybackYears < 99 && Number.isFinite(scenario.paybackYears)
                     ? `${scenario.paybackYears} jaar`
                     : '-'}
                 </Text>
@@ -917,7 +917,7 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
               <Text style={S.sectionEyebrow}>Rekenbasis</Text>
               <Text style={S.sectionTitle}>Transparant en indicatief</Text>
               <Text style={S.paragraph}>
-                Gebaseerd op BAG-woningdata, uw antwoorden, regionale netinformatie en het servermodel. Actuele offerteprijzen, kwartierdata en leveranciersvoorwaarden zijn niet meegenomen.
+                Gebaseerd op woninggegevens, uw antwoorden en het servermodel. De actuele netsituatie is niet geverifieerd. Ingevoerde contracttarieven en batterijofferte worden gebruikt; kwartierdata en een volledige investeringsanalyse ontbreken.
                 Uitkomsten blijven indicatief en kunnen afwijken.
               </Text>
               <Link src="https://saldeerscan.nl/methode" style={S.methodLink}>
@@ -928,6 +928,17 @@ export function SaldeerRapportPDF({ report }: { report: NormalizedReport }) {
         </View>
         <Footer page={2} />
       </Page>
+      {report.calculation && <Page size="A4" style={S.page}>
+        <ContinuationHeader report={report} />
+        <View style={S.body}>
+          <Text style={S.sectionTitle}>Invoer en aannames</Text>
+          <Text style={S.paragraph}>Extra jaarwaarde batterij: {money(report.calculation.batteryExtraAnnualEur)}. Investering: {money(report.calculation.batteryInvestmentEur)}. Extra eenvoudige terugverdientijd: {report.calculation.batteryPaybackYears === null ? 'geen positieve terugverdienwaarde' : `${report.calculation.batteryPaybackYears} jaar`}.</Text>
+          {report.calculation.assumptions.map(line => <View key={line} style={{ marginTop: 10 }} wrap={false}><Text style={S.paragraph}>{line}</Text></View>)}
+          <Link src="https://consument.acm.nl/elektriciteit-en-gas/duurzame-energie/wat-is-salderen" style={S.methodLink}>ACM: salderen, vergoeding en terugleverkosten</Link>
+        </View>
+        <Footer page={3} />
+      </Page>}
+
     </Document>
   )
 }

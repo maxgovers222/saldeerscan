@@ -11,7 +11,7 @@ export const NETCONGESTIE_ARTICLE_SECTIONS = [
   {
     title: 'Waardoor raakt het stroomnet vol?',
     paragraphs: [
-      'De elektriciteitsvraag groeit door onder meer warmtepompen, elektrisch koken, laadpunten en de elektrificatie van bedrijven. Die apparaten vragen vaak rond dezelfde uren vermogen. Vooral de avondpiek tussen 16.00 en 21.00 uur telt zwaar mee.',
+      'De elektriciteitsvraag groeit door onder meer warmtepompen, elektrisch koken, laadpunten en de elektrificatie van bedrijven. Wanneer veel gebruikers tegelijk vermogen vragen, neemt de gezamenlijke belasting van het net toe.',
       'Aan de andere kant leveren zonnepanelen en windparken op gunstige momenten veel stroom tegelijk terug. In woonwijken kan daardoor lokaal de spanning oplopen. Verzwaring van kabels en stations helpt structureel, maar voorbereiding, vergunningen, ruimte en uitvoering kosten jaren.',
     ],
   },
@@ -71,34 +71,34 @@ export const NETCONGESTIE_SOURCES = [
 
 export const NETCONGESTIE_LOCAL_ANALYSES = [
   {
-    label: 'Amsterdam Centrum',
-    href: '/noord-holland/amsterdam/centrum',
-    description: 'Dichte, oudere stadsbebouwing en lokale netinformatie.',
+    label: 'IJsselmonde, Rotterdam',
+    href: '/zuid-holland/rotterdam/ijsselmonde',
+    description: 'Woningcijfers voor de benoemde CBS-wijk, zonder actuele netstatus.',
   },
   {
-    label: 'Osdorp, Amsterdam',
-    href: '/noord-holland/amsterdam/osdorp',
-    description: 'Naoorlogse woningvoorraad met een eigen lokaal profiel.',
+    label: 'Charlois, Rotterdam',
+    href: '/zuid-holland/rotterdam/charlois',
+    description: 'Controleer de gebiedsscope en gebruik eigen huishoudcijfers.',
   },
   {
-    label: 'Centrum Den Haag',
-    href: '/zuid-holland/den-haag/centrum-den-haag',
-    description: 'Binnenstedelijke woningdata en regionale netindicatie.',
+    label: 'Geitenkamp, Arnhem',
+    href: '/gelderland/arnhem/geitenkamp',
+    description: 'De cijfers betreffen de expliciet benoemde CBS-wijk.',
   },
   {
-    label: 'Utrecht Centrum',
-    href: '/utrecht/utrecht/centrum',
-    description: 'Lokale analyse voor een historisch en compact woongebied.',
+    label: 'Hoofddorp, Haarlemmermeer',
+    href: '/noord-holland/haarlemmermeer/hoofddorp',
+    description: 'Locatiecontext geeft geen actuele netstatus voor uw aansluiting.',
   },
   {
     label: 'Leidsche Rijn, Utrecht',
     href: '/utrecht/utrecht/leidsche-rijn',
-    description: 'Een groeigebied met een ander woning- en energieprofiel.',
+    description: 'Bekijk de expliciete CBS-scope en de grenzen van gebiedsgegevens.',
   },
   {
     label: 'Born, Sittard-Geleen',
     href: '/limburg/sittard-geleen/born',
-    description: 'Vergelijk de lokale situatie buiten de Randstad.',
+    description: 'Lees welke CBS-buurt wordt bedoeld; dit is niet de volledige woonplaats.',
   },
 ] as const
 
@@ -115,6 +115,8 @@ export const NETCONGESTIE_ARTICLE = {
   intro:
     'Netcongestie betekent dat een deel van het stroomnet op piekmomenten onvoldoende ruimte heeft om alle gevraagde of aangeboden elektriciteit te vervoeren. Voor huishoudens kan dat gevolgen hebben voor een nieuwe of zwaardere aansluiting en soms voor de werking van zonnepanelen. Een regionale waarschuwing is echter geen bewijs dat uw bestaande aansluiting of teruglevering individueel wordt beperkt.',
   hoofdtekst,
+  reviewedAt: '2026-10-15',
+  sources: NETCONGESTIE_SOURCES.map(item => ({ label: item.label, url: item.href })),
   faqItems: [
     {
       vraag: 'Betekent een rode netstatus dat ik geen zonnestroom kan terugleveren?',
@@ -145,7 +147,7 @@ export const NETCONGESTIE_ARTICLE = {
       'Praktische uitleg over netcongestie voor huishoudens, met beslisboom en actuele primaire bronnen.',
     mainEntityOfPage:
       'https://saldeerscan.nl/kennisbank/netcongestie-problemen-nederland',
-    dateModified: '2026-07-31',
+    dateModified: '2026-10-15',
     inLanguage: 'nl-NL',
   },
   category: 'netcongestie' as const,

@@ -31,11 +31,38 @@ export interface ROIInput {
   bouwjaar: number
   dakOppervlakte: number       // Geschat dakoppervlak m²
   huidigVerbruikKwh?: number   // Optioneel: overschrijft schatting
+  verbruikBron?: 'schatting' | 'gebruiker'
   budgetEur?: number           // Optioneel: max investering
   aantalPanelenOverride?: number // Optioneel: gebruiker overschrijft paneel berekening
   kwhPerPaneel?: number        // Optioneel: paneelefficiëntie (standaard 350)
   dakrichting?: 'Zuid' | 'Oost/West' | 'Noord' | null
   huishouden_grootte?: 1 | 2 | 3 | null
+  jaarProductieKwh?: number
+  directEigenGebruikPct?: number
+  leveringstarief?: number
+  kaalLeveringstarief?: number
+  teruglevertarief?: number
+  terugleverkosten2026Eur?: number
+  terugleverkosten2027Eur?: number
+  terugleverkostenPerKwh2026?: number
+  terugleverkostenPerKwh2027?: number
+  batterijInvesteringEur?: number
+  batterijCapaciteitKwh?: number
+  batterijRendementPct?: number
+  eigenGebruikMetBatterijPct?: number
+}
+
+export interface CalculationSnapshot {
+  input: ROIInput
+  assumptions: string[]
+  batteryExtraAnnualEur: number
+  batteryInvestmentEur: number
+  batteryPaybackYears: number | null
+  batteryCapacityKwh: number
+  directUseKwh: number
+  exportKwh: number
+  batteryDeliveredKwh: number
+  batteryLossKwh: number
 }
 
 export interface ShockEffect2027 {
@@ -54,6 +81,7 @@ export interface ROIScenario {
 }
 
 export interface ROIResult {
+  calculation?: CalculationSnapshot // Absent on reports saved before this model.
   // Kerngetallen
   geschatVerbruikKwh: number
   aantalPanelen: number
@@ -133,104 +161,82 @@ export function schatVerbruik(oppervlakte: number, bouwjaar: number): number {
 }
 
 export function berekenROI(input: ROIInput): ROIResult {
-  const verbruikKwh = input.huidigVerbruikKwh ?? schatVerbruik(input.oppervlakte, input.bouwjaar)
-
-  const aantalPanelen = input.aantalPanelenOverride
-    ?? Math.floor((input.dakOppervlakte * DAK_BENUTTING) / M2_PER_PANEEL)
-  const kwhPerPaneel = input.kwhPerPaneel ?? KWH_PER_PANEEL
-  const richtingFactor = input.dakrichting ? (DAKRICHTING_FACTOR[input.dakrichting] ?? 1.0) : 1.0
-  const productieKwh = Math.round(aantalPanelen * kwhPerPaneel * richtingFactor)
-  const saldering2026 = SALDERING_SCHEMA[2026]
-
-  // Eigengebruik factor op basis van huishoudenssamenstelling
-  const basisFactor = input.huishouden_grootte ? (EIGENGEBRUIK_BASIS[input.huishouden_grootte] ?? 0.30) : 0.30
-
-  const eigenGebruikBasisKwh = Math.min(productieKwh * basisFactor, verbruikKwh)
-
-  // Scenario A: in 2026 mag teruglevering nog volledig worden gesaldeerd tegen
-  // de jaarlijkse netafname. Een eventueel overschot krijgt een terugleververgoeding.
-  const besparingNu = berekenJaarwaarde(
-    productieKwh,
-    verbruikKwh,
-    eigenGebruikBasisKwh,
-    saldering2026,
-  )
-  const investeringPanelen = aantalPanelen * 350  // ~€350 per paneel geïnstalleerd
-
-  // Scenario B: vanaf 2027 met batterij (10 kWh, ~€4000). Het extra
-  // batterijvoordeel moet worden vergeleken met scenario C: hetzelfde jaar
-  // zonder batterij. In 2026 maakt 100% salderen extra eigen gebruik financieel
-  // vrijwel waardeloos, wat ten onrechte een opslagvoordeel van €0 gaf.
-  const besparingMetBatterij = berekenBatterijJaarwaarde2027({
-    productieKwh,
-    verbruikKwh,
-    huishoudenGrootte: input.huishouden_grootte,
-  })
-  const investeringMetBatterij = investeringPanelen + 4000
-
-  // Scenario C: vanaf 2027 stopt salderen. Teruglevering houdt wel een
-  // leveranciersafhankelijke vergoeding; die is hier indicatief geraamd.
-  const besparingWachten = berekenJaarwaarde(
-    productieKwh,
-    verbruikKwh,
-    eigenGebruikBasisKwh,
-    SALDERING_SCHEMA[2027],
-  )
-
-  // Verschil in geraamde jaarwaarde door het einde van salderen.
-  const jaarlijksVerlies = besparingNu - besparingWachten
-  const shockEffect2027: ShockEffect2027 = {
-    jaarlijksVerlies: Math.round(jaarlijksVerlies),
-    cumulatiefVerlies5Jaar: Math.round(jaarlijksVerlies * 5),
-    maandelijksVerlies: Math.round(jaarlijksVerlies / 12),
-    boodschap: `Door het einde van salderen daalt de geraamde jaarwaarde met €${Math.round(jaarlijksVerlies)} per jaar vanaf 1 januari 2027`,
+  const verbruik = input.huidigVerbruikKwh ?? schatVerbruik(input.oppervlakte, input.bouwjaar)
+  const panelen = input.aantalPanelenOverride ?? Math.floor(input.dakOppervlakte * DAK_BENUTTING / M2_PER_PANEEL)
+  const productie = input.jaarProductieKwh ?? Math.round(panelen * (input.kwhPerPaneel ?? KWH_PER_PANEEL) * (input.dakrichting ? DAKRICHTING_FACTOR[input.dakrichting] : 1))
+  const basisPct = input.directEigenGebruikPct ?? (EIGENGEBRUIK_BASIS[input.huishouden_grootte ?? 2] * 100)
+  const direct = Math.min(productie * basisPct / 100, verbruik)
+  const exportKwh = Math.max(productie - direct, 0)
+  const supply = input.leveringstarief ?? LEVERINGSTARIEF
+  const bare = input.kaalLeveringstarief ?? 0.18
+  const compensation = input.teruglevertarief ?? TERUGLEVERTARIEF
+  const fixed26 = input.terugleverkosten2026Eur ?? 0
+  const fixed27 = input.terugleverkosten2027Eur ?? 0
+  const cost26 = input.terugleverkostenPerKwh2026 ?? 0
+  const cost27 = input.terugleverkostenPerKwh2027 ?? 0
+  const batteryCost = input.batterijInvesteringEur ?? 4000
+  const capacity = input.batterijCapaciteitKwh ?? REFERENCE_BATTERY_CAPACITY_KWH
+  const efficiency = (input.batterijRendementPct ?? 90) / 100
+  const targetPct = input.eigenGebruikMetBatterijPct ?? EIGENGEBRUIK_BATTERIJ[input.huishouden_grootte ?? 2] * 100
+  // Annual upper-bound approximation: one capacity cycle per day, subject to surplus and demand.
+  // The desired total own-use percentage is a scenario, not a measured dispatch schedule.
+  const delivered = Math.max(0, Math.min(
+    productie * targetPct / 100 - direct,
+    verbruik - direct,
+    exportKwh * efficiency,
+    capacity * 365 * efficiency,
+  ))
+  const charged = delivered / efficiency
+  const loss = charged - delivered
+  function value(own: number, exported: number, saldering: boolean, fixed: number, perKwh: number) {
+    const netted = saldering ? Math.min(exported, Math.max(verbruik - own, 0)) : 0
+    return own * supply + netted * supply + (exported - netted) * compensation
+      - (exported > 0 ? fixed + exported * perKwh : 0)
   }
-
-  // Vergelijk batterij en geen batterij binnen hetzelfde tariefjaar (2027).
-  const aanbeveling = besparingMetBatterij > besparingWachten * 1.2 ? 'beide' : 'panelen'
-
-  // Zonnepanelen en thuisbatterijen vallen niet onder de landelijke ISDE.
-  const isdeSchatting = {
-    bedragEur: 0,
-    apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij',
-    vermogenKwp: Math.round(aantalPanelen * 0.4 * 10) / 10,  // kWp = panelen × 400Wp
+  const value26 = value(direct, exportKwh, true, fixed26, cost26)
+  const value27 = value(direct, exportKwh, false, fixed27, cost27)
+  const batteryValue = value(direct + delivered, Math.max(exportKwh - charged, 0), false, fixed27, cost27)
+  const extra = batteryValue - value27
+  const rounded = (n: number) => Math.round(n)
+  const payback = (investment: number, benefit: number) => benefit > 0 ? Math.round(investment / benefit * 10) / 10 : null
+  const batteryPayback = payback(batteryCost, extra)
+  // Positive total and incremental annual value plus <=10 years are screening
+  // conditions, not battery-life or profitability guarantees.
+  const recommendBattery = delivered > 0 && extra > 0 && batteryValue > 0 && batteryPayback !== null && batteryPayback <= 10
+  const panelCost = panelen * 350
+  const assumptions = [
+    `Jaarverbruik: ${verbruik} kWh (${input.huidigVerbruikKwh === undefined || input.verbruikBron === 'schatting' ? 'woningmodel' : 'ingevoerd'}). Productie: ${productie} kWh (${input.jaarProductieKwh === undefined ? 'dak- en paneelmodel' : 'ingevoerd'}).`,
+    `Direct eigen gebruik: ${Math.round(direct)} kWh, ${productie > 0 ? Math.round(direct / productie * 100) : 0}% van de productie (${input.directEigenGebruikPct === undefined ? 'huishoudschatting' : 'ingevoerd; begrensd op totaalverbruik'}).`,
+    `Levering: €${supply}/kWh inclusief belasting. Kaal leveringstarief: €${bare}/kWh. Bruto terugleververgoeding: €${compensation}/kWh. Dezelfde tarieven in 2026 en 2027; vervang ze met uw contract.`,
+    `Terugleverkosten 2026: €${fixed26}/jaar + €${cost26}/teruggeleverde kWh. 2027: €${fixed27}/jaar + €${cost27}/teruggeleverde kWh. Alleen bij teruglevering. Een staffel voert u in als het totale jaarbedrag; tel dezelfde kosten niet dubbel.`,
+    `Batterijscenario: ${capacity} kWh, €${batteryCost}, ${Math.round(efficiency * 100)}% rendement, doel ${targetPct}% eigen gebruik. Model: maximaal één cyclus per dag; ${Math.round(delivered)} kWh extra gebruik, ${Math.round(loss)} kWh verlies per jaar. Geen simulatie met kwartierdata.`,
+    `Zonder ingevulde contractwaarden gebruiken we rekenvoorbeelden: €0,40 levering, €0,18 kaal, €0,09 vergoeding en €0 terugleverkosten. Dit zijn geen actuele leverancierstarieven.`,
+    `Tot 2030 is de wettelijke minimumvergoeding 50% van het kale leveringstarief; terugleverkosten staan daar los van. De berekening gebruikt de ingevulde bruto vergoeding, zonder gegarandeerd netto bedrag.`,
+    ...(compensation < bare * 0.5 ? ['De ingevulde vergoeding ligt onder 50% van het kale tarief. Controleer uw 2027-contract; het model corrigeert uw invoer niet automatisch.'] : []),
+    'Dit is een jaarlijkse vergelijking bij vaste tarieven, geen volledige investeringsanalyse. Rente, onderhoud, degradatie, vervanging en dynamische handel ontbreken. Een batterij komt alleen als optie naar voren bij een eenvoudige extra terugverdientijd van maximaal 10 jaar; toets dit met een offerte en kwartierdata.',
+    'Het 2026-scenario toont een volledig referentiejaar, niet de opbrengst van de resterende maanden in 2026. Zonnepanelen: rekenprijs €350 per paneel, geen persoonlijke offerte.',
+  ]
+  function scenario(naam: string, beschrijving: string, annual: number, investment: number): ROIScenario {
+    return { naam, beschrijving, besparingJaarEur: rounded(annual), investeringEur: investment, terugverdientijdJaar: payback(investment, annual) ?? 99 }
   }
-
   return {
-    geschatVerbruikKwh: verbruikKwh,
-    aantalPanelen,
-    productieKwh,
-    eigenGebruikPct: productieKwh > 0 ? Math.round((eigenGebruikBasisKwh / productieKwh) * 100) : 0,
-
-    scenarioNu: {
-      naam: 'Nu installeren',
-      beschrijving: 'Zonnepanelen in 2026 (100% salderen t/m 31 december)',
-      besparingJaarEur: Math.round(besparingNu),
-      investeringEur: investeringPanelen,
-      terugverdientijdJaar: Math.round((investeringPanelen / besparingNu) * 10) / 10,
+    geschatVerbruikKwh: verbruik, aantalPanelen: panelen, productieKwh: productie,
+    eigenGebruikPct: productie > 0 ? rounded(direct / productie * 100) : 0,
+    scenarioNu: scenario('Panelen in 2026', 'Referentiejaar met 100% salderen; kosten volgens invoer', value26, panelCost),
+    scenarioWachten: scenario('Panelen in 2027', 'Zonder salderen; bruto terugleververgoeding blijft, kosten apart', value27, panelCost),
+    scenarioMetBatterij: scenario('Panelen + batterij in 2027', `Vanaf 2027 met ${capacity} kWh thuisbatterij; inclusief opslagverlies`, batteryValue, panelCost + batteryCost),
+    shockEffect2027: {
+      jaarlijksVerlies: rounded(value26 - value27), cumulatiefVerlies5Jaar: rounded((value26 - value27) * 5),
+      maandelijksVerlies: rounded((value26 - value27) / 12),
+      boodschap: `Door het einde van salderen en de ingevulde kosten verandert de geraamde jaarwaarde van €${rounded(value26)} in 2026 naar €${rounded(value27)} in 2027.`,
     },
-    scenarioMetBatterij: {
-      naam: 'Panelen + batterij',
-      beschrijving: 'Vanaf 2027 met 10 kWh thuisbatterij',
-      besparingJaarEur: Math.round(besparingMetBatterij),
-      investeringEur: investeringMetBatterij,
-      terugverdientijdJaar: Math.round((investeringMetBatterij / besparingMetBatterij) * 10) / 10,
+    aanbeveling: recommendBattery ? 'beide' : 'panelen',
+    aanbevelingTekst: `${value27 <= 0 && !recommendBattery ? 'Met deze invoer is de geraamde jaarwaarde nul of negatief. Controleer uw gegevens en contract voordat u een investering overweegt. ' : ''}Alleen panelen leveren in het 2027-scenario €${rounded(value27)}/jaar aan geraamde energiewaarde. De batterij verandert dit met €${rounded(extra)}/jaar bij €${batteryCost} investering. ${recommendBattery ? `De eenvoudige extra terugverdientijd is ${batteryPayback} jaar; laat de haalbaarheid toetsen.` : 'Een batterij wordt met deze invoer niet geadviseerd: de totale jaarwaarde, het extra voordeel of de extra terugverdientijd voldoet niet aan de beoordelingsgrenzen.'}`,
+    isdeSchatting: { bedragEur: 0, apparaatType: 'Geen ISDE voor zonnepanelen of thuisbatterij', vermogenKwp: Math.round(panelen * 4) / 10 },
+    calculation: {
+      input: { ...input }, assumptions, batteryExtraAnnualEur: rounded(extra), batteryInvestmentEur: batteryCost,
+      batteryPaybackYears: batteryPayback, batteryCapacityKwh: capacity, directUseKwh: direct, exportKwh,
+      batteryDeliveredKwh: delivered, batteryLossKwh: loss,
     },
-    scenarioWachten: {
-      naam: 'Wachten tot 2027',
-      beschrijving: 'Na einde salderen (terugleververgoeding blijft)',
-      besparingJaarEur: Math.round(besparingWachten),
-      investeringEur: investeringPanelen,
-      terugverdientijdJaar: besparingWachten > 0
-        ? Math.round((investeringPanelen / besparingWachten) * 10) / 10
-        : 99,
-    },
-
-    shockEffect2027,
-    aanbeveling,
-    aanbevelingTekst: aanbeveling === 'beide'
-      ? `Vanaf 2027 is de geraamde jaarwaarde met panelen en batterij €${Math.round(besparingMetBatterij)}/jaar. Het extra opslagvoordeel ten opzichte van alleen panelen is circa €${Math.round(besparingMetBatterij - besparingWachten)}/jaar. Laat rendement en dimensionering altijd toetsen met actuele tarieven en een offerte.`
-      : `Zonnepanelen leveren in deze indicatie €${Math.round(besparingNu)}/jaar op. Tot en met 31 december 2026 kunt u jaarlijks salderen; vanaf 2027 tellen vooral direct eigen gebruik en de terugleververgoeding.`,
-    isdeSchatting,
   }
 }

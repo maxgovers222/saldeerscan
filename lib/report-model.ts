@@ -1,3 +1,4 @@
+import { UNKNOWN_GRID_EXPLANATION } from './netcongestie'
 import { parseStoredRoi } from '@/lib/roi-result-guard'
 import {
   berekenBatterijJaarwaarde2027,
@@ -32,10 +33,10 @@ export interface ReportSource {
     lon?: number
   } | null
   netcongestie: {
-    status: 'ROOD' | 'ORANJE' | 'GROEN'
+    status: 'ROOD' | 'ORANJE' | 'GROEN' | null
     netbeheerder?: string
     uitleg?: string
-    terugleveringBeperkt?: boolean
+    terugleveringBeperkt?: boolean | null
   } | null
   healthScore: HealthScoreResult | null
   roiResult: unknown
@@ -58,6 +59,7 @@ export interface ReportSource {
 }
 
 export interface NormalizedReport {
+  calculation?: import('@/lib/roi').CalculationSnapshot
   version: typeof REPORT_MODEL_VERSION
   leadId: string | null
   generatedAt: string
@@ -98,6 +100,7 @@ export interface NormalizedReport {
       | 'Zonnepanelen en thuisbatterij'
       | 'Thuisbatterij en slim verbruik'
       | 'Slim verbruik met huidige zonnepanelen'
+      | 'Controleer uw invoer en contract'
     panelCount: number
     existingPanelCount: number | null
     productionKwh: number
@@ -157,18 +160,18 @@ export function buildReportModel(
       ? roundOne(normalizedBatteryScenario.investeringEur / normalizedBatteryScenario.besparingJaarEur)
       : 99
   }
-  const batteryExtraSaving = Math.max(
-    normalizedBatteryScenario.besparingJaarEur - roi.scenarioWachten.besparingJaarEur,
-    0,
-  )
+  const batteryExtraSaving = roi.calculation?.batteryExtraAnnualEur
+    ?? normalizedBatteryScenario.besparingJaarEur - roi.scenarioWachten.besparingJaarEur
+  const batteryPayback = batteryExtraSaving > 0
+    ? roi.calculation?.batteryPaybackYears ?? roundOne(batteryInvestment / batteryExtraSaving)
+    : null
   const batteryRecommended =
-    normalizedBatteryScenario.besparingJaarEur > roi.scenarioWachten.besparingJaarEur * 1.2
-    && batteryExtraSaving > 0
+    batteryExtraSaving > 0 && normalizedBatteryScenario.besparingJaarEur > 0 && batteryPayback !== null && batteryPayback <= 10
   const annualSaving = existing
     ? batteryExtraSaving
     : batteryRecommended
       ? normalizedBatteryScenario.besparingJaarEur
-      : roi.scenarioNu.besparingJaarEur
+      : roi.scenarioWachten.besparingJaarEur
   const investment = existing
     ? batteryRecommended ? batteryInvestment : 0
     : batteryRecommended
@@ -181,15 +184,19 @@ export function buildReportModel(
     : Number.isFinite(
       batteryRecommended
         ? normalizedBatteryScenario.terugverdientijdJaar
-        : roi.scenarioNu.terugverdientijdJaar,
+        : roi.scenarioWachten.terugverdientijdJaar,
     )
       ? batteryRecommended
         ? normalizedBatteryScenario.terugverdientijdJaar
-        : roi.scenarioNu.terugverdientijdJaar
+        : roi.scenarioWachten.terugverdientijdJaar
       : null
+
+  const reportedPayback = payback !== null && payback >= 99 ? null : payback
+  const noPositiveNewScenario = !existing && annualSaving <= 0
 
   return {
     version: REPORT_MODEL_VERSION,
+    calculation: roi.calculation,
     leadId: source.leadId,
     generatedAt: source.createdAt,
     home: {
@@ -203,10 +210,10 @@ export function buildReportModel(
       roofSurfaceM2: source.bagData?.dakOppervlakte ?? null,
     },
     summary: {
-      healthScore: source.healthScore?.score ?? null,
-      healthLabel: source.healthScore?.label ?? null,
+      healthScore: source.bagData ? source.healthScore?.score ?? null : null,
+      healthLabel: source.bagData ? source.healthScore?.label ?? null : null,
       annualSavingEur: annualSaving,
-      paybackYears: payback,
+      paybackYears: reportedPayback,
     },
     impact: {
       annualLossEur: roi.shockEffect2027.jaarlijksVerlies,
@@ -229,7 +236,7 @@ export function buildReportModel(
         .sort((a, b) => a.year - b.year),
     ],
     recommendation: {
-      primarySolution: existing
+      primarySolution: noPositiveNewScenario ? 'Controleer uw invoer en contract' : existing
         ? batteryRecommended
           ? 'Thuisbatterij en slim verbruik'
           : 'Slim verbruik met huidige zonnepanelen'
@@ -243,29 +250,29 @@ export function buildReportModel(
       ownUsePct: roi.eigenGebruikPct,
       batteryCapacityKwh:
         batteryRecommended
-          ? REFERENCE_BATTERY_CAPACITY_KWH
+          ? roi.calculation?.batteryCapacityKwh ?? REFERENCE_BATTERY_CAPACITY_KWH
           : null,
       investmentEur: investment,
-      extraAnnualSavingEur: existing ? batteryExtraSaving : null,
-      paybackYears: payback,
-      explanation: existing
+      extraAnnualSavingEur: batteryExtraSaving,
+      paybackYears: reportedPayback,
+      explanation: noPositiveNewScenario ? 'Met deze invoer is de geraamde jaarwaarde nul of negatief. Er volgt geen positief investeringsadvies. Controleer de productie, kosten, tarieven en offerte voordat u een aanschaf overweegt.' : existing
         ? batteryRecommended
           ? `Behoud uw huidige panelen. Vanaf 2027 kan opslag en slimmer verbruik in deze indicatie circa €${Math.round(batteryExtraSaving)} per jaar extra opleveren. Laat dit toetsen met uw kwartierdata en een offerte.`
           : 'Behoud uw huidige panelen en verhoog waar mogelijk het directe eigen gebruik. Een batterij is in deze indicatie niet rendabel genoeg om te adviseren.'
         : batteryRecommended
           ? `Vanaf 2027 is de geraamde jaarwaarde met panelen en batterij €${Math.round(normalizedBatteryScenario.besparingJaarEur)}/jaar. Het extra opslagvoordeel ten opzichte van alleen panelen is circa €${Math.round(batteryExtraSaving)}/jaar. Laat rendement en dimensionering altijd toetsen met actuele tarieven en een offerte.`
-          : roi.aanbevelingTekst,
+          : roi.calculation ? roi.aanbevelingTekst : `Alleen panelen leveren in het opgeslagen 2027-scenario €${roi.scenarioWachten.besparingJaarEur}/jaar. Een batterij wordt niet geadviseerd bij een extra terugverdientijd boven 10 jaar of zonder positief extra voordeel. Maak een nieuwe scan met uw eigen contractgegevens.`,
       // Zonnepanelen en thuisbatterijen vallen niet onder de landelijke ISDE.
       isdeAmountEur: 0,
     },
     grid: {
-      status: source.netcongestie?.status ?? null,
-      operator: source.netcongestie?.netbeheerder?.trim() || null,
-      explanation: source.netcongestie?.uitleg ?? null,
+      status: null,
+      operator: null,
+      explanation: UNKNOWN_GRID_EXPLANATION,
     },
     qualification: source.qualification,
     technical: source.technical,
-    recommendations: source.healthScore?.aanbevelingen ?? [],
+    recommendations: (source.healthScore?.aanbevelingen ?? []).filter(text => !/batterij|accu|opslag|netcongestie|teruglever|Liander|Enexis|Stedin/i.test(text)),
     delivery: source.delivery,
   }
 }

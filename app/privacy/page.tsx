@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           Privacyverklaring
         </h1>
         <p className="mb-10 text-sm text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
-          Laatste update: juli 2026
+          Laatste update: oktober 2026
         </p>
 
         <div className="space-y-8 text-ink-muted" style={{ fontFamily: 'var(--font-sans)' }}>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
               SaldeerScan.nl is een online platform dat Nederlandse woningeigenaren helpt de impact van de salderingsafschaffing per 1 januari 2027 inzichtelijk te maken. Wij verwerken persoonsgegevens conform de Algemene Verordening Gegevensbescherming (AVG).
             </p>
             <p className="mt-3 text-sm leading-relaxed">
-              Het platform wordt vanuit Nederland beheerd en is bereikbaar via <a href="mailto:info@saldeerscan.nl" className="text-trust-dark underline hover:text-trust">info@saldeerscan.nl</a>. Aanvullende handelsregistergegevens worden hier gepubliceerd zodra deze beschikbaar zijn.
+              SaldeerScan is een persoonlijk project van Max Govers. Voor vragen over het platform of uw gegevens kunt u contact opnemen via <a href="mailto:info@saldeerscan.nl" className="text-trust-dark underline hover:text-trust">info@saldeerscan.nl</a>. Lees meer over de maker en financiering op <a href="/over" className="text-trust-dark underline hover:text-trust">Over SaldeerScan</a>.
             </p>
           </section>
 
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
             <ul className="text-sm leading-relaxed space-y-1.5 pl-4">
               <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Naam</li>
               <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>E-mailadres</li>
-              <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Telefoonnummer</li>
+              <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Telefoonnummer, alleen bij een optionele doorverwijzing voor advies</li>
               <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Adresgegevens (voor de energieanalyse)</li>
               <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Foto's van meterkast, plaatsingslocatie en omvormer (indien geüpload)</li>
               <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Berekende energiegegevens (ROI, besparing, score)</li>
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             <h2 className="mb-3 text-lg font-bold text-ink" style={{ fontFamily: 'var(--font-heading)' }}>3. Waarvoor gebruiken wij uw gegevens?</h2>
             <ul className="text-sm leading-relaxed space-y-1.5 pl-4">
               <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Het opstellen en versturen van uw persoonlijke energierapport</li>
-              <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Doorverwijzing naar een gecertificeerde installateur in uw regio (alleen met uw expliciete toestemming)</li>
+              <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Een optionele doorverwijzing naar een installateur, met afzonderlijke toestemming naast uw rapportaanvraag</li>
               <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-trust-dark">—</span>Verbetering van onze dienstverlening</li>
             </ul>
           </section>
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="mb-3 text-lg font-bold text-ink" style={{ fontFamily: 'var(--font-heading)' }}>4. Grondslag voor verwerking</h2>
             <p className="text-sm leading-relaxed">
-              Wij verwerken uw gegevens uitsluitend op basis van uw uitdrukkelijke toestemming (art. 6 lid 1 sub a AVG), die u geeft bij het invullen van het aanvraagformulier. U kunt uw toestemming te allen tijde intrekken.
+              Voor het maken en bezorgen van het rapport vraagt SaldeerScan uw toestemming in het formulier. Voor het delen van uw aanvraag met een installateur is een aparte, optionele toestemming nodig. U kunt uw toestemming intrekken via de contactgegevens op deze pagina.
             </p>
           </section>
 

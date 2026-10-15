@@ -20,6 +20,7 @@ import {
   type ReportEmailStatus,
 } from '@/lib/report-model'
 import { renderReportEmail } from '@/lib/report-email'
+import { buildLeadConsentRecord } from '@/lib/lead-consent'
 import { Resend } from 'resend'
 
 export const maxDuration = 60
@@ -93,10 +94,9 @@ export async function POST(request: Request) {
       plaatsing_analyse: submission.plaatsingsAnalyse ?? {},
       omvormer_analyse: submission.omvormerAnalyse ?? {},
       isde_pre_fill: roi.isdeSchatting,
-      gdpr_consent: true,
+      ...buildLeadConsentRecord(submission.adviceConsent),
       consent_timestamp: new Date().toISOString(),
       consent_ip: ip,
-      consent_tekst: 'Ja, ik ontvang graag mijn Persoonlijke 2027-Rapport. Ik geef toestemming om mijn scandata te laten valideren door een gecertificeerde energie-expert van SaldeerScan.nl in mijn regio voor een definitief configuratie-advies.',
       is_eigenaar: submission.isEigenaar,
       heeft_panelen: submission.heeftPanelen,
       huidige_panelen_aantal: submission.huidigePanelenAantal,
@@ -218,9 +218,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'report_generation_failed' }, { status: 500 })
   }
 
-  const preparedPartnerDeliveries = await preparePartnerDeliveries(lead.id)
-
-  after(async () => {
+  if (submission.adviceConsent) {
+    const preparedPartnerDeliveries = await preparePartnerDeliveries(lead.id)
+    after(async () => {
     const outcomes = await Promise.allSettled([
       dispatchPreparedPartnerDeliveries(preparedPartnerDeliveries),
       dispatchToBulkBuyer(lead.id),
@@ -235,13 +235,15 @@ export async function POST(request: Request) {
         )
       }
     })
-  })
+    })
+  }
 
   return Response.json(
     {
       leadId: lead.id,
       reportToken: reportAccessToken ?? null,
       status: 'ingediend',
+      adviceRequested: submission.adviceConsent,
       report,
       emailStatus: report.delivery.emailStatus,
     },

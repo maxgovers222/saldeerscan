@@ -67,11 +67,12 @@ test('compares battery value with the same 2027 situation without a battery', ()
 
   expect(result.productieKwh).toBe(4900)
   expect(result.scenarioWachten.besparingJaarEur).toBe(897)
-  expect(result.scenarioMetBatterij.besparingJaarEur).toBe(1504)
+  // 1,960 kWh delivered requires 2,177.78 kWh charged at 90% efficiency.
+  expect(result.scenarioMetBatterij.besparingJaarEur).toBe(1485)
   expect(
     result.scenarioMetBatterij.besparingJaarEur
       - result.scenarioWachten.besparingJaarEur,
-  ).toBe(607)
+  ).toBe(588)
   expect(result.scenarioMetBatterij.beschrijving).toContain('Vanaf 2027')
   expect(result.aanbeveling).toBe('beide')
 })
